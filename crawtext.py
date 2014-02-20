@@ -29,8 +29,7 @@ user_agents = [u'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.1 (KHTML, l
 unwanted_extensions = ['css','js','gif','GIF','jpeg','JPEG','jpg','JPG','pdf','PDF','ico','ICO','png','PNG','dtd','DTD', 'mp4', 'mp3', 'mov']
 
 
-class Seeds(set):
-	
+class Seeds(set):	
 	def __init__(self, query, bing=None, local=None):
 		''' A seed is a set of url who has query, key, path properties'''	
 		self.query = query
@@ -96,7 +95,7 @@ class Page():
 			return False
 
 	def is_relevant(self):
-		'''Reformat the query with OR and AND operators'''
+		'''Reformat the query properly: supports AND, OR and space'''
 		if 'OR' in self.query:
 			for each in self.query.split('OR'):
 				query4re = each.lower().replace(' ', '.*')
@@ -178,18 +177,18 @@ class Crawl():
 				self.do_page(e)
 
 	def prepare(self):
-		''' Check for no infinite loop on url '''
+		''' Check the url has not be already treated'''
 		self.toSee = set()
 		for k, v in self.res.iteritems():
-			''' Here is the place where I'm supposed to store the backlink information'''
+			''' Here is the place where I'm supposed to take backlink information'''
 			self.toSee.update([url for url in v['outlinks'] if url not in self.seen])
 		print "toSee", len(self.toSee)
 		print "Seen", len(self.seen)
 		print "res", len(self.res)
 
 	def clean(self):
-		
-		print "Cleaning..."
+		'''Remobing the link already passed'''
+		'''Voir le copy() et tester avec de l'insertion en BDD'''
 		for e in self.res.values():
 			for link in e['outlinks'].copy():
 				if link not in self.res.keys():
@@ -208,6 +207,7 @@ class Crawl():
 
 
 def crawtext(query, depth, path_to_export_file, bing_account_key=None, local_seeds=None):
+	'''Main worker with threading and loop on depth'''
 	cfg = {
 		'query' : query,
 		'bing_account_key' : bing_account_key,
