@@ -21,7 +21,7 @@ import __future__
 
 from abpy import Filter
 adblock = Filter(file('easylist.txt'))
-
+from database import *
 #For testing in strange env
 #~ reload(sys) 
 #~ sys.setdefaultencoding("utf-8")
@@ -166,6 +166,7 @@ class Crawl():
 
 	def __init__(self, cfg):
 		'''simple parsing parameter'''
+
 		if 'query' in cfg.keys() and cfg['query'] != '':
 			self.query = cfg['query']
 		else: self.query = False
@@ -177,9 +178,14 @@ class Crawl():
 		if 'local_seeds' in cfg.keys() and cfg['local_seeds'] != '':
 			self.local = cfg['local_seeds']
 		else: self.local = False
-
-		self.res = {}
-		self.seen = set()
+		
+		if 'project_name' in cfg.keys() and cfg['project_name'] != '':
+			self.db = Database(cfg['project_name'])
+			self.db.create_tables()
+		else: self.db = False
+		
+		#self.res = {}
+		#self.seen = set()
 
 	def do_page(self, url):
 		'''Create the page results'''
@@ -218,8 +224,8 @@ class Crawl():
 		
 		print "Cleaning..."
 		'''Removing the link already passed'''
-		'''Voir le copy() et tester avec de l'insertion en BDD'''
 		for e in self.res.values():
+			print e
 			for link in e['outlinks'].copy():
 				if link not in self.res.keys():
 					e['outlinks'].remove(link)
@@ -236,14 +242,14 @@ class Crawl():
 		f.close()
 
 
-def crawtext(query, depth, path_to_export_file, bing_account_key=None, local_seeds=None):
+def crawtext(query, depth, project_name="myproject", bing_account_key=None, local_seeds=None):
 	'''Main worker with threading and loop on depth'''
 	cfg = {
 		'query' : query,
 		'bing_account_key' : bing_account_key,
 		'local_seeds' : local_seeds,
 		'depth' : depth,
-		'path_to_export_file' : path_to_export_file,
+		'project_name' : db_collection,
 	}
 
 	c = Crawl(cfg)
@@ -259,7 +265,7 @@ def crawtext(query, depth, path_to_export_file, bing_account_key=None, local_see
 		print "##### DEPTH", depth, "#####"
 		c.prepare()
 		q = Queue.Queue()
-		for i in range(10):
+		for i in range(4):
 		     t = threading.Thread(target=worker)
 		     t.daemon = True
 		     t.start()
@@ -278,10 +284,9 @@ if __name__ == '__main__':
 	
 	crawtext(	'viande algues',
 				1,
-				"./results.json",
-				bing_account_key="J8zQNrEwAJ2u3VcMykpouyPf4nvA6Wre1019v/dIT0o"
-				,)
-				# local_seeds="myseeds.txt")
+				project_name ="results",
+				bing_account_key="J8zQNrEwAJ2u3VcMykpouyPf4nvA6Wre1019v/dIT0o",
+				local_seeds="myseeds.txt")
 
 	#sys.exit()
 
