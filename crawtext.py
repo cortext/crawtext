@@ -4,7 +4,7 @@
 from os.path import exists
 import sys
 import requests
-from requests import RequestException
+#from requests import RequestException
 import json
 import re
 import threading
@@ -22,7 +22,7 @@ import __future__
 from abpy import Filter
 adblock = Filter(file('easylist.txt'))
 
-#For testing in wired env
+#For testing in strange env
 #~ reload(sys) 
 #~ sys.setdefaultencoding("utf-8")
 
@@ -39,7 +39,7 @@ class Seeds(set):
 		self.path = local
 
 	def get_bing(self):
-		''' Method to extract results (defaut results_nb is 10) from BING API (Limited to 5000 req/month). ''' 
+		''' Method to add urlist results from BING API (Limited to 5000 req/month). ''' 
 		
 		try:
 			r = requests.get(
@@ -59,7 +59,7 @@ class Seeds(set):
 			return False
 
 	def get_local(self):
-		''' Method to extract url list from text file'''
+		''' Method to add url to queue'''
 		try:
 			for url in open(self.path).readlines():
 				self.add(url)
@@ -87,8 +87,8 @@ class Page():
 		''' Request a specific HTML file and return html file stored in self.src''' 
 		try:
 			#removing proxies
-			
-			self.req = requests.get( self.url, headers={'User-Agent': choice(user_agents)}, timeout=3)
+			requests.adapters.DEFAULT_RETRIES = 2
+			self.req = requests.get( self.url, headers={'User-Agent': choice(user_agents)},allow_redirects=True, timeout=5)
 
 			if 'text/html' not in self.req.headers['content-type']:
 				return False
@@ -103,11 +103,13 @@ class Page():
 				try:
 					self.src = self.req.text
 				except Exception, e:
-					print e
+					print "Error catching Textfile",e
 					print self.req
 				
 				return True
 				
+		except requests.exceptions.ConnectionError:
+			return False
 		except requests.exceptions.RequestException as e:
 			print e.args, self.url
 			# template = "An exception of type {0} occured. Arguments:\n{1!r}"
@@ -117,6 +119,8 @@ class Page():
 			#HTTPConnectionPool(host='fr.wikipedia.org', port=80): Max retries exceeded with url: / (Caused by <class 'httplib.BadStatusLine'>: '')
 			#print "Exception:",e
 			return False
+		
+		
 
 	def is_relevant(self):
 		'''Reformat the query properly: supports AND, OR and space'''
@@ -139,7 +143,7 @@ class Page():
 		self.soup = BeautifulSoup(Extractor(html=self.src).getHTML())
 
 	def extract_urls(self):
-		''' Extract and clean urls'''
+		''' Extract outlink url'''
 		self.outlinks = set()
 		self.netloc = 'http://' + urlparse(self.url)[1]
 
