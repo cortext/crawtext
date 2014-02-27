@@ -38,6 +38,7 @@ Etat: Terminé
 - Ajout d'un champ nom du porjet pour création d'une BDD correspondante structurée comme suit:
 	
 	* Collection: **"sources"**
+		    
 		    {
 		    
 		    "url": "www.example.com", 
@@ -49,6 +50,7 @@ Etat: Terminé
 		    } 
 	
 	* Collection: **"results"** 
+		
 		{
 		 
 		 "url": "www.example.com",' 
@@ -68,6 +70,7 @@ Etat: Terminé
 		}
 	
 	* Collection: **"report"**
+		
 		{
 		 
 		 "url": "www.example.com",
