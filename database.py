@@ -6,8 +6,8 @@ from pymongo import errors
 
 class Database():
 	def __init__(self, database_name="full_test"):
-		client = MongoClient('mongodb://localhost:27017')
-		self.db = client[database_name]
+		client = MongoClient('mongodb://localhost,localhost:27017')
+		self.db = client.database_name
 		#self.db.x = self.db[x]
 		print self.db
 		

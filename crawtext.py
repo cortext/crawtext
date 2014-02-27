@@ -34,16 +34,15 @@ unwanted_extensions = ['css','js','gif','asp', 'GIF','jpeg','JPEG','jpg','JPG','
 	
 class Seeds(set):	
 	'''Create Root Url'''
-	def __init__(self, query, bing=None, local=None, dbname="craw_text"):
+	def __init__(self, query, bing=None, local=None, db=None):
 		'''Creating the first seeds for Crawler with 2 methods'''	
 		self.query = query
 		self.key = bing
 		self.path = local
-		self.db = Database(dbname)
-		self.db.create_tables()
+		self.db = db
 
 	def get_bing(self):
-		''' Method to add urlist results from BING API (Limited to 5000 req/month). ''' 
+		print ''' Method to add urlist results from BING API (Limited to 5000 req/month). ''' 
 		
 		try:
 			r = requests.get(
@@ -61,7 +60,7 @@ class Seeds(set):
 					self.db.queue.insert(e['Url'])
 			return True
 		except:
-			self.db.error.insert({"url":e['Url'], "error_code": r.status_code, "type": "Error Fetching content"})
+			self.db.report.insert({"url":e['Url'], "error_code": r.status_code, "type": "Error Fetching content"})
 			return False
 
 	def get_local(self):
@@ -91,21 +90,22 @@ class Page():
 	def retrieve(self):
 		''' Request a specific HTML file and return html file stored in self.src''' 
 		try:
+			print self.url, self.req.status_code
 			#removing proxies
 			requests.adapters.DEFAULT_RETRIES = 2
 			self.req = requests.get(self.url, headers={'User-Agent': choice(user_agents)},allow_redirects=True, timeout=5)
 
 			if 'text/html' not in self.req.headers['content-type']:
 
-				self.db.error.insert({"url":self.url, "error_code": self.req.status_code, "type": "Content type is not TEXT/HTML"})
+				self.db.report.insert({"url":self.url, "error_code": self.req.status_code, "type": "Content type is not TEXT/HTML"})
 				return False
 			#Error on ressource or on server
 			elif self.req.status_code in range(400,520):
-				self.db.error.insert({"url":self.url, "error_code": self.req.status_code, "type": "Connexion error"})
+				self.db.report.insert({"url":self.url, "error_code": self.req.status_code, "type": "Connexion error"})
 				return False
 			#Redirect
 			elif len(self.req.history) > 0 | self.req.status_code in range(300,320): 
-				self.db.error.insert({"url":self.url, "error_code": self.req.status_code, "type": "Redirection"})
+				self.db.report.insert({"url":self.url, "error_code": self.req.status_code, "type": "Redirection"})
 				return False
 			
 			else:
@@ -114,16 +114,16 @@ class Page():
 					return True
 
 				except Exception, e:
-					self.db.error.insert({"url":self.url, "error_code": self.req.status_code, "type": "Error fetching text"})
+					self.db.report.insert({"url":self.url, "error_code": self.req.status_code, "type": "Error fetching text"})
 					return False
 				
 				
 				
 		except requests.exceptions.ConnectionError as e:
-			self.db.error.insert({"url":self.url, "error_code": self.req.status_code, "type": e})
+			self.db.report.insert({"url":self.url, "error_code": self.req.status_code, "type": e})
 			return False
 		except requests.exceptions.RequestException as e:
-			self.db.error.insert({"url":self.url, "error_code": self.req.status_code, "type": e.args})
+			self.db.report.insert({"url":self.url, "error_code": self.req.status_code, "type": e.args})
 			
 			# template = "An exception of type {0} occured. Arguments:\n{1!r}"
 			# message = template.format(type(ex).__name__, ex.args)
@@ -193,7 +193,12 @@ class Crawl():
 		if 'local_seeds' in cfg.keys() and cfg['local_seeds'] != '':
 			self.local = cfg['local_seeds']
 		else: self.local = False
-		
+		if 'database_name' and cfg['database_name']!='':
+			self.db = Database(cfg['database_name'])
+			self.db.create_tables() 
+		else:
+			self.db = Database('myproject')
+			self.db.create_tables()
 		# if 'project_name' in cfg.keys() and cfg['project_name'] != '':
 		# 	self.project_name = cfg['project_name']
 			
@@ -212,6 +217,7 @@ class Crawl():
 				print "insert.."
 				self.db.results.insert({"url":p.url,'content':p.src})
 				self.db.queue.insert(p.extract_urls())
+				self.db.remove(p.url)
 					#~ self.res[p.url] = {
 						#~ 'pointers' : set(),
 						#~ #'source' : p.src,
@@ -224,7 +230,7 @@ class Crawl():
 	
 	def start(self):
 		'''Start the crawler '''
-		self.seeds = Seeds(self.query, self.bing, self.local, dbname="craw_test3")
+		self.seeds = Seeds(self.query, self.bing, self.local, self.db)
 
 		if (self.seeds.get_bing() and self.seeds.get_local()) or (self.seeds.get_bing() or self.seeds.get_local()):
 			for url in self.db.queue.distinct("url"):
@@ -262,13 +268,14 @@ class Crawl():
 		f.close()
 
 
-def crawtext(query, depth, bing_account_key=None, local_seeds=None):
+def crawtext(query, depth, bing_account_key=None, local_seeds=None, database_name= None):
 	'''Main worker with threading and loop on depth'''
 	cfg = {
 		'query' : query,
 		'bing_account_key' : bing_account_key,
 		'local_seeds' : local_seeds,
 		'depth' : depth,
+		'database_name':database_name,
 	}
 
 	c = Crawl(cfg)
