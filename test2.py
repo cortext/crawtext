@@ -28,7 +28,7 @@ def start(path, db):
 	'inserting seeds form local file'''
 	for url in open(path).readlines():
 		url = urlparse(re.sub('\n', '', url), allow_fragments=False)
-		uri ='http://'+url.netloc+re.sub('/$', '', url.path)+":8080"
+		uri ='http://'+url.netloc+re.sub('/$', '', url.path)
 		
 		if url not in db.queue.distinct("url"):
 			db.queue.insert({"url":uri})
@@ -50,8 +50,7 @@ class Page(object):
 			#removing proxies
 			#~ requests.adapters.DEFAULT_RETRIES = 2
 			print "Requesting for ",self.url
-			self.req = requests.get(self.url)
-			#~ self.req = requests.get(self.url, port=9000, headers={'User-Agent': choice(user_agents)},allow_redirects=True, timeout=5)
+			self.req = requests.get(self.url, headers={'User-Agent': choice(user_agents)},timeout=5)
 			if 'text/html' not in self.req.headers['content-type']:
 				self.db.report.insert({"url":self.url, "error_code": self.req.status_code, "type": "Content type is not TEXT/HTML"})
 				return False
