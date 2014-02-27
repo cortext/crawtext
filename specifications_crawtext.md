@@ -45,13 +45,13 @@ Etat: Terminé
 		    
 		    "date": timestamp(2005-10-30 T 23:00), 
 		    
-		    "method":(sourcing OR discovery),
+		    "method":"sourcing",
 		    
 		    } 
 	
 	* Collection: **"results"** 
 		
-		   {
+		      {
 		 
 		    "url": "www.example.com",
 		 
@@ -67,11 +67,11 @@ Etat: Terminé
 		 
 		    "crawldate": timestamp(2005-10-30 T 23:00),
 		
-		   }
+		      }
 	
 	* Collection: **"report"**
 		
-		   {
+		      {
 		 
 		    "url": "www.example.com",
 		 
@@ -79,7 +79,7 @@ Etat: Terminé
 		 
 		    "error_description": "Page not found",
 		
-		   }
+		      }
 
 >Remarque: ajout des dates au moment de l'implémentation de la récurrence
 
