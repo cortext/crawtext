@@ -39,47 +39,47 @@ Etat: Terminé
 	
 	* Collection: **"sources"**
 		    
-		    '{
+		    {
 		    
 		    "url": "www.example.com", 
 		    
 		    "date": timestamp(2005-10-30 T 23:00), 
 		    
-		    "method":(sourcing OR discovery)
+		    "method":(sourcing OR discovery),
 		    
-		    }' 
+		    } 
 	
 	* Collection: **"results"** 
 		
-		'{
+		   {
 		 
-		 "url": "www.example.com",
+		    "url": "www.example.com",
 		 
-		 "pointers":["www.example4.com", "www.example5.com","www.example6.com"],
+		    "pointers":["www.example4.com", "www.example5.com","www.example6.com"],
 		 
-		 "outlinks":["www.example4.com", "www.example5.com","www.example6.com"],
+		    "outlinks":["www.example4.com", "www.example5.com","www.example6.com"],
 		 
-		 "title": "titre de la page",
+		    "title": "titre de la page",
 		 
-		 "source":"Le texte nettoyé de la page", 
+		    "source":"Le texte nettoyé de la page", 
 		 
-		 "pubdate":timestamp(2005-10-30),
+		    "pubdate":timestamp(2005-10-30),
 		 
-		 "crawldate": timestamp(2005-10-30 T 23:00),
+		    "crawldate": timestamp(2005-10-30 T 23:00),
 		
-		}'
+		   }
 	
 	* Collection: **"report"**
 		
-		'{
+		   {
 		 
-		 "url": "www.example.com",
+		    "url": "www.example.com",
 		 
-		 "error_code":404,
+		    "error_code":404,
 		 
-		 "error_description": "Page not found",
+		    "error_description": "Page not found",
 		
-		}'
+		   }
 
 >Remarque: ajout des dates au moment de l'implémentation de la récurrence
 
