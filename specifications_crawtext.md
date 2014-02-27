@@ -112,6 +112,12 @@ Etat: 0%
 
 Etat: 0%
 
+####Autres questions
+
+- Intégration et stockage des PDF?
+- Gestion des liens réciproques?
+
+
 
 
 
