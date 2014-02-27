@@ -86,6 +86,7 @@ Etat: 0%
 ####Périmêtre d'execution du crawler défini par l'utilisateur:
 
 *Mode découverte: à chaque execution du crawler nouvelle recherche par mot clé, insertion cumulative dans la table source de la nouvelle url avec sa date d'ajout et la méthode d'ajout (sourcing/ discovery)
+
 *Mode sourcing: à la première execution du crawler, création d'une bddd source puis simple execution du crawler sur ces données sources la méthode d'ajout par dafut est sourcing
 
 
