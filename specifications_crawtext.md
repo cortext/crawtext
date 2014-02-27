@@ -36,11 +36,13 @@ Etat: Terminé
 ###Base de données:
 - Ecriture des résultats au fur et à mesure.
 - Ajout d'un champ nom du porjet pour création d'une BDD correspondante structurée comme suit:
+	
 	*Collection: "sources"
 		    {"url": "www.example.com", 
 		    "date": timestamp(2005-10-30 T 23:00), 
 		    "method":(sourcing OR discovery)
 		    } 
+	
 	*Collection: "results" 
 		'{'
 		 '"url": "www.example.com",' 
@@ -51,6 +53,7 @@ Etat: Terminé
 		 '"pubdate":timestamp(2005-10-30),'
 		 '"crawldate": timestamp(2005-10-30 T 23:00),'
 		'}'
+	
 	*Collection: "report"
 		'{'
 		 '"url": "www.example.com",' 
@@ -69,9 +72,11 @@ Passage d'un traitement par thread à un tratement plus léger par multiprocessi
 
 ###Ajout de fréquence et périmêtre pour le crawl
 ####Fréquence d'execution du crawl défini par l'utilisateur:
-*3 options :	*tous les jours pendant 1 mois 
-				*toutes les semaines pendant 1 mois
-				*une fois par mois pendant 6 mois
+Permettre l'exploration à intervalle
+*3 options :	
+	*tous les jours pendant 1 mois 
+	*toutes les semaines pendant 1 mois
+	*une fois par mois pendant 6 mois
 
 >là on peut aussi ajouter par heure, par minutes, le lundi mardi jeudi par exemple  qu'on veut 
 >mais je suis pas sure que ce soit vraiment nécessaire et autant ne pas embrouiller l'utilisateur
