@@ -2,6 +2,7 @@
 
 ##SPECIFICATIONS
 Crawler pour l'analyse de corpus web.
+
 =>Définition du corpus d'études
 - un fichier texte (une url par ligne)
 - une requête web (résultats de recherche BING)
