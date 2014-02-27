@@ -73,10 +73,10 @@ Passage d'un traitement par thread à un tratement plus léger par multiprocessi
 ###Ajout de fréquence et périmêtre pour le crawl
 ####Fréquence d'execution du crawl défini par l'utilisateur:
 Permettre l'exploration à intervalle
-*3 options :	
-	*tous les jours pendant 1 mois 
-	*toutes les semaines pendant 1 mois
-	*une fois par mois pendant 6 mois
+* 3 options :	
+	* tous les jours pendant 1 mois 
+	* toutes les semaines pendant 1 mois
+	* une fois par mois pendant 6 mois
 
 >là on peut aussi ajouter par heure, par minutes, le lundi mardi jeudi par exemple  qu'on veut 
 >mais je suis pas sure que ce soit vraiment nécessaire et autant ne pas embrouiller l'utilisateur
@@ -85,9 +85,9 @@ Etat: 0%
 
 ####Périmêtre d'execution du crawler défini par l'utilisateur:
 
-*Mode découverte: à chaque execution du crawler nouvelle recherche par mot clé, insertion cumulative dans la table source de la nouvelle url avec sa date d'ajout et la méthode d'ajout (sourcing/ discovery)
+* Mode découverte: à chaque execution du crawler nouvelle recherche par mot clé, insertion cumulative dans la table source de la nouvelle url avec sa date d'ajout et la méthode d'ajout (sourcing/ discovery)
 
-*Mode sourcing: à la première execution du crawler, création d'une bddd source puis simple execution du crawler sur ces données sources la méthode d'ajout par dafut est sourcing
+* Mode sourcing: à la première execution du crawler, création d'une bddd source puis simple execution du crawler sur ces données sources la méthode d'ajout par dafut est sourcing
 
 
 Etat: 0%
