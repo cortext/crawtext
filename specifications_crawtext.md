@@ -37,29 +37,46 @@ Etat: Terminé
 - Ecriture des résultats au fur et à mesure.
 - Ajout d'un champ nom du porjet pour création d'une BDD correspondante structurée comme suit:
 	
-	*Collection: "sources"
-		    {"url": "www.example.com", 
+	* Collection: **"sources"**
+		    {
+		    
+		    "url": "www.example.com", 
+		    
 		    "date": timestamp(2005-10-30 T 23:00), 
+		    
 		    "method":(sourcing OR discovery)
+		    
 		    } 
 	
-	*Collection: "results" 
-		'{'
-		 '"url": "www.example.com",' 
-		 '"pointers":["www.example4.com", "www.example5.com","www.example6.com"],'
-		 '"outlinks":["www.example4.com", "www.example5.com","www.example6.com"], '
-		 '"title": "titre de la page", '
-		 '"source":"Le texte nettoyé de la page", '
-		 '"pubdate":timestamp(2005-10-30),'
-		 '"crawldate": timestamp(2005-10-30 T 23:00),'
-		'}'
+	* Collection: **"results"** 
+		{
+		 
+		 "url": "www.example.com",' 
+		 
+		 "pointers":["www.example4.com", "www.example5.com","www.example6.com"],'
+		 
+		 "outlinks":["www.example4.com", "www.example5.com","www.example6.com"], '
+		 
+		 "title": "titre de la page", '
+		 
+		 "source":"Le texte nettoyé de la page", '
+		 
+		 "pubdate":timestamp(2005-10-30),'
+		 
+		 "crawldate": timestamp(2005-10-30 T 23:00),'
+		
+		}
 	
-	*Collection: "report"
-		'{'
-		 '"url": "www.example.com",' 
-		 '"error_code":404, '
-		 '"error_description": "Page not found",'
-		'}'
+	* Collection: **"report"**
+		{
+		 
+		 "url": "www.example.com",
+		 
+		 "error_code":404,
+		 
+		 "error_description": "Page not found",
+		
+		}
 
 >Remarque: ajout des dates au moment de l'implémentation de la récurrence
 
