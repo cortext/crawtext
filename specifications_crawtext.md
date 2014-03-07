@@ -28,16 +28,17 @@ Une base de donnée (exportable en JSON) avec trois tables:
 ###Gestion des erreurs:
 - Traiter l'intégralité des erreurs de téléchargement de pages
 - Intégrer un rapport sur les urls erronées dans la base de données (table distincte des résultats)
-
->Reste une erreur sur le chargement de certaines pages à voir avec HttpLib et le formattage de la requete à analysser dans les rapports d'erreurs
-
+> Problème de Httplib terminé (Problème dans l'envoi des headers)
 Etat: Terminé
+
 ###Nettoyage des textes:
 - Boilerpipe
 - Test de Goose: intégration de la logique de Goose 
 - Extract du flux RSS
 - Nettoyage final en regex
 Etat: 60%
+###Nettoyage des urls
+Url relative vs url absolue
 
 ###Base de données:
 - Ecriture des résultats au fur et à mesure.
@@ -92,7 +93,7 @@ Etat: 60%
 >Remarque: ajout des dates au moment de l'implémentation de la récurrence
 
 
-Etat d'avancement : 90%
+Etat d'avancement : 100%
 
 ###Multiprocessing:
 Passage d'un traitement par thread à un tratement plus léger par multiprocessing. 
