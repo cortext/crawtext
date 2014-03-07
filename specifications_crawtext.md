@@ -32,10 +32,16 @@ Une base de donnée (exportable en JSON) avec trois tables:
 >Reste une erreur sur le chargement de certaines pages à voir avec HttpLib et le formattage de la requete à analysser dans les rapports d'erreurs
 
 Etat: Terminé
+###Nettoyage des textes:
+- Boilerpipe
+- Test de Goose: intégration de la logique de Goose 
+- Extract du flux RSS
+- Nettoyage final en regex
+Etat: 60%
 
 ###Base de données:
 - Ecriture des résultats au fur et à mesure.
-- Ajout d'un champ nom du porjet pour création d'une BDD correspondante structurée comme suit:
+- Ajout d'un champ nom du projet pour création d'une BDD correspondante structurée comme suit:
 	
 	* Collection: **"sources"**
 		    
@@ -58,6 +64,8 @@ Etat: Terminé
 		    "pointers":["www.example4.com", "www.example5.com","www.example6.com"],
 		 
 		    "outlinks":["www.example4.com", "www.example5.com","www.example6.com"],
+
+		    "backlinks":["www.example4.com", "www.example5.com","www.example6.com"],
 		 
 		    "title": "titre de la page",
 		 
@@ -84,7 +92,7 @@ Etat: Terminé
 >Remarque: ajout des dates au moment de l'implémentation de la récurrence
 
 
-Etat d'avancement : 70%
+Etat d'avancement : 90%
 
 ###Multiprocessing:
 Passage d'un traitement par thread à un tratement plus léger par multiprocessing. 
@@ -94,13 +102,9 @@ Passage d'un traitement par thread à un tratement plus léger par multiprocessi
 ####Fréquence d'execution du crawl défini par l'utilisateur:
 Permettre l'exploration à intervalle
 * 3 options :	
-	* tous les jours pendant 1 mois 
-	* toutes les semaines pendant 1 mois
-	* une fois par mois pendant 6 mois
+	** à definir  
 
->là on peut aussi ajouter par heure, par minutes, le lundi mardi jeudi par exemple  qu'on veut 
->mais je suis pas sure que ce soit vraiment nécessaire et autant ne pas embrouiller l'utilisateur
-
+> See python-cron
 Etat: 0%
 
 ####Périmêtre d'execution du crawler défini par l'utilisateur:
