@@ -287,7 +287,7 @@ class Crawl():
 		'''Start the crawler creating the first seeds '''
 		if self.db_name is False:
 			
-			create_database(")
+			create_database("defaut_job_crawtest")
 			#self.sourcing()
 			#self.mode = "sourcing"
 		self.seeds = Seeds(self.query, self.bing, self.local, self.db)
