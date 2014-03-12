@@ -248,7 +248,7 @@ class Page():
 		self.outlinks = set()
 		self.netloc = 'http://' + urlparse(self.url)[1]
 		p = Pool(5)
-		self.outlinks= p.map(self.soup.find_all('a', {'href': True}))
+		self.outlinks= p.map(self.check_url, self.soup.find_all('a', {'href': True}))
 		
 			
 
@@ -276,7 +276,7 @@ class Page():
 		
 if __name__ == '__main__':
 	seed = get_bing(api_key="J8zQNrEwAJ2u3VcMykpouyPf4nvA6Wre1019v/dIT0o", query="algues vertes")
-	db = Database("alguesvertes")
+	db = Database("alguesvertes3")
 	db.queue.insert(seed)
 	#print db.report()
 	for n in db.queue.distinct("url"):
