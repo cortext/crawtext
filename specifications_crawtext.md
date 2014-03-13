@@ -11,8 +11,8 @@ Crawler pour l'analyse de corpus web.
 => Définition de la fréquence des crawls
 *Définir la fréquence
 *Définir le périmêtre
-- Discovery: Simple requête web
-- Périmêtre défini à une liste de sources fixes
+- Discovery: Simple requête web qui ajoute les nouvelles url à la source avec date d'ajout / suppression
+- Périmêtre défini à une liste de sources fixes qui ne bouge pas
 
 => Résultats
 Une base de donnée (exportable en JSON) avec trois tables:
@@ -32,13 +32,14 @@ Une base de donnée (exportable en JSON) avec trois tables:
 Etat: Terminé
 
 ###Nettoyage des textes:
-- Boilerpipe
-- Test de Goose: intégration de la logique de Goose 
-- Extract du flux RSS
-- Nettoyage final en regex
-Etat: 60%
+- Boilerpipe (Problème de portage des lib)
+- Test de Goose: intégration de la logique de Goose (==> Goose)
+- Extract du flux RSS (NIY)
+- Nettoyage final en regex (NIY)
+Etat: 99%
 ###Nettoyage des urls
 Url relative vs url absolue
+Etat: Terminé
 
 ###Base de données:
 - Ecriture des résultats au fur et à mesure.
@@ -90,7 +91,7 @@ Url relative vs url absolue
 		
 		      }
 
->Remarque: ajout des dates au moment de l'implémentation de la récurrence
+>Remarque: ajout des dates au moment de l'implémentation de la récurrence (à vérifier)
 
 
 Etat d'avancement : 100%
@@ -115,12 +116,13 @@ Etat: 0%
 * Mode sourcing: à la première execution du crawler, création d'une bddd source puis simple execution du crawler sur ces données sources la méthode d'ajout par dafut est sourcing
 
 
+==> A valider
 Etat: 0%
 
 ####Autres questions
 
 - Intégration et stockage des PDF?
-- Gestion des liens réciproques?
+- Gestion des liens réciproques? (Base intégrée mais nécessite ensuite une réinterprétation de la BDDB => Script à part pour remonter le chemin inverse))
 
 
 
