@@ -22,9 +22,6 @@ from abpy import Filter
 adblock = Filter(file('easylist.txt'))
 
 from database import Database
-#For testing in strange env
-#~ reload(sys) 
-#~ sys.setdefaultencoding("utf-8")
 
 user_agents = [u'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.1 (KHTML, like Gecko) Chrome/22.0.1207.1 Safari/537.1', u'Mozilla/5.0 (Windows NT 6.1; rv:15.0) Gecko/20120716 Firefox/15.0a2', u'Mozilla/5.0 (compatible; MSIE 10.6; Windows NT 6.1; Trident/5.0; InfoPath.2; SLCC1; .NET CLR 3.0.4506.2152; .NET CLR 3.5.30729; .NET CLR 2.0.50727) 3gpp-gba UNTRUSTED/1.0', u'Opera/9.80 (Windows NT 6.1; U; es-ES) Presto/2.9.181 Version/12.00']
 #pourquoi ne pas prendre le problème à l'envers et dire je ne veux que htm, html et pdf
@@ -61,8 +58,8 @@ class Seeds():
 			else:
 				self.error_type= "No search results via Bing API. Please check your API key"
 				self.status = False
-		except Exception:
-			self.error_type= "Error Fetching content via Bing API. Please check your API key"
+		except Exception, e:
+			self.error_type= "Error Fetching content via Bing API. Please check your API key %s" e.args
 			self.status = False
 			return False
 
