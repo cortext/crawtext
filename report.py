@@ -9,8 +9,11 @@ import cStringIO
 from time import gmtime, strftime
 import smtplib
 from database import Database
-from cfg import username, password
-from email.MIMEText import MIMEText
+try:
+	from cfg import username, password
+	from email.MIMEText import MIMEText
+except:
+	print "Email reports disabled (%s)" % sys.exc_info()[0]
 
 class Report():
 	def __init__(self, docopt_args):
