@@ -41,9 +41,52 @@ install.sh create a virtualenv inside the project and download the libraries sto
 
 To use crawtext please first enter in command line:
 source bin/activate inside the current directory
-	
+
+Installation on a mac
+---
+
++ [MongoDB](https://www.mongodb.org/)
+
++ Dependencies
+
+```sh
+sudo pip install pymongo
+sudo pip install docotp
+sudo pip install tld
+```
+
++ [goose](https://github.com/grangier/python-goose)
+
+```bash
+git clone https://github.com/grangier/python-goose.git
+cd python-goose
+sudo pip install -r requirements.txt
+sudo python setup.py install
+```
+
++ When running crawtext, python might fail import the *_imaging* module:
+
+```
+>>> import _imaging
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+ImportError: dlopen(//anaconda/lib/python2.7/site-packages/PIL/_imaging.so, 2): Library not loaded: /opt/anaconda1anaconda2anaconda3/lib/libtiff.5.dylib
+  Referenced from: //anaconda/lib/python2.7/site-packages/PIL/_imaging.so
+  Reason: image not found
+```
+
+Reinstalling PIL might help:
+
+```sh
+sudo pip uninstall pil
+pypath=`python -c "from distutils.sysconfig import get_python_lib; print get_python_lib()"` && cd $pypath && sudo rm -rf PIL
+sudo pip install pil --allow-external pil --allow-unverified pil
+```
+
+
 Usage on Command Line
 ----
+
 	Usage:
 	crawtext.py <project> crawl <query> 
 	crawtext.py <project> discover <query> [--file=<filename> | --key=<bing_api_key> | --file=<filename> --key=<bing_api_key>] [-v]
@@ -65,6 +108,13 @@ Options:
 	-h --help Show usage and Options.
 	--version Show versions.  
 
-    
+Example
+---
+
+With the Bing API key "1234567890", let's get 50 urls from bing and crawl them for the query "Algues Vertes":
+
+```sh
+python crawtext.py alguesVertes discover "Algues Vertes" --key=1234567890
+```
 
 
