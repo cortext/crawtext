@@ -137,7 +137,7 @@ class Worker(object):
 		'''create one specific task'''
 		if ask_yes_no("Do you want to create a new project?"):
 			#schedule to be run in 5 minutes
-			self.next_run = self.creation_date.replace(minute = self.creation_date.minute+5)
+			#self.next_run = self.creation_date.replace(minute = self.creation_date.minute+5)
 			self.schedule_task()
 			#subprocess.Popen(["python","crawtext.py","start", str(self.name)])
 			return "Sucessfully created '%s' task for project '%s'."%(self.action,self.name)
@@ -150,7 +150,6 @@ class Worker(object):
 	def select_tasks(self, query):
 		'''show tasks that match the filter with a specific order return the set of tasks'''
 		self.task_list = [n for n in self.COLL.find(query)]
-		
 		self.task = None
 		if len(self.task_list) == 0:
 			self.task_list = None
@@ -158,17 +157,14 @@ class Worker(object):
 		else:
 			if len(self.task_list) == 1:
 				self.task = self.task_list[0]
-				task = "task"
 				
-			else:
-				task = "tasks"
-			#print "\n", len(self.task_list), "%s stored in %s database for %s:'%s'"%(task, str(TASK_MANAGER_NAME), str(query.keys()[0]), str(query.values()[0]))
 			return len(self.task_list)	
 			
 	def show_task(self):
 		if self.task_list is not None:
 			#print "%s: %s"%(order.capitalize(), query[str(order)])
 			print "\n"
+			print "____________________"
 			print self.name.upper()
 			print "____________________\n"
 			for task in self.task_list:
@@ -295,6 +291,7 @@ class Worker(object):
 		return "Project %s with crawl, report and export has been sucessfully scheduled and will be run next %s" %(self.name, self.repeat)
 	
 	def unschedule(self):
+		'''delete all tasks attached to the project'''
 		self.select_tasks({"name":self.name})
 		if self.task_list is None:
 			return "No project %s  has been found." %(self.name)
@@ -302,6 +299,7 @@ class Worker(object):
 			for n in self.task_list:
 				self.COLL.remove({"name": self.name, "action":n["action"]})
 			return "Every tasks of  project %s has been sucessfully unscheduled" %(self.name)
+	
 	def unschedule_task(self):
 		'''delete a specific task'''
 		self.select_tasks({"name":self.name, "action":"crawl"})
@@ -352,7 +350,7 @@ class Worker(object):
 			e = Crawl(self.name)
 			log = os.spawnl(os.P_NOWAIT, e.run_job())
 			
-			if e.run_job() is False:
+			if log is False:
 				self.COLL.update({"name":self.name, "action":"crawl"}, {"$set":{"status":e.status}})
 				self.COLL.update({"name":self.name, "action":"crawl"},  {"$set":{"next_run":self.last_run}})
 			else:
