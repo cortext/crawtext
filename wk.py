@@ -264,7 +264,6 @@ class Worker(object):
 	def refresh_task(self):
 		'''after a run update the last_run and set nb_run how to log msg?'''
 		if self.last_run is None:
-			os.spawnl(os.P_NOWAIT, self.start())
 			self.last_run = self.creation_date
 		
 		if self.repeat == "week":
@@ -273,11 +272,13 @@ class Worker(object):
 			if self.repeat == "day":
 				self.next_run = self.last_run.replace(day=self.last_run.day+1)
 			
-			if self.repeat == "month":
+			elif self.repeat == "month":
 				self.next_run = self.last_run.replace(month=self.last_run.month+1)
 			elif self.repeat == "year":
 				self.next_run = self.last_run.replace(year=self.last_run.year+1)
-		self.COLL.update({"name":self.name, "action": self.action}, {"$set":{"next_run": self.next_run}})
+			else:
+				self.next_run = None
+		self.COLL.update({"name":self.name, "action": self.action}, {"$set":{"next_run": self.next_run, "last_run": self.last_run}})
 		return self.next_run
 		
 	def schedule_task(self):
@@ -349,14 +350,17 @@ class Worker(object):
 			return "No active crawl job found for %s" %self.name
 		else:
 			e = Crawl(self.name)
+			log = os.spawnl(os.P_NOWAIT, e.run_job())
+			
 			if e.run_job() is False:
-				self.COLL.update({"name":self.name, "action":"crawl"}, {"$inc": {"nb_run": 1}})
 				self.COLL.update({"name":self.name, "action":"crawl"}, {"$set":{"status":e.status}})
 				self.COLL.update({"name":self.name, "action":"crawl"},  {"$set":{"next_run":self.last_run}})
-				return e.status
 			else:
+				self.refresh_task()
 				self.COLL.update({"name":self.name, "action":"crawl"}, {"$inc": {"nb_run": 1}})
-				return True
+				self.COLL.update({"name":self.name, "action":"crawl"}, {"$set":{"status":True}})
+				self.COLL.update({"name":self.name, "action":"crawl"},  {"$set":{"next_run":self.next_run, 'last_run': self.last_run}})
+			return True
 	
 	def stop(self):
 		self.select_task({"name":self.name, "action":"crawl"})
