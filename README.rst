@@ -71,17 +71,18 @@ Getting started
         	python crawtext.py pesticides -s set seeds.txt
         - programm a search to get results from BING:
         	python crawtext.py pesticides -k "YOUR API KEY"
-        See you to get your BING API key here <https://datamarket.azure.com/dataset/bing/search>
- * To declare ownership on the project
- 	python crawtext.py -u me@cortext.fr
- * To schedule a reccurency for your project:
+	See you to get your BING API key here https://datamarket.azure.com/dataset/bing/search
+
+* To declare ownership on the project (optionnal):
+	python crawtext.py -u me@cortext.fr
+* To schedule a reccurency for your project (optionnal):
  	python crawtext.py -r day
  options are : hour, day, week, month, year 
  defaut is set to month
 
- * To launch immediately the crawl:
+* To launch immediately the crawl:
  	python start pesticides
- >> this last option is not recommended : an automatic execution is scheduled 5 minutes after creation and then following the recurrency you've chosen
+ 
 
 More options
 ---------
@@ -92,6 +93,7 @@ More options
 
 * Unschedule the project
 * Delete the project
+* Delete url of sources
 * Stop the current execution
 * Expand sources
 * Automatically put search results to seeds
