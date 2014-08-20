@@ -22,10 +22,12 @@ Installation
 
 
 To install crawtext, it is recommended to create a virtual env:
+
+::
 	
-	$mkvirtualenv crawtext
+	$ mkvirtualenv crawtext
 	
-	$workon crawtext
+	$ workon crawtext
 
 Then you can automatically install all the dependencies using pip 
 (all dependencies are available throught pip)
@@ -36,12 +38,15 @@ Then you can automatically install all the dependencies using pip
 You must have **MongoDB** installed:
 
 * For Debian distribution install it from distribution adding to /etc/sources.list
+::
 	
 	deb http://downloads-distro.mongodb.org/repo/debian-sysvinit dist 10gen
 	
 	sudo apt-get install mongodb-10gen
 
 * For OSX distribution install it with brew:
+
+::
 	
 	brew install mongodb
 	
@@ -53,6 +58,8 @@ Getting help
 Crawtext is a simple module in command line to crawl the web given a query.
 This interface offers you a full set of option to set up a project.
 If you need any help on interacting with the shell command you can just type to see all the options:
+
+::
 
 	python crawtext.py --help
 
@@ -66,29 +73,43 @@ Getting started
 Start crawl job 
 ----
 * Create a new project:	
+::
+	
 	python crawtext.py pesticides
 
 * Add a query:
 
 Query support AND OR NOT * ? " operators.
 
+::
+
 	python crawtext.py -q "pesticides AND DDT"
 
 * Add new seeds (urls to begin the crawl):
 	* manually enter one url:
+::
+
 	python crawtext.py pesticides -s add www.lemonde.fr
 	* OR/AND send a txt file with urls:
+::
+
 		python crawtext.py pesticides -s set seeds.txt
 	* OR/AND programm a search to get results from BING:
+::
+
 		python crawtext.py pesticides -k set "YOUR API KEY"     
 
 See how to get your BING API key here https://datamarket.azure.com/dataset/bing/search
 
 * Launch immediately the crawl:
+
+::
 	
 	python start pesticides
 
 * Program it to be run ever day (optionnal):
+
+::
 	
 	python crawtext.py -r day
 
@@ -100,18 +121,26 @@ Start an archive job
 ----
 * Create a new project:	
 
+::
+
 	python crawtext.py www.lemonde.fr
 
 * Lauch the job
+
+::
 
 	python crawtext.py start www.lemonde.fr
 	
 More options:
 ----
 * Declare ownership on the project (optionnal):
+::
+
 	python crawtext.py -u me@cortext.fr
 
-* To see the all bunch of options:
+* To see all the options and usage explanation:
+::
+
 	python crawtxt.py --help
 
 (Website Archives are shared between user)
