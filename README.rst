@@ -10,7 +10,7 @@ http://manager.cortext.net/
 Crawtext is a tiny crawler in commandline that let you investigate the web with a specific query and collect results 
 
 How does a crawler works?
----
+------------
 The crawler needs a *query* to select pertinent pages and *seeds* i.e urls to start collecting data. 
 Whenever the page contains the query 
 the robot will collect the article and will investigate the query 
@@ -33,13 +33,15 @@ Then you can automatically install all the dependencies using pip
 	$ pip -r requirements.txt
 
 
-You *may* have MongoDB installed:
+You must have **MongoDB** installed:
 
 * For Debian distribution install it from distribution adding to /etc/sources.list
+	
 	deb http://downloads-distro.mongodb.org/repo/debian-sysvinit dist 10gen
 	sudo apt-get install mongodb-10gen
 
 * For OSX distribution install it with brew:
+	
 	brew install mongodb
 	
 
@@ -165,38 +167,36 @@ There is several way to add seeds:
 # delete every seeds of the job:				crawtext.py pesticides -s delete
 
 * Archive parameters:
+
 An archive job need an url, you can also specify the format extraction (optionnal)
-#consult archive project : 	crawtext.py www.lemonde.fr
-#create an archive: crawtext.py archive www.lemonde.fr
-#create an archive for wiki : crawtext.py archive -f wiki fr.wikipedia.org
+	*consult archive project : 	crawtext.py www.lemonde.fr
+	*create an archive: crawtext.py archive www.lemonde.fr
+	*create an archive for wiki : crawtext.py archive -f wiki fr.wikipedia.org
 
 Results
 -------
 
 The results are stored in a mongo database called by the name of your project
-You can export results using export option:
-	python crawtext.py pesticides export
-
-Datasets are stored in json and zip in 3 collections:
-* results
-* sources
-* logs
 Crawtext provide a simple method to export it:
 
 	python crawtext.py export pesticides
 
+Datasets are stored in json in 3 collections:
+ * results
+ * sources
+ * logs
+
 The complete structure of the datasets can be found in 
-- sources_example.json
-- results_example.json
-- logs_example.json
+ - sources_example.json
+ - results_example.json
+ - logs_example.json
 
 
 Source
 ------
 
 You can see the code `here <https://github.com/c24b/clean_crawtext>`_
-
-- Special thanks to Xavier Grangier and his module ''python-goose'' forked and used for automatical article detection.
+A great thanks to Xavier Grangier and his module ''python-goose'' forked and used for automatical article detection.
 
 
 TODO
