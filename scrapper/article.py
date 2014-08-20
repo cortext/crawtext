@@ -130,7 +130,8 @@ class Article(Extractor):
 				"title": self.title,
 				"content": self.content,
 				"description": self.meta_description,
-				"outlinks": self.outlinks,
+				"links": [self.links],
+				"outlinks": [self.outlinks],
 				"crawl_date": self.start_date,
 				"raw_html": self.raw_html,
 				}
