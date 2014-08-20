@@ -256,8 +256,7 @@ class ContentExtractor(object):
 		#self.outlinks = set(self.outlinks)
 		#~ self.outlinks = [[{"url": url, "domain":self.get_domain(url)} ] for url in self.outlinks]
 			return self.outlinks
-		else:
-			return ['']
+		
 		
 	def get_inlinks(self, links):
 		self.inlinks = []
