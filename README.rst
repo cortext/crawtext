@@ -5,7 +5,7 @@ Crawtext
 ===============================================
 Crawtext is one example of the tools at your disposal on the **Cortext manager** plateform.
 Get a free account and discover the tools you can use for your own research by registering at
-http://manager.cortext.net/
+.. _Cortext:`http://manager.cortext.net/`
 
 Crawtext is a tiny crawler in commandline that let you investigate the web with a specific query and collect results 
 
@@ -21,22 +21,30 @@ Installation
 ------------
 
 
-To install crawtext, it is recommended to create a virtual env::
+To install crawtext, it is recommended to create a virtual env.
+
+.. code:: bash
 	$ mkvirtualenv crawtext
 	$ workon crawtext
 
-Then you can automatically install all the dependencies using pip 
-(all dependencies are available throught pip).::
+
+Then you can automatically install all the dependencies using pip. 
+
+.. code:: bash
 	$ pip -r requirements.txt
 
 
 You must have **MongoDB** installed:
 
 * For Debian distribution install it from distribution adding to /etc/sources.list.::
+
+.. code:: bash
 	deb http://downloads-distro.mongodb.org/repo/debian-sysvinit dist 10gen
 	sudo apt-get install mongodb-10gen
 
 * For OSX distribution install it with brew.::	
+	
+.. code:: bash	
 	brew install mongodb
 	
 
@@ -58,10 +66,14 @@ Getting started
 
 Start crawl job 
 ----
-* Create a new project::	
+* Create a new project:
+
+.. code:: python	
 	python crawtext.py pesticides
 
-* Add a query:: 
+* Add a query: 
+
+.. code:: python	
 	python crawtext.py -q "pesticides AND DDT"
 
 Query support AND OR NOT * ? " operators.
@@ -72,30 +84,31 @@ Query support AND OR NOT * ? " operators.
 
 * Add new seeds (urls to begin the crawl):
 	* manually enter one url:
-::
 
-	python crawtext.py pesticides -s add www.lemonde.fr
+	.. code:: python	
+		python crawtext.py pesticides -s add www.lemonde.fr
+		
 	* OR/AND send a txt file with urls:
-::
 
+	.. code:: python	
 		python crawtext.py pesticides -s set seeds.txt
+		
 	* OR/AND programm a search to get results from BING:
-::
 
+.. code:: python	
 		python crawtext.py pesticides -k set "YOUR API KEY"     
 
-See how to get your BING API key here https://datamarket.azure.com/dataset/bing/search
+
+See how to get your _BING API key: https://datamarket.azure.com/dataset/bing/search
 
 * Launch immediately the crawl:
 
-::
-	
+.. code:: python	
 	python start pesticides
 
 * Program it to be run ever day (optionnal):
 
-::
-	
+.. code:: python	
 	python crawtext.py -r day
 
  options are : hour, day, week, month, year
