@@ -212,6 +212,7 @@ class Crawl(object):
 							article = page.extract("article")
 							if article.status is True:
 								if article.is_relevant(query):			
+									print article
 									self.db.results.insert(article.repr())
 									if article.outlinks is not None and len(article.outlinks) > 0:
 										self.db.queue.insert(article.outlinks)
