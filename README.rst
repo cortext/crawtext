@@ -21,33 +21,22 @@ Installation
 ------------
 
 
-To install crawtext, it is recommended to create a virtual env:
-
-::
-	
+To install crawtext, it is recommended to create a virtual env::
 	$ mkvirtualenv crawtext
-	
 	$ workon crawtext
 
 Then you can automatically install all the dependencies using pip 
-(all dependencies are available throught pip)
-	
+(all dependencies are available throught pip).::
 	$ pip -r requirements.txt
 
 
 You must have **MongoDB** installed:
 
-* For Debian distribution install it from distribution adding to /etc/sources.list
-::
-	
+* For Debian distribution install it from distribution adding to /etc/sources.list.::
 	deb http://downloads-distro.mongodb.org/repo/debian-sysvinit dist 10gen
-	
 	sudo apt-get install mongodb-10gen
 
-* For OSX distribution install it with brew:
-
-::
-	
+* For OSX distribution install it with brew.::	
 	brew install mongodb
 	
 
@@ -57,10 +46,7 @@ Getting help
 
 Crawtext is a simple module in command line to crawl the web given a query.
 This interface offers you a full set of option to set up a project.
-If you need any help on interacting with the shell command you can just type to see all the options:
-
-::
-
+If you need any help on interacting with the shell command you can just type to see all the options.::
 	python crawtext.py --help
 
 You can also ask for pull request here http://github.com/cortext/crawtext/, 
@@ -72,18 +58,17 @@ Getting started
 
 Start crawl job 
 ----
-* Create a new project:	
-::
-	
+* Create a new project::	
 	python crawtext.py pesticides
 
-* Add a query:
+* Add a query:: 
+	python crawtext.py -q "pesticides AND DDT"
 
 Query support AND OR NOT * ? " operators.
 
-::
 
-	python crawtext.py -q "pesticides AND DDT"
+
+	
 
 * Add new seeds (urls to begin the crawl):
 	* manually enter one url:
