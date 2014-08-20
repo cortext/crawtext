@@ -27,7 +27,7 @@ from utils import FileHelper
 from utils.encoding import smart_unicode
 from utils.encoding import smart_str
 from utils.encoding import DjangoUnicodeDecodeError
-
+from crawtext import CRAWTEXT_DIR
 
 
 TABSSPACE = re.compile(r'[\s\t]+')
@@ -103,7 +103,7 @@ class StopWords(object):
         self.STOP_WORDS = self._cached_stop_words[language]
 
     def remove_punctuation(self, content):
-        # code taken form
+        # code taken from
         # http://stackoverflow.com/questions/265960/best-way-to-strip-punctuation-from-a-string-in-python
         if isinstance(content, unicode):
             content = content.encode('utf-8')
