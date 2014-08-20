@@ -99,17 +99,18 @@ class Article(Extractor):
 			
 			#self.content = self.content.decode("utf-8")
 			self.links = extractor.get_links()
-			self.outlinks = extractor.get_outlinks()
+			self.outlinks = [{"url":url} for url in extractor.get_outlinks()]
 			try:
 				self.content = formatter.get_formatted_text()
 			except Exception as e:
 				self.content = bs(self.raw_html).text
+				print self.content[0:200]
 			#self.inlinks, self.inlinks_err = extractor.get_outlinks(self.links)
 			# TODO
 			# self.article.publish_date = self.extractor.get_pub_date(doc)
 			# self.article.additional_data = self.extractor.more(doc)
 			
-			return self.repr()
+			return self
 			
 		except Exception as e:
 			self.status = False
@@ -127,11 +128,10 @@ class Article(Extractor):
 		return {
 				"url": self.canonical_link,
 				"domain": self.domain,
-				"title": self.title,
+				"title": self.title.encode("utf-8"),
 				"content": self.content,
-				"description": self.meta_description,
-				"links": [self.links],
-				"outlinks": [self.outlinks],
+				"description": self.meta_description.encode("utf-8"),
+				"outlinks": self.outlinks,
 				"crawl_date": self.start_date,
 				"raw_html": self.raw_html,
 				}

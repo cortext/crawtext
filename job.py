@@ -202,8 +202,7 @@ class Crawl(object):
 			return False
 			
 		else:
-			self.status["msg"] = "running crawl on %i sources with query '%s'" %(len(self.db.sources.distinct("url")), self.query)
-				
+			self.status["msg"] = "running crawl on %i sources with query '%s'" %(len(self.db.sources.distinct("url")), self.query)				
 			while self.db.queue.count > 0:	
 				for url in self.db.queue.distinct("url"):
 					if url != "":
@@ -211,8 +210,8 @@ class Crawl(object):
 						if page.check() and page.request() and page.control():
 							article = page.extract("article")
 							if article.status is True:
+								
 								if article.is_relevant(query):			
-									print article
 									self.db.results.insert(article.repr())
 									if article.outlinks is not None and len(article.outlinks) > 0:
 										self.db.queue.insert(article.outlinks)

@@ -234,27 +234,30 @@ class ContentExtractor(object):
 		node = self.article.doc
 		if node is None:
 			node = self.parser(self.article.raw_html)
+			
 		select = CSSSelector("a")
-		links = [ el.get('href') for el in select(node)]
-		links = [n for n in self.links if n is not None or n != ""]
-		return links
+		
+		self.links = [ el.get('href') for el in select(node)]
+		self.links = [n for n in self.links if n is not None or n != ""]
+		return self.links
 		
 			
 	def get_outlinks(self):
-		links = self.get_links()
+		if self.links is None:
+			self.links = self.get_links()
 		outlink ={"scope": "outlinks"}
 		self.outlinks = []
-		if len(links) > 0:
-			for url in links:
-				print url
+		if len(self.links) > 0:
+			for url in self.links:
 				url = from_rel_to_absolute_url(url,self.url)
-				
 				outlink["status"], outlink["code"], outlink["msg"], outlink["url"] = check_url(url)
 				if outlink["status"] is True:
 					self.outlinks.append(outlink["url"])
 		#self.outlinks = set(self.outlinks)
 		#~ self.outlinks = [[{"url": url, "domain":self.get_domain(url)} ] for url in self.outlinks]
 			return self.outlinks
+		else:
+			return ['']
 		
 	def get_inlinks(self, links):
 		self.inlinks = []
