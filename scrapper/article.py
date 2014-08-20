@@ -76,16 +76,16 @@ class Article(Extractor):
 			#meta
 			self.meta_lang = extractor.get_meta_lang()
 			#self.meta_favicon = extractor.get_favicon()
-			#self.meta_description = extractor.get_meta_description()
-			#self.meta_description = self.meta_description.decode("utf-8")
-			#self.meta_keywords = extractor.get_meta_keywords()
+			self.meta_description = extractor.get_meta_description()
+			self.meta_description = self.meta_description.decode("utf-8")
+			self.meta_keywords = extractor.get_meta_keywords()
 			
 			#domain and url
 			self.canonical_link = extractor.get_canonical_link()
 			self.domain = extractor.get_domain()
 			#~ 
 			#~ #tag
-			#self.tags = extractor.extract_tags()
+			self.tags = extractor.extract_tags()
 			#~ #text
 			self.doc = cleaner.clean()
 			
