@@ -109,7 +109,7 @@ class Article(Extractor):
 			# self.article.publish_date = self.extractor.get_pub_date(doc)
 			# self.article.additional_data = self.extractor.more(doc)
 			
-			return self
+			return self.repr()
 			
 		except Exception as e:
 			self.status = False
