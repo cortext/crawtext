@@ -8,6 +8,7 @@ from formatters import StandardOutputFormatter
 from extractors import StandardContentExtractor
 import datetime
 from BeautifulSoup import BeautifulSoup as bs
+import nltk
 
 class Extractor(object):
 	'''Generic Extractor'''	
@@ -93,6 +94,7 @@ class Article(Extractor):
 			if self.top_node is not None:
 				# post cleanup
 				self.top_node = extractor.post_cleanup(self.top_node)
+				
 			# clean_text
 			#self.cleaned_text = formatter.get_formatted_text()
 			
@@ -102,9 +104,14 @@ class Article(Extractor):
 			self.outlinks = [{"url":url} for url in extractor.get_outlinks()]
 			try:
 				self.content = formatter.get_formatted_text()
+				
 			except Exception as e:
-				self.content = bs(self.raw_html).text
-				print self.content[0:200]
+				try:
+					self.content = bs(self.raw_html).getText()
+					self.content = nltk.clean_html(self.content)
+				except Exception as e:
+					print e
+					self.content  = re.sub(r'<.*?>', '', self.raw_html)
 			#self.inlinks, self.inlinks_err = extractor.get_outlinks(self.links)
 			# TODO
 			# self.article.publish_date = self.extractor.get_pub_date(doc)

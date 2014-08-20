@@ -3,6 +3,7 @@ from HTMLParser import HTMLParser
 from utils.text import innerTrim
 #from configuration import get_parser, stopwords_class
 from utils.text import StopWords
+
 class OutputFormatter(object):
 
     def __init__(self,article, stopwords_class="en"):
