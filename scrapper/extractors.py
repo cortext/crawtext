@@ -246,15 +246,16 @@ class ContentExtractor(object):
 		self.outlinks = []
 		if len(links) > 0:
 			for url in links:
-				print url
+				
 				url = from_rel_to_absolute_url(url,self.url)
 				
 				outlink["status"], outlink["code"], outlink["msg"], outlink["url"] = check_url(url)
 				if outlink["status"] is True:
+					
 					self.outlinks.append(outlink["url"])
 		#self.outlinks = set(self.outlinks)
 		#~ self.outlinks = [[{"url": url, "domain":self.get_domain(url)} ] for url in self.outlinks]
-			return self.outlinks
+			return list(set(self.outlinks))
 		
 	def get_inlinks(self, links):
 		self.inlinks = []
