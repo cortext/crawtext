@@ -252,56 +252,70 @@ class Archive(object):
 		return True
 
 class Export(object):
-	def __init__(self, name, coll_type = None, format = "json"):
+	def __init__(self, name, format = None,coll_type = None):
+		if format is None:
+			self.format = "json"
+		else:
+			self.format = format
+		
 		self.date = datetime.today()
+		
 		self.date = self.date.strftime('%d-%m-%Y')
+		
 		self.name = name
 		self.coll_type = coll_type 
-		self.format = format
-		self.sources = {"filename": "export_%s_sources.%s" %(self.name, self.date, self.format),
-						"format": self.format
-						"fields": 'url,origin,date.date'
-						"collection": "sources"
-						}
-		self.logs = {	"filename": "export_%s_logs_%s.%s" %(self.name, self.date, self.format), 
-						"format":self.format,
-						"fields": 'url,code,scope,status,msg'
-						"collection": "logs"
-					}
-		self.results = {"filename": "export_%s_results_%s.%s" %(self.name, self.date, self.format), 
-						"format":self.format,
-						"fields": 'url,domain,title,links,outlinks,crawl_date'
-						"collection": "results"
-						}	
+		self.dict_values = {}
+		self.dict_values["sources"] = {
+							"filename": "export_%s_sources_%s.%s" %(self.name, self.date, self.format),
+							"format": self.format,
+							"fields": 'url,origin,date.date',
+							}
+		self.dict_values["logs"] = {
+							"filename": "export_%s_logs_%s.%s" %(self.name, self.date, self.format), 
+							"format":self.format,
+							"fields": 'url,code,scope,status,msg',
+							}
+		self.dict_values["results"] = {
+							"filename": "export_%s_results_%s.%s" %(self.name, self.date, self.format), 
+							"format":self.format,
+							"fields": 'url,domain,title,content.content,outlinks.url,crawl_date',
+							}	
+		
 			
 	def export_all(self):
-		for n in ['sources', 'results', 'logs']:
-			dict_ values = self.getattr(self, n)
+		datasets = ['sources', 'results', 'logs']
+		for n in datasets:
+			dict_values = self.dict_values[str(n)]
 			if self.format == "csv":
-				c = "mongoexport -d %s -c %s --csv -f %s -o %s"%(self.name,n,dict_values['fields'] dict_values['filename'])			
+				c = "mongoexport -d %s -c %s --csv -f %s -o %s"%(self.name,n,dict_values['fields'], dict_values['filename'])			
 			else:
 				c = "mongoexport -d %s -c %s --jsonArray -o %s"%(self.name,n,dict_values['filename'])				
 			subprocess.call(c.split(" "), stdout=open(os.devnull, 'wb'))
-		return "Sucessfully exported 3 datasets of project %s" %self.name		
+			print "in %s" %dict_values['filename']
+		return "Sucessfully exported 3 datasets: %s of project %s" %(",".join(datasets), self.name)		
+	
 	def export_one(self):
-		try:
-			dict_ values = self.getattr(self, str(self.coll_type))
 		
+		if self.coll_type is None:
+			return "there is no dataset called %s in your project %s"%(self.coll_type, self.name)
+		try:
+			dict_values = self.dict_values[str(self.coll_type)]
 			if self.format == "csv":
-				c = "mongoexport -d %s -c %s --csv -f %s -o %s"%(self.name,self.coll_type,dict_values['fields'] dict_values['filename'])			
+				print "Exporting into csv"
+				c = "mongoexport -d %s -c %s --csv -f %s -o %s"%(self.name,self.coll_type,dict_values['fields'], dict_values['filename'])
 			else:
+				print "Exporting into json"
 				c = "mongoexport -d %s -c %s --jsonArray -o %s"%(self.name,self.coll_type,dict_values['filename'])				
 			subprocess.call(c.split(" "), stdout=open(os.devnull, 'wb'))
-			return "Sucessfully exported %s datasets of project %s" %self.coll_type, self.name		
-		except Exception as a:
-			print e.args
-			return "there is no dataset called %s in your project %s"%self.coll_type, self.name
+			return "Sucessfully exported %s dataset of project %s into %s" %(str(self.coll_type), str(self.name), str(dict_values['filename']))
+		except KeyError:
+			return "there is no dataset called %s in your project %s"%(self.coll_type, self.name)
 			
 	def run_job(self):
-		if self.coll_type is None:
-			return self.export_all()
-		else:
-			return self.export_one(self)
+		if self.coll_type is not None:
+			return self.export_one()
+		self.export_all()
+			
 					
 class Report(object):
 	def __init__(self, name):
