@@ -11,7 +11,7 @@ Usage:
 	crawtext.py <user>
 	crawtext.py <archive_url>
 	crawtext.py report <name> 
-	crawtext.py export <name> 
+	crawtext.py export <name> [ -f <format> ] [-c <coll_type>]
 	crawtext.py delete <name>
 	crawtext.py start <name>
 	crawtext.py stop <name>

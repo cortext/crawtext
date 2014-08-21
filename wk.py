@@ -21,8 +21,8 @@ class Worker(object):
 	OPTION_lIST	= ['add', 'set', 'append', 'delete', 'expand']
 	DATA_C_LIST = ['<url>', '<file>', '<query>', '<key>']
 	DATA_U_LIST = ['<user>', '<repeat>']
-	DATA_A_LIST = ['<format>']
-	
+	DATA_R_LIST = ['<format>', '<coll_type>']
+	DATA_A_LIST = ['<url>', '<format>']
 	
 	def __init__(self):
 		#defaut params
@@ -104,6 +104,13 @@ class Worker(object):
 					setattr(self, k, v)
 					self.value = k
 					self.action = "update_project"
+				elif v is not None and k in self.DATA_R_LIST:
+					k = re.sub("<|>", "", k)
+					setattr(self, k, v)
+					self.value = k
+					self.action = "export"
+					
+					
 				else:
 					continue
 			
@@ -377,11 +384,22 @@ class Worker(object):
 		return e.run_job()
 	
 	def export(self):
+		
 		self.select_task({"name":self.name, "action":"crawl"})
 		if self.task is None:
-			print "No active crawl job found for %s" %self.name
-		else:	
-			e = Export(self.name)
+			print "No active crawl job found for %s. Export can be executed" %self.name
+		else:
+			try:
+				format = self.format
+			except AttributeError:
+				format = None
+			try:
+				coll_type = self.coll_type
+			except AttributeError:
+				coll_type = None
+				
+			e = Export(self.name, format, coll_type)
+			
 			return e.run_job()
 		
 	def process(self, user_input):

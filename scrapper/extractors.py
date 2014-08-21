@@ -247,15 +247,22 @@ class ContentExtractor(object):
 			self.links = self.get_links()
 		outlink ={"scope": "outlinks"}
 		self.outlinks = []
+<<<<<<< HEAD
 		if len(self.links) > 0:
 			for url in self.links:
+=======
+		if len(links) > 0:
+			for url in links:
+				
+>>>>>>> exportcsv
 				url = from_rel_to_absolute_url(url,self.url)
 				outlink["status"], outlink["code"], outlink["msg"], outlink["url"] = check_url(url)
 				if outlink["status"] is True:
+					
 					self.outlinks.append(outlink["url"])
 		#self.outlinks = set(self.outlinks)
 		#~ self.outlinks = [[{"url": url, "domain":self.get_domain(url)} ] for url in self.outlinks]
-			return self.outlinks
+			return list(set(self.outlinks))
 		
 		
 	def get_inlinks(self, links):

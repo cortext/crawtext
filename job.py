@@ -212,6 +212,13 @@ class Crawl(object):
 							if article.status is True:
 								
 								if article.is_relevant(query):			
+<<<<<<< HEAD
+=======
+									#debug output
+									print article.__dict__
+									print article.outlinks
+									
+>>>>>>> exportcsv
 									self.db.results.insert(article.repr())
 									if article.outlinks is not None and len(article.outlinks) > 0:
 										self.db.queue.insert(article.outlinks)
@@ -248,35 +255,71 @@ class Archive(object):
 		return True
 
 class Export(object):
-	def __init__(self, name, coll_type = None):
-		self.date = datetime.now()
-		self.date = self.date.strftime('%d-%m-%Y__%H-%M')
+	def __init__(self, name, format = None,coll_type = None):
+		if format is None:
+			self.format = "json"
+		else:
+			self.format = format
+		
+		self.date = datetime.today()
+		
+		self.date = self.date.strftime('%d-%m-%Y')
+		
 		self.name = name
 		self.coll_type = coll_type 
-	
-	def run_job(self):
-		print "Exporting data from", self.name
-		if self.coll_type is None:			
-			for n in ['sources', 'results', 'logs']:
-				self.filename = "Export_%s_%s_%s.json" %(self.name, n, str(self.date))
-				c = "mongoexport -d %s -c %s -o %s"%(self.name,n, self.filename)	
-				print "- exporting %s" %(n)
-				subprocess.call(c.split(" "), stdout=open(os.devnull, 'wb'))
-				print "Sucessfully exported data project %s in json file" %self.name
-				zipf = re.split("\.",self.filename)[0] 
-				subprocess.call(['zip', zipf, self.filename])
-			#print "Exporting %s" %self.name
-			return True
-		else:
-			self.filename = "Export_%s_%s_%s.json" %(self.name, self.coll_type, str(self.date))
-			c = "mongoexport -d %s -c %s -o %s --jsonArray"%(self.name,self.coll_type, self.filename)	
-			print "-> exporting %s to %s" %(self.coll_type, self.filename)
-			subprocess.call(c.split(" "), stdout=open(os.devnull, 'wb'))
-			print "Sucessfully exported %s project %s in json file" %(self.coll_type, self.name)
-			zipf = re.split("\.",self.filename)[0] 
-			subprocess.call(['zip', zipf, self.filename])
-			return True
+		self.dict_values = {}
+		self.dict_values["sources"] = {
+							"filename": "export_%s_sources_%s.%s" %(self.name, self.date, self.format),
+							"format": self.format,
+							"fields": 'url,origin,date.date',
+							}
+		self.dict_values["logs"] = {
+							"filename": "export_%s_logs_%s.%s" %(self.name, self.date, self.format), 
+							"format":self.format,
+							"fields": 'url,code,scope,status,msg',
+							}
+		self.dict_values["results"] = {
+							"filename": "export_%s_results_%s.%s" %(self.name, self.date, self.format), 
+							"format":self.format,
+							"fields": 'url,domain,title,content.content,outlinks.url,crawl_date',
+							}	
 		
+			
+	def export_all(self):
+		datasets = ['sources', 'results', 'logs']
+		for n in datasets:
+			dict_values = self.dict_values[str(n)]
+			if self.format == "csv":
+				c = "mongoexport -d %s -c %s --csv -f %s -o %s"%(self.name,n,dict_values['fields'], dict_values['filename'])			
+			else:
+				c = "mongoexport -d %s -c %s --jsonArray -o %s"%(self.name,n,dict_values['filename'])				
+			subprocess.call(c.split(" "), stdout=open(os.devnull, 'wb'))
+			print "in %s" %dict_values['filename']
+		return "Sucessfully exported 3 datasets: %s of project %s" %(",".join(datasets), self.name)		
+	
+	def export_one(self):
+		
+		if self.coll_type is None:
+			return "there is no dataset called %s in your project %s"%(self.coll_type, self.name)
+		try:
+			dict_values = self.dict_values[str(self.coll_type)]
+			if self.format == "csv":
+				print "Exporting into csv"
+				c = "mongoexport -d %s -c %s --csv -f %s -o %s"%(self.name,self.coll_type,dict_values['fields'], dict_values['filename'])
+			else:
+				print "Exporting into json"
+				c = "mongoexport -d %s -c %s --jsonArray -o %s"%(self.name,self.coll_type,dict_values['filename'])				
+			subprocess.call(c.split(" "), stdout=open(os.devnull, 'wb'))
+			return "Sucessfully exported %s dataset of project %s into %s" %(str(self.coll_type), str(self.name), str(dict_values['filename']))
+		except KeyError:
+			return "there is no dataset called %s in your project %s"%(self.coll_type, self.name)
+			
+	def run_job(self):
+		if self.coll_type is not None:
+			return self.export_one()
+		self.export_all()
+			
+					
 class Report(object):
 	def __init__(self, name):
 		self.date = datetime.now()
