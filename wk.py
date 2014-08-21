@@ -211,6 +211,7 @@ class Worker(object):
 				
 	def update_sources(self):
 		self.Msg = "udpated"
+		self.select_task({"name": self.name, "action": "crawl"})
 		c = Crawl(self.name)
 		#delete 
 		if self.option == "delete":
@@ -224,6 +225,7 @@ class Worker(object):
 		
 		#expand
 		elif self.option == "expand":
+			
 			self.COLL.update({"_id":self.task["_id"]},{"$set":{"option": self.option}})
 			print "Successfully added option expand for crawl project %s"% self.name
 			c.expand()
