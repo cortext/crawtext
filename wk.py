@@ -210,9 +210,10 @@ class Worker(object):
 				return self.update_sources()	
 				
 	def update_sources(self):
-		self.Msg = "udpated"
+		self.msg = "udpated"
 		self.select_task({"name": self.name, "action": "crawl"})
 		c = Crawl(self.name)
+		self.status = {"status":"", "msg":"", "code", "scope":"update sources"}
 		#delete 
 		if self.option == "delete":
 			#all
@@ -226,10 +227,11 @@ class Worker(object):
 		#expand
 		elif self.option == "expand":
 			
-			self.COLL.update({"_id":self.task["_id"]},{"$set":{"option": self.option}})
-			print "Successfully added option expand for crawl project %s"% self.name
-			c.expand()
-			return c.status["msg"]
+			self.COLL.update({"_id":self.task["_id"]},{"$set":{"option": self.option}}) 
+			if c.expand() is False:
+				return c.status["msg"]
+			else:
+				return "Successfully added option expand for crawl project %s"% self.name
 		elif self.option == "add":
 			url = check_url(self.url)[-1]
 			c.insert_url(url,"manual")
