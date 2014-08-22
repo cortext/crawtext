@@ -1,5 +1,4 @@
-.. image:: http://www.cortext.net/IMG/siteon0.png?1300195437
-        :target: http://www.cortext.net
+![http://www.cortext.net](http://www.cortext.net/IMG/siteon0.png?1300195437)
 
 Crawtext
 ===============================================
