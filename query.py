@@ -5,6 +5,7 @@ from whoosh.index import create_in
 from whoosh.fields import *
 from whoosh.qparser import QueryParser
 from whoosh.qparser import MultifieldParser
+import os
 
 class Query(object):
 	def __init__(self, query):
