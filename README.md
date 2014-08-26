@@ -93,15 +93,15 @@ Crawl job
 	
 * Add new seeds (urls to begin the crawl):
 	
-	* manually enter one url:
+- manually enter one url:
 		
 ```python crawtext.py pesticides -s add www.lemonde.fr```
 		
-	* send a txt file with urls:
+- send a txt file with urls:
 	
 ```python crawtext.py pesticides -s set seeds.txt```
 		
-	* programm a search to get results from BING:
+- programm a search to get results from BING:
 	
 ```python crawtext.py pesticides -k set "YOUR API KEY"```
 	
