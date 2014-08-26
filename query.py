@@ -8,6 +8,8 @@ from whoosh.qparser import MultifieldParser
 
 class Query(object):
 	def __init__(self, query):
+		if not os.path.exists("index"):
+			os.makedirs("index")
 		schema = Schema(title=TEXT(stored=True), content=TEXT(stored=True))
 		self.ix = create_in("index", schema)
 		self.q = query
