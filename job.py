@@ -14,7 +14,6 @@ import sys
 from multiprocessing import Pool
 import subprocess
 from utils.url import *
-import zipfile
 from query import Query
 		
 			 
@@ -205,12 +204,14 @@ class Crawl(object):
 			self.status["msg"] = "running crawl on %i sources with query '%s'" %(len(self.db.sources.distinct("url")), self.query)				
 			while self.db.queue.count > 0:	
 				for url in self.db.queue.distinct("url"):
+					if self.db.results.count() => 10.000:
+						self.db.queue.drop()
+						
 					if url != "":
 						page = Page(url)
 						if page.check() and page.request() and page.control():
 							article = page.extract("article")
 							if article.status is True:
-								
 								if article.is_relevant(query):			
 									self.db.results.insert(article.repr())
 									if article.outlinks is not None and len(article.outlinks) > 0:
@@ -234,7 +235,9 @@ class Crawl(object):
 			return True
 	
 	def stop(self):		
-		print self.db.drop_collection("queue")	
+		self.db.drop_collection("queue")	
+		r = Report(self.name)
+		r.run_job()
 		return "Current crawl job %s stopped." %self.name	
 				
 class Archive(object):
@@ -248,7 +251,7 @@ class Archive(object):
 		return True
 
 class Export(object):
-	def __init__(self, name, format = None,coll_type = None):
+	def __init__(self, name, format = None, coll_type = None):
 		if format is None:
 			self.format = "json"
 		else:
@@ -280,22 +283,27 @@ class Export(object):
 			
 	def export_all(self):
 		datasets = ['sources', 'results', 'logs']
+		filenames = []
 		for n in datasets:
 			dict_values = self.dict_values[str(n)]
 			if self.format == "csv":
 				print "- dataset '%s' in csv:" %n
-				c = "mongoexport -d %s -c %s --csv -f %s -o %s"%(self.name,n,dict_values['fields'], dict_values['filename'])			
+				c = "mongoexport -d %s -c %s --csv -f %s -o %s"%(self.name,n,dict_values['fields'], dict_values['filename'])	
+				filenames.append(dict_values['filename'])		
 			else:
 				print "- dataset '%s' in json:" %n
 				c = "mongoexport -d %s -c %s --jsonArray -o %s"%(self.name,n,dict_values['filename'])				
+				filenames.append(dict_values['filename'])
 			subprocess.call(c.split(" "), stdout=open(os.devnull, 'wb'))
 			#moving into report/name_of_the_project
+			
 			subprocess.call(["mv",dict_values['filename'], self.directory], stdout=open(os.devnull, 'wb'))
 			print "into file: '%s'" %dict_values['filename']
+		ziper = "zip %s %s_%s.zip" %(" ".join(filenames), self.name, self.date)
+		subprocess.call(ziper.split(" "), stdout=open(os.devnull, 'wb'))
 		return "\nSucessfully exported 3 datasets: %s of project %s into directory %s/" %(", ".join(datasets), self.name, self.directory)		
 	
 	def export_one(self):
-		
 		if self.coll_type is None:
 			return "there is no dataset called %s in your project %s"%(self.coll_type, self.name)
 		try:
@@ -315,7 +323,7 @@ class Export(object):
 			
 	def run_job(self):
 		name = re.sub("[^0-9a-zA-Z]","_", self.name)
-		self.directory = "results/%s" %name
+		self.directory = "%s/results/" %name
 		if not os.path.exists(self.directory):
 			os.makedirs(self.directory)
 		if self.coll_type is not None:
@@ -325,21 +333,31 @@ class Export(object):
 			
 					
 class Report(object):
-	def __init__(self, name):
+	def __init__(self, name, format="txt"):
 		self.date = datetime.now()
 		self.name = name
 		self.db = Database(self.name)
 		self.date = self.date.strftime('%d-%m-%Y_%H-%M')
-	def run_job(self):
+		self.format = format
+	
+	def txt_report(self):
 		name = re.sub("[^0-9a-zA-Z]","_", self.name)
-		self.directory = "report/%s" %name
+		self.directory = "%s/reports" %name
 		if not os.path.exists(self.directory):
 			os.makedirs(self.directory)
-		self.date
 		filename = "%s/Report_%s_%s.txt" %(self.directory, self.name, self.date)
 		with open(filename, 'a') as f:
 			f.write((self.db.stats()).encode('utf-8'))
 		print "Successfully generated report for %s\nReport name is: %s" %(self.name, filename)
 		return True
-		
+	
+	def html_report(self):
+		pass
+				
+	def run_job(self):
+		if self.format == "txt":
+			return self.txt_report()
+		elif self.format == "html":
+			raise NotImplemented
+			
 
