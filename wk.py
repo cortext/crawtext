@@ -353,8 +353,7 @@ class Worker(object):
 			return self.next_run
 			
 	def start(self):
-		
-		print self.select_tasks({"name":self.name})
+		self.select_tasks({"name":self.name})
 		if self.task is None:
 			return "No active crawl job found for %s" %self.name
 		else:
@@ -372,11 +371,12 @@ class Worker(object):
 			return True
 	
 	def stop(self):
-		self.select_task({"name":self.name, "action":"crawl"})
+		self.select_task({"name":self.name})
+		print self.task
 		if self.task is None:
 			return "No active crawl job found for %s" %self.name
 		else:
-			e = Crawl(self.task)
+			e = Crawl(self.name)
 			return e.stop()		
 			
 	def report(self):

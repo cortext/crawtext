@@ -204,7 +204,7 @@ class Crawl(object):
 			self.status["msg"] = "running crawl on %i sources with query '%s'" %(len(self.db.sources.distinct("url")), self.query)				
 			while self.db.queue.count > 0:	
 				for url in self.db.queue.distinct("url"):
-					if self.db.results.count() => 10.000:
+					if self.db.results.count() >= 10.000:
 						self.db.queue.drop()
 						
 					if url != "":
@@ -235,7 +235,7 @@ class Crawl(object):
 			return True
 	
 	def stop(self):		
-		self.db.drop_collection("queue")	
+		self.db.queue.drop()	
 		r = Report(self.name)
 		r.run_job()
 		return "Current crawl job %s stopped." %self.name	
@@ -301,7 +301,7 @@ class Export(object):
 			print "into file: '%s'" %dict_values['filename']
 		ziper = "zip %s %s_%s.zip" %(" ".join(filenames), self.name, self.date)
 		subprocess.call(ziper.split(" "), stdout=open(os.devnull, 'wb'))
-		return "\nSucessfully exported 3 datasets: %s of project %s into directory %s/" %(", ".join(datasets), self.name, self.directory)		
+		return "\nSucessfully exported 3 datasets: %s of project %s into directory %s" %(", ".join(datasets), self.name, self.directory)		
 	
 	def export_one(self):
 		if self.coll_type is None:
