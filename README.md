@@ -189,70 +189,70 @@ Delete the entire project. An export is automatically done when the project is d
 Manage a projet
 ====
 
-	* Consult un project : 			
+*  Consult un project : 			
 
 ``` 
 crawtext.py pesticides
 ```
 
 
-	* Consult an archive :			
+*  Consult an archive :			
 
 ```
 crawtext.py http://www.lemonde.fr
 ```
 
 
-	* Consult your projects :		
+*  Consult your projects :		
 	
 ```
 crawtext.py vous@cortext.net
 ```
 
 	
-	* Get  a report : 				
+*  Get  a report : 				
 
 ``` 
 crawtext.py report pesticides
 ```
 
 
-	* Get an export : 				
+*  Get an export : 				
 
 ``` 
 crawtext.py export pesticides
 ```
 
 
-	* Delete a projet : 				
+*  Delete a projet : 				
 
 ``` 
 crawtext.py delete pesticides
 ```
 
 	
-	* Run a project :
+*  Run a project :
 
 ``` 
 crawtext.py start pesticides
 ```
 
 
-	* Stop the current execution of a project :				
+*  Stop the current execution of a project :				
 
 ``` 
 crawtext.py stop pesticides
 ```
 
 
-	* Repeat the project :
+*  Repeat the project :
 
 ``` 
 crawtext.py pesticides -r (year|month|week|day)
 ```
 
 
-	* Define user of the project :	
+*  Define user of the project :	
 
 ```
 crawtext pesticides -u vous@cortext.net
