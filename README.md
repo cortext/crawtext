@@ -173,54 +173,45 @@ Delete the entire project. An export is automatically done when the project is d
 Manage a projet
 ====
 
-* Consult un project : 			
+	* Consult un project : 			
 
+	```crawtext.py pesticides```
 
-```crawtext.py pesticides```
+	* Consult an archive :			
 
-* Consult an archive :			
+	```crawtext.py http://www.lemonde.fr```
 
-
-```crawtext.py http://www.lemonde.fr```
-
-* Consult your projects :		
+	* Consult your projects :		
 	
-
-```crawtext.py vous@cortext.net```
+	```crawtext.py vous@cortext.net```
 	
-* Get  a report : 				
+	* Get  a report : 				
 
+	```crawtext.py report pesticides```
 
-```crawtext.py report pesticides```
+	* Get an export : 				
 
-* Get an export : 				
+	```crawtext.py export pesticides```
 
+	* Delete a projet : 				
 
-```crawtext.py export pesticides```
-
-* Delete a projet : 				
-
-
-```crawtext.py delete pesticides```
+	```crawtext.py delete pesticides```
 	
-* Run a project :
+	* Run a project :
 
+	```crawtext.py start pesticides```
 
-```crawtext.py start pesticides```
+	* Stop the current execution of a project :				
 
-* Stop the current execution of a project :				
+	```crawtext.py stop pesticides```
 
+	* Repeat the project :
 
-```crawtext.py stop pesticides```
+	```crawtext.py pesticides -r (year|month|week|day)```
 
-* Repeat the project :
+	* Define user of the project :	
 
-
-```crawtext.py pesticides -r (year|month|week|day)```
-
-* Define user of the project :	
-
-```crawtext pesticides -u vous@cortext.net```
+	```crawtext pesticides -u vous@cortext.net```
 
 
 Crawl advanced  parameters
@@ -241,46 +232,46 @@ There are several ways to add seeds:
 
 To define a query: (Query supports AND OR NOT * ? operators)
 
-```crawtext pesticides pesticides -q "pesticide? AND DDT"```
+	```crawtext pesticides pesticides -q "pesticide? AND DDT"```
 
 
 * Sources
 ----
-# define sources from file :					
+* define sources from file :					
 
-```crawtext.py pesticides -s set sources.txt```	
+	```crawtext.py pesticides -s set sources.txt```	
 
 
-# add sources from file :						
+* add sources from file :						
 	
-```crawtext.py pesticides -s append sources.txt```
+	```crawtext.py pesticides -s append sources.txt```
 
 
-# add sources from url : 						
+* add sources from url : 						
 	
-```crawtext.py pesticides -s add http://www.latribune.fr```
+	```crawtext.py pesticides -s add http://www.latribune.fr```
 
-# define sources from Bing search results :		
+* define sources from Bing search results :		
 	
-```crawtext.py pesticides -k set 12237675647```
+	```crawtext.py pesticides -k set 12237675647```
 
 
-# add sources from Bing search results :		
+* add sources from Bing search results :		
 	
-```crawtext.py pesticides -k append 12237675647```
+	```crawtext.py pesticides -k append 12237675647```
 
 
-# expand sources set with previous results :	
+* expand sources set with previous results :	
 	
 ```crawtext.py pesticides -s expand```
 
 
-# delete a seed :								
+* delete a seed :								
 	
 ```crawtext.py pesticides -s delete http://www.latribune.fr```
 
 
-# delete every seeds of the job:
+* delete every seeds of the job:
 
 ```crawtext.py pesticides -s delete```
 
@@ -290,11 +281,11 @@ Archive parameters (Not implemented yet):
 
 An archive job need an url, you can also specify the format extraction (optionnal)
 
-# consult or create a new archive project : 	
+* consult or create a new archive project : 	
 
 ```crawtext.py www.lemonde.fr```
 
-# create an archive for wiki : 
+* create an archive for wiki : 
 
 ```crawtext.py archive fr.wikipedia.org -f wiki```
 
@@ -325,8 +316,8 @@ The complete structure of the datasets can be found in
 
 Bug report
 -----
-# 1 outlinks empty [DONE]
-# 2 expand mode error [DONE]
+* 1 outlinks empty [DONE]
+* 2 expand mode error [DONE]
 
 Features
 -----
