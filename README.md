@@ -95,15 +95,15 @@ Crawl job
 	
 	* manually enter one url:
 		
-	```python crawtext.py pesticides -s add www.lemonde.fr```
+```python crawtext.py pesticides -s add www.lemonde.fr```
 		
 	* send a txt file with urls:
 	
-	```python crawtext.py pesticides -s set seeds.txt```
+```python crawtext.py pesticides -s set seeds.txt```
 		
 	* programm a search to get results from BING:
 	
-	```python crawtext.py pesticides -k set "YOUR API KEY"```
+```python crawtext.py pesticides -k set "YOUR API KEY"```
 	
 	
 See how to get your BING API key here https://datamarket.azure.com/dataset/bing/search
@@ -175,43 +175,43 @@ Manage a projet
 
 	* Consult un project : 			
 
-	```crawtext.py pesticides```
+```crawtext.py pesticides```
 
 	* Consult an archive :			
 
-	```crawtext.py http://www.lemonde.fr```
+```crawtext.py http://www.lemonde.fr```
 
 	* Consult your projects :		
 	
-	```crawtext.py vous@cortext.net```
+```crawtext.py vous@cortext.net```
 	
 	* Get  a report : 				
 
-	```crawtext.py report pesticides```
+```crawtext.py report pesticides```
 
 	* Get an export : 				
 
-	```crawtext.py export pesticides```
+```crawtext.py export pesticides```
 
 	* Delete a projet : 				
 
-	```crawtext.py delete pesticides```
+```crawtext.py delete pesticides```
 	
 	* Run a project :
 
-	```crawtext.py start pesticides```
+```crawtext.py start pesticides```
 
 	* Stop the current execution of a project :				
 
-	```crawtext.py stop pesticides```
+```crawtext.py stop pesticides```
 
 	* Repeat the project :
 
-	```crawtext.py pesticides -r (year|month|week|day)```
+```crawtext.py pesticides -r (year|month|week|day)```
 
 	* Define user of the project :	
 
-	```crawtext pesticides -u vous@cortext.net```
+```crawtext pesticides -u vous@cortext.net```
 
 
 Crawl advanced  parameters
@@ -232,33 +232,33 @@ There are several ways to add seeds:
 
 To define a query: (Query supports AND OR NOT * ? operators)
 
-	```crawtext pesticides pesticides -q "pesticide? AND DDT"```
+```crawtext pesticides pesticides -q "pesticide? AND DDT"```
 
 
 * Sources
 ----
 * define sources from file :					
 
-	```crawtext.py pesticides -s set sources.txt```	
+```crawtext.py pesticides -s set sources.txt```	
 
 
 * add sources from file :						
 	
-	```crawtext.py pesticides -s append sources.txt```
+```crawtext.py pesticides -s append sources.txt```
 
 
 * add sources from url : 						
 	
-	```crawtext.py pesticides -s add http://www.latribune.fr```
+```crawtext.py pesticides -s add http://www.latribune.fr```
 
 * define sources from Bing search results :		
 	
-	```crawtext.py pesticides -k set 12237675647```
+```crawtext.py pesticides -k set 12237675647```
 
 
 * add sources from Bing search results :		
 	
-	```crawtext.py pesticides -k append 12237675647```
+```crawtext.py pesticides -k append 12237675647```
 
 
 * expand sources set with previous results :	
