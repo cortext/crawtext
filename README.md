@@ -96,20 +96,20 @@ Getting started
 
 Crawl job 
 -----
-1. Create a new project:	
+* Create a new project:	
 	
 ```
 python crawtext.py pesticides
 ```
 
 
-2. Add a query:
+* Add a query:
 ```
 python crawtext.py pesticides -q "pesticides AND DDT"
 ```
 (Query support AND OR NOT * ? " operators)
 	
-3. Add new seeds (urls to begin the crawl) by using the erach engine option:
+* Add new seeds (urls to begin the crawl) by using the erach engine option:
 (more options are available to add urls)
 
 ```
@@ -118,28 +118,28 @@ python crawtext.py pesticides -k set "YOUR API KEY"
 
 See how to get your ![BING API key](https://datamarket.azure.com/dataset/bing/search)
 
-4. Launch the crawl:
+* Launch the crawl:
 	
 ``` 
 python crawtext.py pesticides start
 ```
 
 The crawl is limited to 20.000 results	
-4. See how it's running:
+* See how it's running:
 
 ``` 
 python crawtetx.py pesticides report
 ```
 
 
-4. Export results:
-* into a csv:
+* Export results:
+-into a csv:
 		
 ```
 python crawtext.py pesticides export -f csv```
 
 		
-* or into a json:
+- or into a json:
 	
 ``` 
 python crawtext.py pesticides export
