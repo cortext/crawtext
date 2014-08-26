@@ -34,14 +34,12 @@ Installation
 To install crawtext, it is recommended to create a virtual env:
 	
 ```
-$ mkvirtualenv crawtext```
-
-	
+$ mkvirtualenv crawtext
+$ workon crawtext
 ```
-$ workon crawtext```
-
 
 Then clone the repository:
+
 ```
 $ git clone git@github.com:cortext/crawtextV2.git
 $ cd crawtextV2
@@ -115,20 +113,21 @@ python crawtext.py pesticides -q "pesticides AND DDT"
 (more options are available to add urls)
 
 ```
-python crawtext.py pesticides -k set "YOUR API KEY"```
+python crawtext.py pesticides -k set "YOUR API KEY"
+```
 
 See how to get your ![BING API key](https://datamarket.azure.com/dataset/bing/search)
 
 4. Launch the crawl:
 	
-	```
+``` 
 python crawtext.py pesticides start
 ```
 
 The crawl is limited to 20.000 results	
 4. See how it's running:
 
-	```
+``` 
 python crawtetx.py pesticides report
 ```
 
@@ -142,7 +141,7 @@ python crawtext.py pesticides export -f csv```
 		
 * or into a json:
 	
-	```
+``` 
 python crawtext.py pesticides export
 ```
 
@@ -190,7 +189,7 @@ Manage a projet
 
 	* Consult un project : 			
 
-	```
+``` 
 crawtext.py pesticides
 ```
 
@@ -211,42 +210,42 @@ crawtext.py vous@cortext.net
 	
 	* Get  a report : 				
 
-	```
+``` 
 crawtext.py report pesticides
 ```
 
 
 	* Get an export : 				
 
-	```
+``` 
 crawtext.py export pesticides
 ```
 
 
 	* Delete a projet : 				
 
-	```
+``` 
 crawtext.py delete pesticides
 ```
 
 	
 	* Run a project :
 
-	```
+``` 
 crawtext.py start pesticides
 ```
 
 
 	* Stop the current execution of a project :				
 
-	```
+``` 
 crawtext.py stop pesticides
 ```
 
 
 	* Repeat the project :
 
-	```
+``` 
 crawtext.py pesticides -r (year|month|week|day)
 ```
 
