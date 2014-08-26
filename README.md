@@ -109,14 +109,16 @@ python crawtext.py pesticides -q "pesticides AND DDT"
 ```
 (Query support AND OR NOT * ? " operators)
 	
-* Add new seeds (urls to begin the crawl) by using the erach engine option:
-(more options are available to add urls)
+* Add new seeds by using the search engine option:
+
 
 ```
 python crawtext.py pesticides -k set "YOUR API KEY"
 ```
 
 See how to get your ![BING API key](https://datamarket.azure.com/dataset/bing/search)
+More option are available to add urls see Advanced  parameters for crawl
+
 
 * Launch the crawl:
 	
