@@ -142,7 +142,7 @@ class Crawl(object):
 			return "url %s was not in sources. Check url format" %url
 					
 	def delete(self):
-		e = ExportJob(self.name, "sources")
+		e = Export(self.name, "sources")
 		print e.run()
 		print self.db.sources.drop()
 		return 'Every single seed has been deleted from crawl job of project %s.'%self.name		
@@ -292,7 +292,7 @@ class Export(object):
 				filenames.append(dict_values['filename'])		
 			else:
 				print "- dataset '%s' in json:" %n
-				c = "mongoexport -d %s -c %s --jsonArray -o %s"%(self.name,n,dict_values['filename'])				
+				c = "mongoexport -d %s -c %s -o %s"%(self.name,n,dict_values['filename'])				
 				filenames.append(dict_values['filename'])
 			subprocess.call(c.split(" "), stdout=open(os.devnull, 'wb'))
 			#moving into report/name_of_the_project
