@@ -179,7 +179,7 @@ Export in json/csv format results, sources and logs of the project. Datasets are
 
 Give stats on the current process and results stored in the database. Reports are stored in report/name_of_your_project
 
--**Delete**:
+- **Delete**:
 
 Delete the entire project. An export is automatically done when the project is deleted.
  
