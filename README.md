@@ -1,24 +1,30 @@
+![eminux](icon_small.png)
 ![http://www.cortext.net](http://www.cortext.net/IMG/siteon0.png?1300195437)
-![http://www.cortext.net](icon.png)
 
-Crawtext
+
+Eminux
 ===============================================
-Crawtext is one example of the tools at your disposal on the **Cortext manager** plateform.
+Eminus is an independant prooject developpedalong to the **Cortext manager** plateform.
 Get a free account and discover the tools you can use for your own research by registering at
-http://manager.cortext.net/
+![Cortext](http://manager.cortext.net/)
 
-Crawtext is a tiny crawler in commandline that let you investigate the web with a specific query and collect results 
+**Eminux** is a tiny crawler in commandline that let you investigate and collect the ressources of the web that match the special keywords 
 
-How does a crawler works?
+How does a crawler work?
 ---------
+
 The crawler needs:
 * a **query** to select pertinent pages 
 and 
 * **seeds** i.e urls to start collecting data. 
 
-Whenever the page match the query 
-the robot will collect the article and will investigate the query 
-in the next pages using the links found in this page and so on and so force untill he gets no more pertinents pages.
+Given a list of url
+1. the robot will collect the article  for each url
+2. It will search for the keywords inside the text extracted from the article. 
+=> If the keywords are present in the page 
+3. The links inside the page will be added to the next lists to be treated
+
+
 
 
 Installation
@@ -27,9 +33,15 @@ Installation
 
 To install crawtext, it is recommended to create a virtual env:
 	
-`$mkvirtualenv crawtext`
+`$ mkvirtualenv crawtext`
 	
 `$ workon crawtext`
+
+Then clone the repository:
+
+'$ git clone git@github.com:cortext/crawtextV2.git
+
+'$ cd crawtextV2'
 
 Then you can automatically install all the dependencies using pip 
 (all dependencies are available throught pip)
@@ -41,10 +53,13 @@ You *must* have MongoDB installed:
 
 To install it
 * For Debian distribution install it from distribution adding to /etc/sources.list
+
 `$ deb http://downloads-distro.mongodb.org/repo/debian-sysvinit dist 10gen`
+
 `$ sudo apt-get install mongodb-10gen`
 
 * For OSX distribution install it with brew:
+
 `$ brew install mongodb`
 	
 
@@ -58,8 +73,8 @@ If you need any help on interacting with the shell command you can just type to 
 
 `python crawtext.py --help`
 
-You can also ask for pull request here http://github.com/cortext/crawtext/, 
-we will be happy to answer to any configuration problem or desired featured.
+You can also ask for pull request here http://github.com/cortext/crawtextV2/, 
+we will be happy to answer to any configuration problem or desired features.
 
 
 Getting started
@@ -72,11 +87,10 @@ Crawl job
 `python crawtext.py pesticides`
 
 * Add a query:
+`python crawtext.py pesticides -q "pesticides AND DDT"`
 
 (Query support AND OR NOT * ? " operators)
 	
-`python crawtext.py -q "pesticides AND DDT"`
-
 * Add new seeds (urls to begin the crawl):
 	
 	* manually enter one url:
@@ -96,59 +110,32 @@ See how to get your BING API key here https://datamarket.azure.com/dataset/bing/
 
 * Launch immediately the crawl:
 	
-`python start pesticides`
+`python pesticides start`
 	
 * program it to be run ever day (optionnal):
 	
-`python crawtext.py -r day`
+`python crawtext.py pesticides -r day`
 
 options are : hour, day, week, month, year 
 defaut is set to month
 
 * Export datasets:
-	* into a csv
-(Be carefull openning the csv doesn't handle the content of the page due to limitations)
+	- into a csv:
+(Be carefull openning the csv doesn't handle the content of the page due to caracters limitation for cell)
 		
-`python crawtext.py -f csv`
+`python crawtext.py pesticides export -f csv`
 		
-	*into a json
+	- into a json:
 	
-`python crawtext.py -f json`
+`python crawtext.py pesticides -f json`
 	
-	* export a specific dataset
-	
-`python crawtext.py -f csv -c sources`
-
-They are stored in results/name_of_the_project
+	- export a specific dataset
 		
-Archive job
------
-* Create a new project:	
-	
-`python crawtext.py www.lemonde.fr`
+`python crawtext.py pesticides -f csv -c sources`
 
-* Lauch the job
-	
-`python crawtext.py start www.lemonde.fr`
-	
-> More options:
-----
-* Declare ownership on the project (optionnal):
-	
-`python crawtext.py -u me@cortext.fr`
 
-* To see the all bunch of options:
-	
-`python crawtxt.py --help`
-
-Archive are shared to every user
-
-	
-
- 
-
-Complete usage 
----------
+Advanced usage 
+====
 A project is define by its name, the results are stored in a mongo database with this given name.
 
 A project is a set of jobs:
@@ -183,42 +170,51 @@ Give stats on the current process and results stored in the database. Reports ar
 Delete the entire project. An export is automatically done when the project is deleted.
  
  
-* Manage a projet
-----
+Manage a projet
+====
 
 * Consult un project : 			
+
 
 `crawtext.py pesticides`
 
 * Consult an archive :			
 
+
 `crawtext.py http://www.lemonde.fr`
 
 * Consult your projects :		
 	
+
 `crawtext.py vous@cortext.net`
 	
 * Get  a report : 				
+
 
 `crawtext.py report pesticides`
 
 * Get an export : 				
 
+
 `crawtext.py export pesticides`
 
 * Delete a projet : 				
+
 
 `crawtext.py delete pesticides`
 	
 * Run a project :
 
+
 `crawtext.py start pesticides`
 
 * Stop the current execution of a project :				
 
+
 `crawtext.py stop pesticides`
 
 * Repeat the project :
+
 
 `crawtext.py pesticides -r (year|month|week|day)`
 
@@ -227,8 +223,8 @@ Delete the entire project. An export is automatically done when the project is d
 `crawtext pesticides -u vous@cortext.net`
 
 
-* Crawl  parameters
-----
+Crawl advanced  parameters
+====
 
 A crawl needs 2 parameters to be active:
 - a **query**
@@ -245,7 +241,7 @@ There are several ways to add seeds:
 
 To define a query: (Query supports AND OR NOT * ? operators)
 
-`crawtext pesticides -q "pesticide? AND DDT"`
+`crawtext pesticides pesticides -q "pesticide? AND DDT"`
 
 
 * Sources
@@ -289,25 +285,21 @@ To define a query: (Query supports AND OR NOT * ? operators)
 `crawtext.py pesticides -s delete`
 
 
-* Archive parameters (Not implemented yet):
+Archive parameters (Not implemented yet):
 ----
 
 An archive job need an url, you can also specify the format extraction (optionnal)
 
-# consult archive project : 	
+# consult or create a new archive project : 	
 
 `crawtext.py www.lemonde.fr`
-
-# create an archive: 
-
-`crawtext.py archive www.lemonde.fr`
 
 # create an archive for wiki : 
 
 `crawtext.py archive fr.wikipedia.org -f wiki`
 
 Results
--------
+====
 
 The results are stored in a mongo database called by the name of your project
 You can export results using export option:
@@ -321,9 +313,9 @@ Datasets are stored in json and zip in 3 collections in special directory ''resu
 
 Crawtext provide a simple method to export it:
 
-`python crawtext.py export pesticides`
+`python crawtext.py pesticides export`
 	
-And options for format and collections
+And also options for format and collections
 
 The complete structure of the datasets can be found in 
 - sources_example.json
@@ -351,12 +343,12 @@ Next steps
 Sources
 ------
 
-You can see the code `here <https://github.com/c24b/clean_crawtext>`_
+You can see the code ![here] (https://github.com/c24b/crawtextV2)
 
-- Special thanks to Xavier Grangier and his module ''python-goose'' inspiring the automatical article detection system of crawtext.
+- Special thanks to Xavier Grangier and his module ![python-goose](https://github.com/grangier/python-goose) forked for automatical article detection.
 
 
-----
+
 
 
 COMMON PROBLEMS
