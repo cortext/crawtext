@@ -10,11 +10,11 @@ Usage:
 	crawtext.py <name>
 	crawtext.py <user>
 	crawtext.py <archive_url>
-	crawtext.py report <name> 
-	crawtext.py export <name> [ -f <format> ] [-c <coll_type>]
-	crawtext.py delete <name>
-	crawtext.py start <name>
-	crawtext.py stop <name>
+	crawtext.py <name> report 
+	crawtext.py <name> export  [ -f <format> ] [-c <coll_type>]
+	crawtext.py <name> start 
+	crawtext.py <name> stop 
+	crawtext.py <name> delete
 	crawtext.py <name> -u <user>
 	crawtext.py <name> -q <query>
 	crawtext.py <name> -k set <key>
@@ -33,9 +33,9 @@ Options:
 	Projets:
 	# Pour consulter un projet : 	crawtext.py pesticides
 	# Pour consulter vos projets :	crawtext.py vous@cortext.net
-	# Pour obtenir un rapport : 	crawtext.py report pesticides
-	# Pour obtenir un export : 		crawtext.py export pesticides
-	# Pour supprimer un projet : 	crawtext.py delete pesticides
+	# Pour obtenir un rapport : 	crawtext.py pesticides report 
+	# Pour obtenir un export : 		crawtext.py pesticides export 
+	# Pour supprimer un projet : 	crawtext.py pesticides delete 
 	Proprietaire:
 	# pour définir le propriétaire du project: crawtext pesticides -u vous@cortext.net
 	Requête:
@@ -51,8 +51,9 @@ Options:
 	# pour supprimer toutes les sources :			crawtext.py pesticides -s delete
 	Récurrence
 	# pour définir la récurrence :                	crawtext.py pesticides -r (monthly|weekly|daily)
-	Executer un projet								crawtext.py start pesticides
-	Stopper un projet								crawtext.py stop pesticides
+	Executer un projet								crawtext.py pesticides start 
+	Stopper un projet								crawtext.py pesticides stop 
+	Supprimer un projet								crawtext.py pesticides delete
 	
 '''
 
@@ -66,17 +67,8 @@ CRAWTEXT_DIR = os.path.dirname(os.path.abspath(sys.argv[0]))
 import __future__
 from docopt import docopt
 
-
- 
-
 if __name__== "__main__":
 	from wk import Worker
-	
-	#~ user_input = docopt(__doc__)
-		#~ is_valid = validate_email(user_input['<email>'])
-		#~ if is_valid:
-			#~ user_input['<name>'] = user_input['<email>']
-		#~ else:
 	try:		
 		w = Worker()
 		print w.process(docopt(__doc__))
