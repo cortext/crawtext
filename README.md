@@ -1,4 +1,5 @@
 ![http://www.cortext.net](http://www.cortext.net/IMG/siteon0.png?1300195437)
+![http://www.cortext.net](http://www.github.com/cortext/crawtextV2/icon.png)
 
 Crawtext
 ===============================================
