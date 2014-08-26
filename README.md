@@ -133,16 +133,16 @@ python crawtetx.py pesticides report
 
 
 * Export results:
--into a csv:
-		
-```
-python crawtext.py pesticides export -f csv```
-
-		
-- or into a json:
 	
+in json file
 ``` 
 python crawtext.py pesticides export
+```
+ 
+If you want a csv:
+
+```
+python crawtext.py pesticides export -f csv
 ```
 
 Results and report are stored in /pesticides/	
