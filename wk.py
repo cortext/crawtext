@@ -23,7 +23,18 @@ class Worker(object):
 	
 	
 	def __init__(self):
-		pass
+		
+		self.log = []
+		self.action = "create_or_show"
+		self.repeat = None
+		self.user = None
+		now = datetime.datetime.now()
+		self.creation_date = now.replace(second=0, microsecond=0)
+		self.last_run = None
+		self.next_run = None
+		self.nb_run = 0
+		self.started = False
+		self.scheduled = False
 		#~ #defaut params
 		#~ self.name = None
 		#~ self.action = "unset"
@@ -56,25 +67,14 @@ class Worker(object):
 			self.url = self.name
 			self.scheduled = True
 			try:
-				self.format = 	user_input['<format>']
+				self.format = user_input['<format>']
 			except KeyError:
 				self.format = "defaut"
 				return self	
-		#archive job
-		#~ elif user_input["archive"] is True:
-			#~ self.action = 'archive'
-			#~ self.url = user_input['<url>']
-			#~ self.name = self.url
-			#~ self.scheduled = True
-			#~ try:
-				#~ self.format = user_input['<format>']
-			#~ except KeyError:
-				#~ self.format = "defaut"
-			#~ return self
-		#crawl management or report or export
 		else:
-			#sources_management
+			self.action = "create_or_show"
 			self.name = user_input["<name>"]
+			#sources_management
 			if user_input["-s"] is True:
 				self.action = "update_sources"
 				for k,v in user_input.items():
@@ -86,19 +86,19 @@ class Worker(object):
 			else:
 				for k,v in user_input.items():
 					if v is True and k in self.ACTION_LIST:
-						self.action = k
+						self.action = k+"_job"
 					if v is not None and k in self.CRAWL_LIST:	
 						self.action ="update_crawl"
 					if v is not None and k in self.PROJECT_LIST:	
 						self.action ="update_project"
 					if v is not None and v is not False and k != "<name>":
-						#setattr(self, re.sub("|<|>","", k), v)
+						setattr(self, re.sub("|<|>","", k), v)
 						self.values[re.sub("--|<|>", "", k)] = v
+				
 				return self			
 		
 				
 	def show_user(self):
-		
 		user_data = [n for n in self.COLL.find({"user": self.user})]
 		if len(user_data) == 0:
 			print "No user %s registered" %self.user
@@ -114,7 +114,6 @@ class Worker(object):
 		if self.action == "create_or_show":
 			#defaut action to create is a crawl
 			self.action = "crawl"
-			
 		self.select_tasks({"name": self.name, "action":self.action})
 		if self.task is None:
 			return self.create_task()
@@ -125,8 +124,24 @@ class Worker(object):
 		'''create one specific task'''
 		if ask_yes_no("Do you want to create a new project?"):
 			#schedule to be run in 5 minutes
-			#self.next_run = self.creation_date.replace(minute = self.creation_date.minute+5)
-			self.schedule_task()
+			self.scope = "create task" 
+			self.next_run = self.creation_date.replace(minute = self.creation_date.minute+1)
+			
+			project_db = Database(self.name)
+			print project_db.use_coll("results").count()
+			if project_db.use_coll("results").count() > 0 or project_db.use_coll("sources").count()>0 or :
+				print "An old project %s exists with data. If you reactivate the project it will add new data to the existing."
+				if ask_yes_no("Do you want to clean the database?"):
+					project_db.drop(collection, "results")
+					project_db.drop(collection, "logs")
+					project_db.drop(collection, "sources")
+					
+			#~ print project_db.results.count()
+			#~ print project_db.logs.count()
+			#~ print project_db.sources.count()
+			#schedule
+			self.COLL.insert(self.__dict__)
+			
 			#subprocess.Popen(["python","crawtext.py","start", str(self.name)])
 			return "Sucessfully created '%s' task for project '%s'."%(self.action,self.name)
 		else: sys.exit()
@@ -171,17 +186,22 @@ class Worker(object):
 			
 	def update_crawl(self):
 		self.action = "crawl"
-		self.msg = "crawl %s updated" %self.values.keys()[0]
+		
+		
 		self.select_task({"name": self.name, "action": self.action})
 		if self.task is None:
 			print "No active crawl has been found for project %s" %self.name
 			return self.create_task()
 		else:
+			self.scope = "crawl update"
+			self.msg = "crawl %s updated" %self.values.keys()[0]
+			self.log.append(self.msg)
 			if self.values.keys()[0] == "key":
 				c = Crawl(self.name)
 				print "Adding urls into sources requesting  results from BING for search expression:\t'%s'" %self.task["query"]
 				if c.get_bing(self.values["key"]) is False:
 					self.COLL.update({"_id":self.task["_id"]}, {"$set": c.status})
+					self.log.append(c.status['msg'])
 					return c.status["msg"]
 					
 			self.COLL.update({"_id":self.task["_id"]}, {"$set": self.values})	
@@ -192,8 +212,9 @@ class Worker(object):
 		self.select_task({"name": self.name, "action": "crawl"})
 		c = Crawl(self.name)
 		self.status = {"status":"", "msg":"", "code":"", "scope":"update sources"}
-		#delete 
-		if self.option == "delete":
+		#delete
+		
+		if self.option == "delete_job":
 			print self.values
 			#all
 			if self.value is None:
@@ -273,7 +294,7 @@ class Worker(object):
 			self.COLL.insert(w.__dict__)
 		return "Project %s with crawl, report and export has been sucessfully scheduled and will be run next %s" %(self.name, self.repeat)
 	
-	def unschedule(self):
+	def unschedule_job(self):
 		'''delete all tasks attached to the project'''
 		self.select_tasks({"name":self.name})
 		if self.task_list is None:
@@ -300,7 +321,7 @@ class Worker(object):
 		self.COLL.insert(a.__dict__)
 		return "Sucessfully scheduled Archive job for %s Next run will be executed in 3 minutes" %self.url
 	
-	def delete(self):
+	def delete_job(self):
 		'''delete project and archive results'''
 		self.select_task({"name":self.name, "action":"crawl"})
 		if self.task is None:
@@ -311,7 +332,7 @@ class Worker(object):
 				print "Before deleting project :\n****Archiving*****" 
 				e = Export(self.name)
 				e.run_job()
-				self.unschedule()
+				self.unschedule_job()
 				db = Database(self.name)
 				db.client.drop_database(self.name)
 			return "Project %s sucessfully deleted." %self.name
@@ -324,7 +345,7 @@ class Worker(object):
 			self.next_run = self.next_run.replace(minute = mins) 
 			return self.next_run
 			
-	def start(self):
+	def start_job(self):
 		self.select_tasks({"name":self.name})
 		if self.task is None:
 			return "No active crawl job found for %s" %self.name
