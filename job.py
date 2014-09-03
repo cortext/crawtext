@@ -10,12 +10,11 @@ from utils import yes_no
 from database import *
 import requests
 from page import Page
-import sys
 from multiprocessing import Pool
 import subprocess
 from utils.url import *
 from query import Query
-		
+from scrapper.article import Article		
 			 
 class Crawl(object):
 	def __init__(self, name): 
@@ -59,13 +58,21 @@ class Crawl(object):
 			r.raise_for_status()
 			i = 0
 			for e in r.json()['d']['results']:
-				i = i+1
+				
 				#no check url: url is suposed to be correct 
-				#note for myself: a short description is also done in results 
-				self.insert_url(e["Url"],origin="bing")
+				#note for myself: a short description is also done in results
+				status, status_code, error_type, url = check_url(e["Url"])
+				print status, status_code, error_type, url
+				if self.status is True:
+					self.insert_url(e["Url"],origin="bing", depth=0, date=datetime.now())
+					i = i+1
+				else:
+					self.db.logs.insert({"url": url, "status": status, "msg": "Incorrect url from BING", "scope": self.status["scope"], "code":status_code, "date": datetime.now()})
 			self.seeds_nb = i
 			self.status["status"] = True
-			
+			self.status["msg"] = "Inserted %s urls from Bing results" %self.seeds_nb
+			print ">>>>>>", self.status["msg"]
+			return True
 		except Exception as e:
 			#raise requests error if not 200
 			if r.status_code is not None:
@@ -74,8 +81,9 @@ class Crawl(object):
 				r.status_code = 601
 			self.status["msg"] = "Error fetching results from BING API. %s" %e.args
 			self.status["status"] = False
-			
-		return self.status["status"]
+			print self.status["msg"]
+			return False
+		
 		
 	def get_local(self, afile = ""):
 		''' Method to extract url list from text file'''
@@ -83,7 +91,6 @@ class Crawl(object):
 		self.status["scope"] = "crawl search bing"
 		if afile == "":
 			afile = self.file
-		
 		try:
 			i = 0
 			for url in open(afile).readlines():
@@ -92,8 +99,8 @@ class Crawl(object):
 				url = re.sub("\n", "", url)
 				status, status_code, error_type, url = check_url(url)
 				if status is True:
-					i = i+1
-					self.insert_url(url, origin=afile)
+					if self.insert_url(url, origin=afile) is True:
+						i = i+1
 				else:
 					self.db.logs.insert({"url": url, "status": status, "msg": error_type, "scope": self.status["scope"], "code":status_code, "file": afile})
 			self.seeds_nb = i
@@ -121,18 +128,25 @@ class Crawl(object):
 			for url in self.db.results.distinct("url"):
 				i = 1
 				if url not in self.db.sources.find({"url": url}) and url not in self.db.logs.find({"url": url}):
-					i = i+1
-					self.insert_url(url, "automatic")
+					if self.insert_url(url, "automatic") is True:
+						i = i+1
 				self.seed_nb = i
 				self.status["status"] = True
 			return True
 				
-	def insert_url(self, url, origin="default"):
-		if url not in self.db.sources.find({"url": url}) and url not in self.db.logs.find({"url": url}):
-			self.db.sources.insert({"url":url, "origin":origin,"date":[datetime.today()]})
+	def insert_url(self, url, origin="default", date=None):
+		'''Inséré ou mis à jour'''
+		if url not in self.db.sources.find({"url": url}):
+			if url in self.db.logs.find({"url": url}):
+				'''si url est déjà dans les erreurs, on update l'erreur et on ne l'insére pas dans les sources'''
+				self.db.logs.update({"url":url,"$push": {"date":datetime.today()}})
+				return False
+			else:
+				self.db.sources.insert({"url":url, "origin":origin,"date":[datetime.today()]})
+				return True
 		else:
 			self.db.sources.update({"url":url,"origin":origin, "$push": {"date":datetime.today()}})
-		return True
+			return False
 	
 	def delete_url(self, url):
 		if self.db.sources.find_one({"url": url}) is not None:
@@ -149,6 +163,7 @@ class Crawl(object):
 		
 	def collect_sources(self):
 		''' Method to add new seed to sources and send them to queue if sourcing is deactivate'''
+		print "collecting sources"
 		if self.option == "expand":
 			#print "Automatically expanding sources from last results"
 			self.expand()
@@ -158,7 +173,7 @@ class Crawl(object):
 		else:
 			#print "Getting seeds from file is deactivated. No file with seeds url has been foud. Please set up a file with url if you want to add multiple urls."			
 			if self.query is not None:
-				#print "Getting seeds from Bing results on search %s" %self.query
+				print "Getting seeds from Bing results on search %s" %self.query
 				if self.key is not None:
 					self.get_bing(self.key, self.query)
 				else:
@@ -168,8 +183,10 @@ class Crawl(object):
 				return False	
 			
 	def send_seeds_to_queue(self):
+		print "sending urls to queue"
 		for url in self.db.sources.distinct("url"):
 			if url not in self.db.logs.find({"url": url}):
+				print "inserting %s", %url
 				self.db.queue.insert({"url":url})
 		return True
 				
@@ -180,7 +197,7 @@ class Crawl(object):
 			self.status["msg"] = "Unable to start crawl: no query has been set."
 			self.status["code"] = 600.1
 			self.status["status"] = False
-			return False 
+			
 		else:
 			query = Query(self.query)
 			
@@ -189,7 +206,7 @@ class Crawl(object):
 			self.status["msg"] = "Unable to start crawl: no seeds have been set."
 			self.status["code"] = 600.1
 			self.status["status"] = False
-			return False
+			
 		else:
 			self.send_seeds_to_queue()
 		
@@ -198,27 +215,31 @@ class Crawl(object):
 			self.status["msg"] = "Error while sending urls into queue: queue is empty"
 			self.status["code"] = 600.1
 			self.status["status"] = False
-			return False
 			
 		else:
 			self.status["msg"] = "running crawl on %i sources with query '%s'" %(len(self.db.sources.distinct("url")), self.query)				
+			print self.status["msg"]
 			while self.db.queue.count > 0:	
 				for url in self.db.queue.distinct("url"):
-					if self.db.results.count() >= 10.000:
-						self.db.queue.drop()
+					# if self.db.results.count() >= 10.000:
+					# 	self.db.queue.drop()
 						
 					if url != "":
 						page = Page(url)
 						if page.check() and page.request() and page.control():
-							article = page.extract("article")
-							if article.status is True:
+							article = Article(page.url, page.raw_html)
+							if article.get() is True:
+								print article.status
 								if article.is_relevant(query):			
-									self.db.results.insert(article.repr())
+									self.db.results.insert(article.status)
 									if article.outlinks is not None and len(article.outlinks) > 0:
 										self.db.queue.insert(article.outlinks)
+								else:
+									self.db.logs.insert(article.status)	
 							else:	
-								self.db.logs.insert(article.logs)
+								self.db.logs.insert(article.status)
 						else:
+							print page.status
 							self.db.logs.insert(page.status)	
 					self.db.queue.remove({"url": url})
 					
@@ -232,7 +253,8 @@ class Crawl(object):
 
 			self.status["msg"] = "%s. Crawl done sucessfully in %s s" %(self.status["msg"],str(elapsed))
 			self.status["status"] = True
-			return True
+		print self.status["msg"]
+		return self.status["status"]
 	
 	def stop(self):		
 		self.db.queue.drop()	

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 #from __future__ import print_function
@@ -16,12 +16,9 @@ from pymongo import errors as mongo_err
 from urlparse import urlparse
 from random import choice
 from tld import get_tld
-#~ from abpy import Filter
-#~ 
-#~ from article import Extractor
 from scrapper import *
 from utils.url import *
-
+from scrapper.article import Article
  
 class Page(object):
 	'''Page factory'''
@@ -115,14 +112,17 @@ class Page(object):
 	def extract(self, type="article"):
 		'''Dict extract content and info of webpage return boolean and self.info'''	
 		#self.status["step"] = "extract %s" %type
-		return Extractor.run(self.url, self.raw_html, type)
+		a = Article(self.url, self.raw_html)
+		return a.get()
 		
+	'''
 	def is_relevant(self, query, content):
 		if query.match(self,unicode(content)) is False:
 			self.status = {"url":self.url, "code": -1, "msg": "Not Relevant","status": False, "title": self.title, "content": self.content}
 			return False
 		else:
+			self.status = 
 			return True
 							 	
-		
+	'''	
 	
