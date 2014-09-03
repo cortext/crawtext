@@ -148,6 +148,8 @@ class Crawl(object):
 			elif status is False:
 				self.db.logs.insert({"url":url,"status": "false", "scope": "inserting","date": [datetime.today()]})
 			self.db.sources.update({"url":url},{"$set":{"status": "true"},"$push":{"date": datetime.today()}})
+		else:
+			self.db.sources.insert({"url":url, "origin":origin, "status": "true","date": [datetime.today()]})
 		return 
 		'''
 		if url in self.db.sources.find({"url": url}):
