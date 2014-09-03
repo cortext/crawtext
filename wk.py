@@ -31,19 +31,20 @@ class Worker(object):
 		self.last_run = None
 		self.next_run = None
 		self.nb_run = 0
+		self.status = {}
 		self.process_input(user_input)
+		
 	
 	def select_jobs(self, query):
 		'''mapping job database'''
 		self.job_list = [n for n in self.COLL.find(query)]
 		self.job = None
-		if len(self.task_list) == 0:
-			self.task_list = None
-			return None
+		if len(self.job_list) == 0:
+			self.job_list = None	
 		else:
-			if len(self.task_list) == 1:
-				self.task = self.task_list[0]	
-			return self.task_list
+			if len(self.job_list) == 1:
+				self.job = self.job_list[0]	
+		return self.job_list
 	
 	def process_input(self, user_input):
 		'''mapping user input into task return job parameters'''
@@ -61,11 +62,15 @@ class Worker(object):
 			self.scheduled = True
 			try:
 				self.format = user_input['<format>']
+				self.COLL.insert(self.__dict__)	
+				self.status = "Successfully created an archive job in project %s", self.name
+				return 
+				
 			except KeyError:
 				self.format = "defaut"
-			self.COLL.insert(self.__dict__)	
-			return "Successfully created an archive job in project %s", self.name
-		
+				self.COLL.insert(self.__dict__)	
+				self.status = "Successfully created an archive job in project %s", self.name
+				return
 		else:
 			self.name = user_input["<name>"]
 			#sources_management
@@ -77,6 +82,7 @@ class Worker(object):
 					if v is not None and v is not False:
 						setattr(self,re.sub("<|>","", k), v)
 				return self.update_sources()
+				
 			else:
 				self.action = "create_or_show"
 				self.select_jobs({"name":self.name, "action":"crawl"})
@@ -131,10 +137,11 @@ class Worker(object):
 					project_db.drop(collection, "sources")
 					
 			self.COLL.insert(self.__dict__)
-			return "Sucessfully created '%s' task for project '%s'."%(self.action,self.name)
+			self.status = "Sucessfully created '%s' task for project '%s'."%(self.action,self.name)
+			return self.status
 			#return self.show()
 		else: 
-			return 
+			return
 	
 	def show_job(self):
 		if self.job_list is not None:
@@ -143,42 +150,57 @@ class Worker(object):
 			print "____________________"
 			print self.name.upper()
 			print "____________________\n"
-			for task in self.task_list:
-				print "> ", task["action"],":\n"
+			for job in self.job_list:
+				print "> ", job["action"],":\n"
 				print "  parameters"
 				print "--------------"
-				for k,v in task.items():
+				for k,v in job.items():
 					if k == '_id' or k =="action" or k == "name":
 						continue
 					if v is not False or v is not None:
 						print k+":", v
 				print "--------------"
-			return "____________________"
+			print "____________________"
+			return None
 		else:
-			return "No task for project %s"% self.name
+			self.status = "No task for project %s"% self.name
+			return self.status
 	def archive(self):
 		a = Archive(self.name)
 		self.COLL.insert(a.__dict__)
-		return "Sucessfully scheduled Archive job for %s Next run will be executed in 3 minutes" %self.url
+		self.status = "Sucessfully scheduled Archive job for %s Next run will be executed in 3 minutes" %self.url
+		return self.status
 	
 	def update_crawl(self):
+		self.status["project"] = self.name
+		self.status["action"] = self.action
+		self.status["scope"] = "get bing"			
 		if self.job is None:
 			print "No active crawl has been found for project %s" %self.name
 			return self.create_job()
 		else:
 			#~ self.scope = "crawl update"
 			#~ self.msg = "crawl %s updated" %self.values.keys()[0]
-			self.log.append(self.scope)
+			#self.log.append(self.scope)
+			c = Crawl(self.name)
 			if self.values.keys()[0] == "key":
-				c = Crawl(self.name)
-				print "Adding urls into sources requesting  results from BING for search expression:\t'%s'" %self.task["query"]
-				if c.get_bing(self.values["key"]) is False:
-					self.COLL.update({"_id":self.task["_id"]}, {"$set": c.status})
-					self.log.append(c.status['msg'])
-					return c.status["msg"]
+				try :
+					print self.job
+					self.query = self.job["query"]				
+					print "Adding urls into sources requesting  results from BING for search expression:\t'%s'" %self.job["query"]
+					if c.get_bing(self.values["key"]) is False:
+						print c.status
+						self.COLL.update({"_id":self.task["_id"]}, {"$set": c.status})
+						return c.status
+				except KeyError:
 					
-			self.COLL.update({"_id":self.task["_id"]}, {"$set": self.values})	
-			return c.status
+					self.status["status"] = "false"
+					self.status["msg"] = "Unable to update crawl sources from BING. No query has been set "
+					self.COLL.update({"_id":self.job["_id"]}, {"$set": self.status})
+					return self.status
+			self.COLL.update({"_id":self.job["_id"]}, {"$set": self.values})	
+			self.status = c.status
+			return self.status
 				
 	def update_sources(self):
 		self.status["scope"] = "udpate source"
@@ -190,7 +212,8 @@ class Worker(object):
 		if self.option == "delete_job":
 			#all
 			if self.value is None:
-				return c.delete()
+				self.status = c.delete()
+				return self.status
 			#url
 			else:
 				ext = (self.url).split(".")[-1]
@@ -202,10 +225,12 @@ class Worker(object):
 						url = re.sub("\n", "", url)
 						url = check_url(url)[-1]
 						c.delete_url(self.url)						
-					return "All sources from %s sucessfully deleted from sources database." %self.url
+					self.status = "All sources from %s sucessfully deleted from sources database." %self.url
+					return self.status
 				else:
 					self.url = check_url(self.url)[-1]
-					return c.delete_url(self.url)
+					self.status = c.delete_url(self.url)
+					return self.status
 		
 		#expand
 		elif self.option == "expand":
@@ -213,7 +238,8 @@ class Worker(object):
 			self.COLL.update({"_id":self.task["_id"]},{"$set":{"option": self.option, "status":status, "msg": c.status["msg"]}}) 
 			if status is False:
 				self.COLL.update({"_id":self.task["_id"]},{"$set":{"scope":"udpate_sources", "status":status, "msg": c.status["msg"], "error_code":600.3}}) 
-			return c.status["msg"]
+			self.status = c.status
+			return self.status
 			
 		elif self.option == "add":
 			ext = (self.url).split(".")[-1]
@@ -223,13 +249,16 @@ class Worker(object):
 				status = c.get_local(self.file)
 				if status is False:
 					self.COLL.update({"_id":self.task["_id"]},{"$set":c.status}) 
-				return c.status["msg"]
+				self.status = c.status
+				return
 			else:
 				url = check_url(self.url)[-1]
 				c.insert_url(url,"manual")
-				return "Succesfully added url %s to seeds of crawl job %s"%(url, self.name)
+				self.status = "Succesfully added url %s to seeds of crawl job %s"%(url, self.name)
+				return self.status
 		else:
-			return 
+			self.status= "None"
+			return self.status
 						
 	#~ def update_project(self):
 		#~ self.select_tasks({"name": self.name})

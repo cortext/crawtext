@@ -146,9 +146,9 @@ class Crawl(object):
 				self.db.logs.update({"_id":is_error["_id"]},{"$set":{"status": "false", "scope": "inserting"},"$push":{"date": datetime.today()}})
 				return 
 			elif status is False:
-				self.db.logs.insert({"url":url,"status": "false", "scope": "inserting","date": [datetime.today()]}})
+				self.db.logs.insert({"url":url,"status": "false", "scope": "inserting","date": [datetime.today()]})
 			self.db.sources.update({"url":url},{"$set":{"status": "true"},"$push":{"date": datetime.today()}})
-		print "Already in logs?", self.db.logs.find_one({"url": url})
+		return 
 		'''
 		if url in self.db.sources.find({"url": url}):
 			print "found", url
@@ -295,28 +295,31 @@ class Archive(object):
 		return True
 
 class Export(object):
-	def __init__(self, name, form, coll_type):
+	def __init__(self, name, form=None, coll_type=None):
 		
 		self.date = datetime.today()
+		
 		self.form = form
+		if self.form is None:
+			self.form = "json"
 		self.date = self.date.strftime('%d-%m-%Y')
 		
 		self.name = name
 		self.coll_type = coll_type
 		self.dict_values = {}
 		self.dict_values["sources"] = {
-							"filename": "export_%s_sources_%s.%s" %(self.name, self.date, form),
-							"format": form,
+							"filename": "export_%s_sources_%s.%s" %(self.name, self.date, self.form),
+							"format": self.form,
 							"fields": 'url,origin,date.date',
 							}
 		self.dict_values["logs"] = {
-							"filename": "export_%s_logs_%s.%s" %(self.name, self.date, form), 
-							"format":form,
+							"filename": "export_%s_logs_%s.%s" %(self.name, self.date, self.form), 
+							"format":self.form,
 							"fields": 'url,code,scope,status,msg',
 							}
 		self.dict_values["results"] = {
-							"filename": "export_%s_results_%s.%s" %(self.name, self.date, form), 
-							"format":form,
+							"filename": "export_%s_results_%s.%s" %(self.name, self.date, self.form), 
+							"format":self.form,
 							"fields": 'url,domain,title,content.content,outlinks.url,crawl_date',
 							}	
 		
@@ -387,17 +390,18 @@ class Report(object):
 			os.makedirs(self.directory)
 		filename = "%s/Report_%s_%s.txt" %(self.directory, self.name, self.date)
 		with open(filename, 'a') as f:
-			f.write((self.db.stats()).encode('utf-8'))
+			f.write(self.db.stats())
 		print "Successfully generated report for %s\nReport name is: %s" %(self.name, filename)
 		return True
 	
 	def html_report(self):
 		pass
-				
+	def email_report(self):
+		pass			
 	def run_job(self):
 		if self.format == "txt":
 			return self.txt_report()
-		elif self.format == "html":
+		else:
 			raise NotImplemented
 			
 
