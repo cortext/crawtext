@@ -16,36 +16,35 @@ class Worker(object):
 	DB = Database(TASK_MANAGER_NAME)
 	COLL = DB.use_coll(TASK_COLL)
 	#values for docopt and YAML?
-	ACTION_LIST = ["report", "extract", "export", "archive", "start","stop", "delete","list"]
-	SCOPE_LIST = ["-u", "-r", "-q", "-k", "-s"]
-	OPTION_lIST	= ['add', 'set', 'append', 'delete', 'expand']
-	DATA_C_LIST = ['<url>', '<file>', '<query>', '<key>']
-	DATA_U_LIST = ['<user>', '<repeat>']
-	DATA_R_LIST = ['<format>', '<coll_type>']
-	DATA_A_LIST = ['<url>', '<format>']
+	ACTION_LIST = ["report", "extract", "export", "archive", "start","stop", "delete","list", 'schedule', "unschedule"]
+	PROJECT_LIST = ["--user", "--repeat"]
+	CRAWL_LIST = ["--query", "--key"]
+	OPTION_lIST	= ['add', 'delete', 'expand']
+	
 	
 	def __init__(self):
-		#defaut params
-		self.name = None
-		self.action = "unset"
-		self.msg ="created"
-		self.repeat = "month"
-		self.user = "constance@cortext.net"
-		self.status = True
-		
-		#schedule params
-		now = datetime.datetime.now()
-		self.creation_date = now.replace(second=0, microsecond=0)
-		self.last_run = None
-		self.next_run = None
-		self.nb_run = 0
-		#self.started = False
-		#self.scheduled = False
-			
+		pass
+		#~ #defaut params
+		#~ self.name = None
+		#~ self.action = "unset"
+		#~ self.msg ="created"
+		#~ self.repeat = "month"
+		#~ self.user = "constance@cortext.net"
+		#~ self.status = True
+		#~ 
+		#~ #schedule params
+		#~ now = datetime.datetime.now()
+		#~ self.creation_date = now.replace(second=0, microsecond=0)
+		#~ self.last_run = None
+		#~ self.next_run = None
+		#~ self.nb_run = 0
+		#~ #self.started = False
+		#~ #self.scheduled = False
+			#~ 
 	def task_from_ui(self, user_input):
 		'''mapping user input into task return job parameters'''
 		self.name = user_input['<name>']
-		self.value = None
+		self.values = {}
 		#user
 		if validate_email(self.name) is True:
 			self.action = "show_user"
@@ -62,59 +61,41 @@ class Worker(object):
 				self.format = "defaut"
 				return self	
 		#archive job
-		elif user_input["archive"] is True:
-			self.action = 'archive'
-			self.url = user_input['<url>']
-			self.name = self.url
-			self.scheduled = True
-			try:
-				self.format = user_input['<format>']
-			except KeyError:
-				self.format = "defaut"
-			return self
+		#~ elif user_input["archive"] is True:
+			#~ self.action = 'archive'
+			#~ self.url = user_input['<url>']
+			#~ self.name = self.url
+			#~ self.scheduled = True
+			#~ try:
+				#~ self.format = user_input['<format>']
+			#~ except KeyError:
+				#~ self.format = "defaut"
+			#~ return self
 		#crawl management or report or export
 		else:
-			self.action = "create_or_show"
-			for k,v in user_input.items():
-				if v is True and k in self.ACTION_LIST:
-					if user_input["-s"] is False:
-						self.action = k
-					else:
-						self.action = "update_sources"
+			#sources_management
+			self.name = user_input["<name>"]
+			if user_input["-s"] is True:
+				self.action = "update_sources"
+				for k,v in user_input.items():
+					if v is True and k in self.OPTION_lIST:
 						self.option = k
-						
-				elif v is True and k in self.SCOPE_LIST:
-					self.scope = re.sub("-", "", k)
-					
-				elif v is True and k in self.OPTION_lIST: 
-					self.option = k
-					if user_input['-s'] is True:
-						self.action = "update_sources"
-					else:
-						self.action = "update_crawl"
-					
-				elif v is not None and k in self.DATA_C_LIST:
-					k = re.sub("<|>", "", k)
-					setattr(self, k, v)
-					self.action = "update_crawl"
-					self.scheduled = True
-					self.value = k
-				elif v is not None and k in self.DATA_U_LIST:
-					k = re.sub("<|>", "", k)
-					setattr(self, k, v)
-					self.value = k
-					self.action = "update_project"
-				elif v is not None and k in self.DATA_R_LIST:
-					k = re.sub("<|>", "", k)
-					setattr(self, k, v)
-					self.value = k
-					self.action = "export"
-					
-					
-				else:
-					continue
-			
-			return self
+					if v is not None and v is not False:
+						setattr(self,re.sub("<|>","", k), v)
+				return self
+			else:
+				for k,v in user_input.items():
+					if v is True and k in self.ACTION_LIST:
+						self.action = k
+					if v is not None and k in self.CRAWL_LIST:	
+						self.action ="update_crawl"
+					if v is not None and k in self.PROJECT_LIST:	
+						self.action ="update_project"
+					if v is not None and v is not False and k != "<name>":
+						#setattr(self, re.sub("|<|>","", k), v)
+						self.values[re.sub("--|<|>", "", k)] = v
+				return self			
+		
 				
 	def show_user(self):
 		
@@ -190,39 +171,30 @@ class Worker(object):
 			
 	def update_crawl(self):
 		self.action = "crawl"
-		self.msg = "updated"
+		self.msg = "crawl %s updated" %self.values.keys()[0]
 		self.select_task({"name": self.name, "action": self.action})
 		if self.task is None:
 			print "No active crawl has been found for project %s" %self.name
-			self.create_task()
+			return self.create_task()
 		else:
-			
-			if self.scope == "q":
-				self.COLL.update({"_id":self.task["_id"]}, {"$set":{"query": self.query}})
-				return "Sucessfully updated query to : %s on crawl job of project %s" %(self.query, self.name)
-			elif self.scope == "k":
-				self.COLL.update({"_id":self.task["_id"]},{"$set":{"key": self.key}})
-				print "Sucessfully added a new BING API KEY to crawl job of project %s"%(self.name)
-				if self.option == "append":
-					c = Crawl(self.name)
-					try:
-						if c.get_bing() is True:
-							return "%s seeds from search successfully added to sources of crawl project '%s'" %(c.seeds_nb, self.name)
-						else:
-							return c.status["msg"]
-					except KeyError:
-						return "Unable to search new seeds beacause no query has been set.\nTo set a query to your crawl project '%s' type:\n python crawtext.py %s -q \"your awesome query\"" %(self.name, self.name)
-				
-			else:
-				return self.update_sources()	
+			if self.values.keys()[0] == "key":
+				c = Crawl(self.name)
+				print "Adding urls into sources requesting  results from BING for search expression:\t'%s'" %self.task["query"]
+				if c.get_bing(self.values["key"]) is False:
+					self.COLL.update({"_id":self.task["_id"]}, {"$set": c.status})
+					return c.status["msg"]
+					
+			self.COLL.update({"_id":self.task["_id"]}, {"$set": self.values})	
+			return c.status
 				
 	def update_sources(self):
-		self.msg = "udpated"
+		self.status["scope"] = "sources updated"
 		self.select_task({"name": self.name, "action": "crawl"})
 		c = Crawl(self.name)
 		self.status = {"status":"", "msg":"", "code":"", "scope":"update sources"}
 		#delete 
 		if self.option == "delete":
+			print self.values
 			#all
 			if self.value is None:
 				return c.delete()
@@ -233,28 +205,28 @@ class Worker(object):
 		
 		#expand
 		elif self.option == "expand":
+			status = c.expand()
+			self.COLL.update({"_id":self.task["_id"]},{"$set":{"option": self.option, "status":status, "msg": c.status["msg"]}}) 
+			if status is False:
+				self.COLL.update({"_id":self.task["_id"]},{"$set":{"scope":"udpate_sources", "status":status, "msg": c.status["msg"], "error_code":600.3}}) 
+			return c.status["msg"]
 			
-			self.COLL.update({"_id":self.task["_id"]},{"$set":{"option": self.option}}) 
-			if c.expand() is False:
+		elif self.option == "add":
+			ext = (self.url).split(".")[-1]
+			if ext == "txt":
+				print "Adding the list of url contained in the file %s" %self.url
+				self.file = self.url
+				status = c.get_local(self.file)
+				if status is False:
+					self.COLL.update({"_id":self.task["_id"]},{"$set":c.status}) 
 				return c.status["msg"]
 			else:
-				return "Successfully added option expand for crawl project %s"% self.name
-		elif self.option == "add":
-			url = check_url(self.url)[-1]
-			c.insert_url(url,"manual")
-			return "Succesfully added url %s to seeds of crawl job %s"%(url, self.name)
+				url = check_url(self.url)[-1]
+				c.insert_url(url,"manual")
+				return "Succesfully added url %s to seeds of crawl job %s"%(url, self.name)
 		else:
-			#set
-			if self.value is not None:
-				self.COLL.update({"_id":self.task["_id"]},{"$set":{self.value: getattr(self, self.value)}})			
-				if self.option == "set":
-					return "Sucessfully added a new %s \"%s\" to crawl job of project %s"%(self.value, getattr(self, self.value), self.name)
-				#append
-				else:
-					print "Sucessfully added a new %s \"%s\" to crawl job of project %s"%(self.value, getattr(self, self.value), self.name)		
-					c.get_local()
-					return c.status["msg"]
-					
+			return 
+						
 	def update_project(self):
 		self.select_tasks({"name": self.name})
 		#values = [[k, v] for k,v in doc.items() if k != "name"]
@@ -389,22 +361,14 @@ class Worker(object):
 		if self.task is None:
 			print "No active crawl job found for %s. Export can be executed" %self.name
 		else:
-			try:
-				format = self.format
-			except AttributeError:
-				format = None
-			try:
-				coll_type = self.coll_type
-			except AttributeError:
-				coll_type = None
-				
-			e = Export(self.name, format, coll_type)
-			
+			print self.__dict__
+			#e = Export(self.name, self.format, self.coll_type)
 			return e.run_job()
 		
 	def process(self, user_input):
 		self.task_from_ui(user_input)
 		func = getattr(self,self.action)
+		
 		return func()
 		
 				

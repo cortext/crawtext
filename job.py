@@ -32,7 +32,9 @@ class Crawl(object):
 		self.db = Database(self.name)
 		self.db.create_colls(['sources', 'results', 'logs', 'queue'])	
 		
-	def get_bing(self):
+	def get_bing(self, key=None):
+		if key is not None:
+			self.key = key
 		''' Method to extract results from BING API (Limited to 5000 req/month) automatically sent to sources DB ''' 
 		self.status = {}
 		self.status["scope"] = "search seeds from BING"
@@ -52,7 +54,7 @@ class Crawl(object):
 					},	
 					auth=(self.key, self.key)
 					)
-			print "adding results from Bing"
+			
 			r.raise_for_status()
 			i = 0
 			url_list =  [e["Url"] for e in r.json()['d']['results']]
@@ -65,13 +67,12 @@ class Crawl(object):
 					self.insert_url(url,origin="bing")
 					
 			self.seeds_nb = i
-			print self.seeds_nb
 			self.status["status"] = True
 			self.status["msg"] = "Inserted %s urls from Bing results. Sources nb is now : %d" %(self.seeds_nb, self.db.sources.count())
-			print ">>>>>>", self.status["msg"]
+			print self.status["msg"]
 			return True
 		except Exception as e:
-			print "Oups", e
+			
 			#raise requests error if not 200
 			if r.status_code is not None:
 				self.status["code"] = r.status_code
@@ -103,7 +104,7 @@ class Crawl(object):
 					self.db.logs.insert({"url": url, "status": status, "msg": error_type, "scope": self.status["scope"], "code":status_code, "file": afile})
 			self.seeds_nb = i
 			self.status["status"] = True
-			self.status["msg"] = "%s urls have been added to seeds from %s" %(self.seeds_nb, self.file)
+			self.status["msg"] = "%s urls have been added to seeds from %s" %(self.seeds_nb, afile)
 			return True
 		except Exception as e:
 			print e.args[0]
@@ -120,28 +121,41 @@ class Crawl(object):
 		if len(self.db.results.distinct("url")) == 0:
 			self.status["status"] = False
 			self.status["code"] = 603
-			self.status["msg"] = "No results to put in seeds"
+			self.status["msg"] = "No results to put in seeds. Expand option failed"
 			return False
 		else:
+			i = 1
 			for url in self.db.results.distinct("url"):
-				i = 1
-				if url not in self.db.sources.find({"url": url}) and url not in self.db.logs.find({"url": url}):
-					if self.insert_url(url, "automatic") is True:
-						i = i+1
-				self.seed_nb = i
-				self.status["status"] = True
+				check = self.insert_url(url, "automatic")
+				if self.insert_url(url, "automatic") is True:
+					i = i+1
+					
+			self.seed_nb = i
+			self.status["status"] = True
+			self.status["msg"] = "Successfuly added %s urls in sources" %self.seed_nb	
 			return True
 				
 	def insert_url(self, url, origin="default", depth="0"):
 		'''Inséré ou mis à jour'''
-		
-		status, status_code, error_type, final_url = check_url(url)
-		print url
-		if final_url in self.db.sources.find({"url": url}):
-			self.db.sources.update({"url":url}, {"$push": {"date":datetime.today()}})
+		status, status_code, error_type, url = check_url(url)
+		is_source = self.db.sources.find_one({"url": url})
+		is_error = self.db.logs.find_one({"url": url})
+		if is_source is not None:
+			if is_error is not None: 
+				self.db.sources.update({"url":url},{"$set":{"status": "false", "scope":"inserting"},"$push":{"date": datetime.today()}})
+				self.db.logs.update({"_id":is_error["_id"]},{"$set":{"status": "false", "scope": "inserting"},"$push":{"date": datetime.today()}})
+				return 
+			elif status is False:
+				self.db.logs.insert({"url":url,"status": "false", "scope": "inserting","date": [datetime.today()]}})
+			self.db.sources.update({"url":url},{"$set":{"status": "true"},"$push":{"date": datetime.today()}})
+		print "Already in logs?", self.db.logs.find_one({"url": url})
+		'''
+		if url in self.db.sources.find({"url": url}):
+			print "found", url
+			#self.db.sources.update({"url":url}, {"$push": {"date":datetime.today()}})
 			
 		if url in self.db.logs.find({"url": url}):
-			'''si url est déjà dans les erreurs, on update l'erreur et on ne l'insére pas dans les sources'''
+			print "found in logs"
 			self.db.logs.update({"url":url},{"$push": {"date":datetime.today()}})
 			if url in self.db.sources.find({"url":url}):
 				self.db.sources.update({"url":url},{"$set":{"status": "false"},"$push":{"date": datetime.today()}})
@@ -155,7 +169,7 @@ class Crawl(object):
 			else:
 				self.db.sources.insert({"url":url,"depth":0, "origin":origin,"status": "true","date":[datetime.today()]})
 			return True
-	
+		'''
 	def delete_url(self, url):
 		if self.db.sources.find_one({"url": url}) is not None:
 			self.db.sources.remove({"url":url})
@@ -281,32 +295,28 @@ class Archive(object):
 		return True
 
 class Export(object):
-	def __init__(self, name, format = None, coll_type = None):
-		if format is None:
-			self.format = "json"
-		else:
-			self.format = format
+	def __init__(self, name, form, coll_type):
 		
 		self.date = datetime.today()
-		
+		self.form = form
 		self.date = self.date.strftime('%d-%m-%Y')
 		
 		self.name = name
-		self.coll_type = coll_type 
+		self.coll_type = coll_type
 		self.dict_values = {}
 		self.dict_values["sources"] = {
-							"filename": "export_%s_sources_%s.%s" %(self.name, self.date, self.format),
-							"format": self.format,
+							"filename": "export_%s_sources_%s.%s" %(self.name, self.date, form),
+							"format": form,
 							"fields": 'url,origin,date.date',
 							}
 		self.dict_values["logs"] = {
-							"filename": "export_%s_logs_%s.%s" %(self.name, self.date, self.format), 
-							"format":self.format,
+							"filename": "export_%s_logs_%s.%s" %(self.name, self.date, form), 
+							"format":form,
 							"fields": 'url,code,scope,status,msg',
 							}
 		self.dict_values["results"] = {
-							"filename": "export_%s_results_%s.%s" %(self.name, self.date, self.format), 
-							"format":self.format,
+							"filename": "export_%s_results_%s.%s" %(self.name, self.date, form), 
+							"format":form,
 							"fields": 'url,domain,title,content.content,outlinks.url,crawl_date',
 							}	
 		
@@ -316,7 +326,7 @@ class Export(object):
 		filenames = []
 		for n in datasets:
 			dict_values = self.dict_values[str(n)]
-			if self.format == "csv":
+			if self.form == "csv":
 				print "- dataset '%s' in csv:" %n
 				c = "mongoexport -d %s -c %s --csv -f %s -o %s"%(self.name,n,dict_values['fields'], dict_values['filename'])	
 				filenames.append(dict_values['filename'])		
@@ -338,7 +348,7 @@ class Export(object):
 			return "there is no dataset called %s in your project %s"%(self.coll_type, self.name)
 		try:
 			dict_values = self.dict_values[str(self.coll_type)]
-			if self.format == "csv":
+			if self.form == "csv":
 				print "Exporting into csv"
 				c = "mongoexport -d %s -c %s --csv -f %s -o %s"%(self.name,self.coll_type,dict_values['fields'], dict_values['filename'])
 			else:
