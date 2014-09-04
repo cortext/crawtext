@@ -37,9 +37,9 @@ class Crawl(object):
 			self.key = key
 		''' Method to extract results from BING API (Limited to 5000 req/month) automatically sent to sources DB ''' 
 		self.status = {}
-		self.status["scope"] = "search seeds from BING"
-		print "There is %d sources in database" %self.db.sources.count()
-		print "And %d sources with a bad status" %self.db.sources.find({"status":"false"}).count()
+		self.status["step"] = "search seeds from BING"
+		print "There is already %d sources in database" %self.db.sources.count()
+		print "and %d sources with a bad status" %self.db.sources.find({"status":"false"}).count()
 		try:
 			#defaut is Web could be composite Web + News
 			#defaut nb for web is 50 could be more if manipulating offset
@@ -54,34 +54,42 @@ class Crawl(object):
 					},	
 					auth=(self.key, self.key)
 					)
-			
+			self.status["step"] = "requesting Bing"
 			r.raise_for_status()
-			i = 0
+			self.seeds_nb = 0
 			url_list =  [e["Url"] for e in r.json()['d']['results']]
 			for url in url_list:
 				status, self.status_code, self.error_type, final_url = check_url(url)
 				if status is False:
-					self.db.logs.insert({"url": url, "status": status, "msg": "Incorrect format url", "scope": self.status["scope"], "code":self.status_code, "date": datetime.now()})
+					self.db.sources.insert({"url": url, "status": status, "msg": "Incorrect format url", "scope": self.status["scope"], "code":self.status_code, "date": datetime.now()})
 				else:
-					i = i+1
+					self.seeds_nb = self.seeds_nb+1
 					self.insert_url(url,origin="bing")
 					
-			self.seeds_nb = i
-			self.status["status"] = True
-			self.status["msg"] = "Inserted %s urls from Bing results. Sources nb is now : %d" %(self.seeds_nb, self.db.sources.count())
-			print self.status["msg"]
+			if self.seeds_nb <=0:
+				self.status["status"] = "false"
+			else:	
+				self.status["status"] = "true"
+			print "Inserted %s urls from Bing results. Sources nb is now : %d" %(self.seeds_nb, self.db.sources.count())
+			
 			return True
+		
 		except Exception as e:
-			
 			#raise requests error if not 200
-			if r.status_code is not None:
-				self.status["code"] = r.status_code
-			else:
-				r.status_code = 601
-			self.status["msg"] = "Error fetching results from BING API. %s" %e.args
-			self.status["status"] = False
-			
-			return False
+			try:
+				if r.status_code is not None:
+					self.status["code"] = r.status_code
+					self.status["status"] = "false"
+					print "Error requestings new sources from Bing :%s" %e
+					return False
+			except Exception:
+				if r.status_code is not None:
+					self.status["code"] = r.status_code
+				else:
+					r.status_code = 601
+				self.status["msg"] = "Error fetching results from BING API. %s" %e.args
+				self.status["status"] = "false"
+				return False
 		
 		
 	def get_local(self, afile = ""):

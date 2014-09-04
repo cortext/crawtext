@@ -6,7 +6,7 @@ import re
 from datetime import datetime as dt
 from job import *
 #from abc import ABCMeta, abstractmethod
-
+import datetime
 import docopt
 from utils import *
 
@@ -50,6 +50,8 @@ class Worker(object):
 		'''mapping user input into task return job parameters'''
 		self.name = user_input['<name>']
 		self.values = {}
+		self.status = {}
+		
 		#user
 		if validate_email(self.name) is True:
 			self.action = "show_user"
@@ -59,20 +61,28 @@ class Worker(object):
 		elif validate_url(self.name) is True:
 			self.action = "archive"
 			self.url = self.name
-			self.scheduled = True
+			self.status["project"] = self.name
+			self.status["date"] = datetime.datetime.now()
+			
 			try:
 				self.format = user_input['<format>']
 				self.COLL.insert(self.__dict__)	
-				self.status = "Successfully created an archive job in project %s", self.name
+				self.status["step"] = "creation"
+				self.status["status"] = "true"
+				print "Successfully created an archive job in project %s" %self.name
 				return 
 				
 			except KeyError:
 				self.format = "defaut"
 				self.COLL.insert(self.__dict__)	
-				self.status = "Successfully created an archive job in project %s", self.name
+				print "Successfully created an archive job in project %s", self.name
+				self.status["step"] = "creation"
+				self.status["status"] = "true"
 				return
 		else:
 			self.name = user_input["<name>"]
+			self.status["project"] = self.name
+			self.status["date"] = datetime.datetime.now()
 			#sources_management
 			if user_input["-s"] is True:
 				self.action = "update_sources"
@@ -81,9 +91,13 @@ class Worker(object):
 						self.option = k
 					if v is not None and v is not False:
 						setattr(self,re.sub("<|>","", k), v)
+				self.status["step"] = "update source"
+				self.status["status"] = "true"
 				return self.update_sources()
 				
 			else:
+				self.status["project"] = self.name
+				self.status["date"] = datetime.datetime.now()
 				self.action = "create_or_show"
 				self.select_jobs({"name":self.name, "action":"crawl"})
 				for k,v in user_input.items():
@@ -97,7 +111,8 @@ class Worker(object):
 						setattr(self, re.sub("|<|>","", k), v)
 						self.values[re.sub("--|<|>", "", k)] = v
 					
-				
+				self.status["step"] = "dispatch %s" %self.action
+				self.status["status"] = "true"
 				func = getattr(self,self.action)
 				return func()			
 		
@@ -124,7 +139,7 @@ class Worker(object):
 		'''create one specific task'''
 		if ask_yes_no("Do you want to create a new project?"):
 			#schedule to be run in 5 minutes
-			self.scope = "creation" 
+			
 			self.action = "crawl"
 			self.next_run = self.creation_date.replace(minute = self.creation_date.minute+1)
 			self.status= {"status":"true", "scope": ["creation"], "msg": ["created"]}
@@ -137,11 +152,12 @@ class Worker(object):
 					project_db.drop(collection, "sources")
 					
 			self.COLL.insert(self.__dict__)
-			self.status = "Sucessfully created '%s' task for project '%s'."%(self.action,self.name)
-			return self.status
-			#return self.show()
-		else: 
-			return
+			print "Sucessfully created '%s' task for project '%s'."%(self.action,self.name)
+			self.status["step"] = "creation" %self.action
+			self.status["status"] = "true"
+			return 
+			
+		
 	
 	def show_job(self):
 		if self.job_list is not None:
@@ -165,42 +181,42 @@ class Worker(object):
 		else:
 			self.status = "No task for project %s"% self.name
 			return self.status
+	
 	def archive(self):
 		a = Archive(self.name)
 		self.COLL.insert(a.__dict__)
-		self.status = "Sucessfully scheduled Archive job for %s Next run will be executed in 3 minutes" %self.url
+		print "Sucessfully scheduled Archive job for %s Next run will be executed in 3 minutes" %self.url
+		self.status["step"] = "schedule archive"
+		self.status["status"] = "true"
 		return self.status
 	
 	def update_crawl(self):
-		self.status["project"] = self.name
 		self.status["action"] = self.action
-		self.status["scope"] = "get bing"			
 		if self.job is None:
 			print "No active crawl has been found for project %s" %self.name
 			return self.create_job()
 		else:
-			#~ self.scope = "crawl update"
-			#~ self.msg = "crawl %s updated" %self.values.keys()[0]
-			#self.log.append(self.scope)
 			c = Crawl(self.name)
 			if self.values.keys()[0] == "key":
 				try :
-					print self.job
 					self.query = self.job["query"]				
 					print "Adding urls into sources requesting  results from BING for search expression:\t'%s'" %self.job["query"]
+					self.status["step"] = "update crawl"
+					self.status["status"] = "true"
 					if c.get_bing(self.values["key"]) is False:
-						print c.status
-						self.COLL.update({"_id":self.task["_id"]}, {"$set": c.status})
+						self.status = c.status
+						self.COLL.update({"_id":self.task["_id"]}, {"$set": self.status})
 						return c.status
 				except KeyError:
-					
+					self.status = c.status
 					self.status["status"] = "false"
 					self.status["msg"] = "Unable to update crawl sources from BING. No query has been set "
 					self.COLL.update({"_id":self.job["_id"]}, {"$set": self.status})
 					return self.status
+			
 			self.COLL.update({"_id":self.job["_id"]}, {"$set": self.values})	
 			self.status = c.status
-			return self.status
+			return self
 				
 	def update_sources(self):
 		self.status["scope"] = "udpate source"
