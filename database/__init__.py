@@ -5,7 +5,7 @@ import pymongo
 from pymongo import MongoClient
 from pymongo import errors
 import re
-
+from datetime import datetime
 
 TASK_MANAGER_NAME = "crawtext_jobs"
 TASK_COLL = "job"
@@ -15,7 +15,8 @@ class Database(object):
 	def __init__(self, database_name):
 		self.client = MongoClient('mongodb://localhost,localhost:27017')
 		self.db_name = database_name
-		self.db = self.client[self.db_name]
+		self.db = getattr(self.client,database_name)
+		
 		#self.jobs = self.client[self.db_name].jobs
 		#self.results = self.db['results']
 		#self.queue = self.db['queue'] 
@@ -84,28 +85,35 @@ class Database(object):
 			#if n not in ["projects", "tasks"]:
 			self.use_db(n)
 			self.drop("database", n)
-
+		
 	def stats(self):
 		'''Output the current stats of database in Terminal'''
-		title = "===STATS===\n"
+		title = "===STATS==="
+		title2 = "Report  Database %s -" %str(self.db_name)
 		date = datetime.now()
-		date = date.strftime("%d/%M/%Y at %H:%M:%s")
-		name ="Stored results in Mongo Database: %s \n" %(self.db_name)
-		res = "\t-Nombre de resultats dans la base: %d\n" % (self.db.results.count())
-		h2 = "#Sources\n"
-		sources = "\t-Nombre de seeds: %d\n" % len(self.db.sources.distinct('url')) 
-		from_bing="* Sources ajoutées depuis une recherche bing: %d" %len([n for n in self.db.sources.find({"origin":"bing"})])
-		from_file="* Sources ajoutées depuis une fichier: %d" %len([n for n in self.db.sources.find({"origin":"file"})])
-		manual="* Sources ajoutées par l'utilisateur: %d" %len([n for n in self.db.sources.find({"origin":"defaut"})])
-		automatic ="* Sources ajoutées depuis les  résultats: %d" %len([n for n in self.db.sources.find({"origin":"automatic"})])
+		date = date.strftime("%d/%M/%Y at %H:%M -")
+		date = title2+date
+		h1 = "#Overview"
+		name ="Stored results in Mongo Database: %s " %(self.db_name)
+		res = "\t-Nombre de resultats dans la base: %d" % (self.db.results.count())
+		res2 = "\t-Nombre d'erreurs: %d" %(self.db.logs.count())
 		
-		url = "\t-urls en cours de traitement: %d\n" % (self.db.queue.count())
-		url2 = "\t-urls traitees: %d\n" % (len(self.db.results.count())+ len(self.db.logs.count()))
-		url3 = "\t-urls erronees: %d\n" % (self.db.logs.count())
-		url4 = "\t-urls non pertinentes: %d\n" %(self.db.logs.find({"code": -1, "msg": "Not Relevant"}).count())
-		size = "\t-Size of the database %s: %d MB\n" % (self.db_name, (self.db.command('dbStats', 1024)['storageSize'])/1024/1024.)
-		result = [title, date,  name, res, h2, sources, from_bing, from_file, automatic, manual, url, url2, url3, url4, size]
-		return "".join(result)
+		h2 = "#Sources"
+		sources = "\t-Nombre de seeds: %d" % self.db.sources.count() 
+		from_bing="\t-Sources ajoutées depuis une recherche bing: %d" %self.db.sources.find({"origin":"bing"}).count()
+		#from_bing="* Sources ajoutées depuis une recherche bing: %d" %len([n for n in self.db.sources.find({"origin":"bing"})])
+		from_file="\t-Sources ajoutées depuis une fichier: %d" %len([n for n in self.db.sources.find({"origin":"file"})])
+		manual="\t-Sources ajoutées par l'utilisateur: %d" %len([n for n in self.db.sources.find({"origin":"defaut"})])
+		automatic ="\t-Sources ajoutées depuis les résultats: %d" %len([n for n in self.db.sources.find({"origin":"automatic"})])
+		h3="#Working process"
+		url = "\t-urls en cours de traitement: %d" % (self.db.queue.count())
+		url2 = "\t-urls traitees: %d" % int(self.db.results.count()+ self.db.logs.count())
+		url3 = "\t-urls erronees: %d" % int(self.db.logs.count())
+		url4 = "\t-urls non pertinentes: %d" %int(self.db.logs.find({"code": -1, "msg": "Not Relevant"}).count())
+		size = "\t-Size of the database %s: %d MB" %(self.db_name, (self.db.command('dbStats', 1024)['storageSize'])/1024/1024.)
+		result = [title, date,  h1, name, res, res2, h2, sources, from_bing, from_file, automatic, manual, h3, url, url2, url3, url4, size]
+		
+		return "\n".join(result) 
 	
 	def report(self):
 		''' Output the currents of database for Email Report'''
