@@ -32,6 +32,7 @@ class Worker(object):
 		self.next_run = None
 		self.nb_run = 0
 		self.status = {}
+		self.logs = []
 		self.process_input(user_input)
 		
 	
@@ -45,12 +46,18 @@ class Worker(object):
 			if len(self.job_list) == 1:
 				self.job = self.job_list[0]	
 		return self.job_list
-	
+	def update_status(self):
+		'''insert current status of the job once shceduled'''
+		self.select_jobs({"name":self.name, "action": self.action})
+		if self.job:
+			self.COLL.update({"_id":self.job["_id"]}, {"$push":{"logs": self.status}})
+			return True
+		return False
+		
 	def process_input(self, user_input):
 		'''mapping user input into task return job parameters'''
 		self.name = user_input['<name>']
 		self.values = {}
-		self.status = {}
 		
 		#user
 		if validate_email(self.name) is True:
@@ -67,10 +74,10 @@ class Worker(object):
 			try:
 				self.format = user_input['<format>']
 				self.COLL.insert(self.__dict__)	
-				self.status["step"] = "creation"
+				self.status["step"] = "user creation"
 				self.status["status"] = "true"
 				print "Successfully created an archive job in project %s" %self.name
-				return 
+				return self.update_status()
 				
 			except KeyError:
 				self.format = "defaut"
@@ -78,7 +85,7 @@ class Worker(object):
 				print "Successfully created an archive job in project %s", self.name
 				self.status["step"] = "creation"
 				self.status["status"] = "true"
-				return
+				return self.update_status()
 		else:
 			self.name = user_input["<name>"]
 			self.status["project"] = self.name
@@ -155,7 +162,7 @@ class Worker(object):
 			print "Sucessfully created '%s' task for project '%s'."%(self.action,self.name)
 			self.status["step"] = "creation" %self.action
 			self.status["status"] = "true"
-			return 
+			return self.update_status()
 			
 		
 	
@@ -188,7 +195,7 @@ class Worker(object):
 		print "Sucessfully scheduled Archive job for %s Next run will be executed in 3 minutes" %self.url
 		self.status["step"] = "schedule archive"
 		self.status["status"] = "true"
-		return self.status
+		return self.update_status()
 	
 	def update_crawl(self):
 		self.status["action"] = self.action
@@ -206,30 +213,30 @@ class Worker(object):
 					if c.get_bing(self.values["key"]) is False:
 						self.status = c.status
 						self.COLL.update({"_id":self.task["_id"]}, {"$set": self.status})
-						return c.status
+						return self.update_status()
 				except KeyError:
 					self.status = c.status
 					self.status["status"] = "false"
-					self.status["msg"] = "Unable to update crawl sources from BING. No query has been set "
-					self.COLL.update({"_id":self.job["_id"]}, {"$set": self.status})
-					return self.status
+					print self.status["msg"]
+					#self.COLL.update({"_id":self.job["_id"]}, {"$set": self.status})
+					return self.update_status()
 			
 			self.COLL.update({"_id":self.job["_id"]}, {"$set": self.values})	
 			self.status = c.status
-			return self
+			return self.update_status()
 				
 	def update_sources(self):
-		self.status["scope"] = "udpate source"
+		self.status["step"] = "udpate source"
 		
 		c = Crawl(self.name)
-		self.status = {"status":"", "msg":"", "code":"", "scope":"update sources"}
+		
 		#delete
 		
 		if self.option == "delete_job":
 			#all
 			if self.value is None:
 				self.status = c.delete()
-				return self.status
+				return self.update_status()
 			#url
 			else:
 				ext = (self.url).split(".")[-1]
@@ -240,13 +247,15 @@ class Worker(object):
 							pass
 						url = re.sub("\n", "", url)
 						url = check_url(url)[-1]
-						c.delete_url(self.url)						
-					self.status = "All sources from %s sucessfully deleted from sources database." %self.url
-					return self.status
+						c.delete_url(self.url)
+						self.status = c.status
+					print "All sources from %s sucessfully deleted from sources database." %self.url
+					return self.update_status()
 				else:
 					self.url = check_url(self.url)[-1]
-					self.status = c.delete_url(self.url)
-					return self.status
+					print c.delete_url(self.url)
+					self.status = c.status
+					return self.update_status()
 		
 		#expand
 		elif self.option == "expand":
@@ -255,7 +264,8 @@ class Worker(object):
 			if status is False:
 				self.COLL.update({"_id":self.task["_id"]},{"$set":{"scope":"udpate_sources", "status":status, "msg": c.status["msg"], "error_code":600.3}}) 
 			self.status = c.status
-			return self.status
+			print self.status["msg"]
+			return self.update_status()
 			
 		elif self.option == "add":
 			ext = (self.url).split(".")[-1]
@@ -266,15 +276,14 @@ class Worker(object):
 				if status is False:
 					self.COLL.update({"_id":self.task["_id"]},{"$set":c.status}) 
 				self.status = c.status
-				return
+				return self.update_status()
 			else:
 				url = check_url(self.url)[-1]
 				c.insert_url(url,"manual")
-				self.status = "Succesfully added url %s to seeds of crawl job %s"%(url, self.name)
-				return self.status
+				print "Succesfully added url %s to seeds of crawl job %s"%(url, self.name)
+				return self.update_status()
 		else:
-			self.status= "None"
-			return self.status
+			return self.update_status()
 						
 	#~ def update_project(self):
 		#~ self.select_tasks({"name": self.name})
@@ -309,40 +318,45 @@ class Worker(object):
 		if self.task is None:
 			return "No active crawl job found for %s" %self.name
 		else:
-			e = Crawl(self.name)
-			log = os.spawnl(os.P_NOWAIT, e.run_job())
+			c = Crawl(self.name)
+			#here little trick start in 1 minute taken in charge by the daemon or the cron
+			#log = os.spawnl(os.P_NOWAIT, e.run_job())
+			print c.run_job()
+			self.status = c.status
 			
-			if log is False:
-				self.COLL.update({"name":self.name, "action":"crawl"}, {"$set":{"status":e.status}})
-				self.COLL.update({"name":self.name, "action":"crawl"},  {"$set":{"next_run":self.last_run}})
-			else:
-				self.refresh_task()
-				self.COLL.update({"name":self.name, "action":"crawl"}, {"$inc": {"nb_run": 1}})
-				self.COLL.update({"name":self.name, "action":"crawl"}, {"$set":{"status":True}})
-				self.COLL.update({"name":self.name, "action":"crawl"},  {"$set":{"next_run":self.next_run, 'last_run': self.last_run}})
-			return True
+			self.COLL.update({"name":self.name, "action":"crawl"}, {"$inc": {"nb_run": 1}})	
+			self.COLL.update({"name":self.name, "action":"crawl"},  {"$set":{"next_run":self.next_run, 'last_run': self.last_run}})
+			self.refresh_task()
+			return self.update_status()	
 	
 	def stop_job(self):
 		self.select_task({"name":self.name})
 		print self.task
 		if self.task is None:
-			return "No active crawl job found for %s" %self.name
+			print "No active crawl job found for %s" %self.name
+			return 
 		else:
 			e = Crawl(self.name)
-			return e.stop()		
-			
+			e.stop()
+			print "Job %s of %s stopped" %(self.action, self.name)
+			return self.update_status()	
+	
 	def report_job(self):
 		e = Report(self.name)
-		return e.run_job()
+		e.run_job()
+		self.status = e.status
+		return self.update_status()
 	
 	def export_job(self):	
 		self.select_task({"name":self.name, "action":"crawl"})
 		if self.task is None:
 			print "No active crawl job found for %s. Export can be executed" %self.name
+			return
 		else:
 			e = Export(self.name, self.format, self.coll_type)
-			return e.run_job()
-		
+			e.run_job()
+			self.status = e.status
+			return self.update_status()
 		
 				
 		
