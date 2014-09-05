@@ -66,26 +66,17 @@ class Worker(object):
 			return self.show_user()
 		#archive	
 		elif validate_url(self.name) is True:
-			self.action = "archive"
-			self.url = self.name
-			self.status["project"] = self.name
-			self.status["date"] = datetime.datetime.now()
-			
-			try:
-				self.format = user_input['<format>']
-				self.COLL.insert(self.__dict__)	
-				self.status["step"] = "user creation"
-				self.status["status"] = "true"
-				print "Successfully created an archive job in project %s" %self.name
-				return self.update_status()
-				
-			except KeyError:
-				self.format = "defaut"
-				self.COLL.insert(self.__dict__)	
-				print "Successfully created an archive job in project %s", self.name
-				self.status["step"] = "creation"
-				self.status["status"] = "true"
-				return self.update_status()
+			self.action = None
+			for k,v in user_input.items():
+				if v is True and k in self.ACTION_LIST:
+					self.action = k+"_job"
+			if self.action is None: 
+				#for now archive is just scheduled no acess from start
+				return self.archive_job()
+			else:
+				func = getattr(self,self.action)
+				print func()
+				return
 		else:
 			self.name = user_input["<name>"]
 			self.status["project"] = self.name
@@ -121,7 +112,8 @@ class Worker(object):
 				self.status["step"] = "dispatch %s" %self.action
 				self.status["status"] = "true"
 				func = getattr(self,self.action)
-				return func()			
+				print func()
+				return 
 		
 				
 	def show_user(self):
@@ -149,7 +141,6 @@ class Worker(object):
 			
 			self.action = "crawl"
 			self.next_run = self.creation_date.replace(minute = self.creation_date.minute+1)
-			self.status= {"status":"true", "scope": ["creation"], "msg": ["created"]}
 			project_db = Database(self.name)
 			if project_db.use_coll("results").count() > 0 or project_db.use_coll("sources").count()> 0 or project_db.use_coll("logs").count()> 0:
 				print "An old project %s exists with data.\n If you reactivate the project it will add new data to the existing ones."
@@ -160,6 +151,8 @@ class Worker(object):
 					
 			self.COLL.insert(self.__dict__)
 			print "Sucessfully created '%s' task for project '%s'."%(self.action,self.name)
+			self.status["project"] = self.name
+			self.status["date"] = datetime.datetime.now()
 			self.status["step"] = "creation" %self.action
 			self.status["status"] = "true"
 			return self.update_status()
@@ -189,14 +182,43 @@ class Worker(object):
 			self.status = "No task for project %s"% self.name
 			return self.status
 	
-	def archive(self):
+	def archive_job(self):
+		self.action = "archive"
+		self.url = self.name
+		self.status["project"] = self.name
+		self.status["date"] = datetime.datetime.now()
+		self.select_jobs({"name": self.name, "action": "archive"})
+		try:
+			self.format = user_input['<format>']
+			if self.job is None:
+				self.COLL.insert(self.__dict__)	
+				self.status["step"] = "archive creation"
+				self.status["status"] = "true"
+				print "Successfully created an archive job in project %s" %self.name
+				return self.update_status()
+			else:
+				print "Archive project for %s already exists" %self.name
+				return 	
+		except KeyError:
+				self.format = "defaut"
+				if self.job is None:
+					self.COLL.insert(self.__dict__)	
+					print "Successfully created an archive job in project %s", self.name
+					self.status["step"] = "creation"
+					self.status["status"] = "true"
+					return self.update_status()
+				else:
+					print "Archive project for %s already exists" %self.name
+					return 
+		'''
 		a = Archive(self.name)
 		self.COLL.insert(a.__dict__)
 		print "Sucessfully scheduled Archive job for %s Next run will be executed in 3 minutes" %self.url
 		self.status["step"] = "schedule archive"
 		self.status["status"] = "true"
 		return self.update_status()
-	
+		'''
+		
 	def update_crawl(self):
 		self.status["action"] = self.action
 		if self.job is None:
@@ -300,8 +322,9 @@ class Worker(object):
 	
 	def delete_job(self):
 		'''delete project and archive results'''
+		self.select_jobs({"name": self.name})
 		if self.job is None:
-			return "No active crawl job found for %s" %self.name
+			return "No active job found for %s" %self.name
 		else:
 			if self.job_list is not None:
 				print "****Archiving*****" 
