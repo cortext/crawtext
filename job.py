@@ -18,6 +18,9 @@ from scrapper.article import Article
 			 
 class Crawl(object):
 	def __init__(self, name): 
+		self.status = {}
+		self.status['action'] = "crawl"
+		self.status['project'] = name
 		self.name = name
 		self.option = None
 		self.file = None
@@ -33,11 +36,10 @@ class Crawl(object):
 		self.db.create_colls(['sources', 'results', 'logs', 'queue'])	
 		
 	def get_bing(self, key=None):
+		''' Method to extract results from BING API (Limited to 5000 req/month) automatically sent to sources DB ''' 
+		self.status["step"] = "bing extraction"
 		if key is not None:
 			self.key = key
-		''' Method to extract results from BING API (Limited to 5000 req/month) automatically sent to sources DB ''' 
-		self.status = {}
-		self.status["step"] = "search seeds from BING"
 		print "There is already %d sources in database" %self.db.sources.count()
 		print "and %d sources with a bad status" %self.db.sources.find({"status":"false"}).count()
 		try:
@@ -54,7 +56,6 @@ class Crawl(object):
 					},	
 					auth=(self.key, self.key)
 					)
-			self.status["step"] = "requesting Bing"
 			r.raise_for_status()
 			self.seeds_nb = 0
 			url_list =  [e["Url"] for e in r.json()['d']['results']]
@@ -68,11 +69,15 @@ class Crawl(object):
 					
 			if self.seeds_nb <=0:
 				self.status["status"] = "false"
+				self.status["code"] = 300
+				self.status["msg"] = "No new url inserted from Bing"
+				print "No urls from Bing results. Number of urls already in sources db: %d" %(self.seeds_nb, self.db.sources.count())
+				return False
 			else:	
 				self.status["status"] = "true"
-			print "Inserted %s urls from Bing results. Sources nb is now : %d" %(self.seeds_nb, self.db.sources.count())
-			
-			return True
+				self.status["msg"] = "%s urls inserted from Bing" %self.seed_nb
+				print "Inserted %s urls from Bing results. Sources nb is now : %d" %(self.seeds_nb, self.db.sources.count())
+				return True
 		
 		except Exception as e:
 			#raise requests error if not 200
@@ -80,6 +85,7 @@ class Crawl(object):
 				if r.status_code is not None:
 					self.status["code"] = r.status_code
 					self.status["status"] = "false"
+					self.status["msg"] = "Error requestings new sources from Bing :%s" %e
 					print "Error requestings new sources from Bing :%s" %e
 					return False
 			except Exception:
@@ -94,8 +100,7 @@ class Crawl(object):
 		
 	def get_local(self, afile = ""):
 		''' Method to extract url list from text file'''
-		self.status = {}
-		self.status["scope"] = "crawl search bing"
+		self.status["step"] = "file extraction"
 		if afile == "":
 			afile = self.file
 		try:
@@ -111,36 +116,39 @@ class Crawl(object):
 				else:
 					self.db.logs.insert({"url": url, "status": status, "msg": error_type, "scope": self.status["scope"], "code":status_code, "file": afile})
 			self.seeds_nb = i
-			self.status["status"] = True
+			self.status["status"] = "true"
 			self.status["msg"] = "%s urls have been added to seeds from %s" %(self.seeds_nb, afile)
 			return True
 		except Exception as e:
-			print e.args[0]
+			print "Please verify that your file is in the current directory To set up a correct filename and add directly to sources:\n\t crawtext.py %s -s append your_sources_file.txt" %(e.args[1],self.file, self.name)
 			self.status["code"] = float(str(602)+"."+str(e.args[0]))
-			self.status["msg"]= "%s '%s'.\nPlease verify that your file is in the current directory To set up a correct filename and add directly to sources:\n\t crawtext.py %s -s append your_sources_file.txt" %(e.args[1],self.file, self.name)
-			print self.status["msg"]
+			self.status["status"] = "false"
+			self.status["msg"]= "file extraction failed : %s for '%s'." %(e.args[1],self.file, self.name)
 			return False
 		
 	
 	def expand(self):
 		'''Expand sources url adding results urls collected from previous crawl'''
-		self.status = {}
-		self.status["scope"] = "crawl expand"
+		self.status["steo"] = "expand"
 		if len(self.db.results.distinct("url")) == 0:
-			self.status["status"] = False
+			self.status["status"] = "false"
 			self.status["code"] = 603
 			self.status["msg"] = "No results to put in seeds. Expand option failed"
 			return False
 		else:
-			i = 1
+			self.seeds_nb = 1
 			for url in self.db.results.distinct("url"):
 				check = self.insert_url(url, "automatic")
 				if self.insert_url(url, "automatic") is True:
-					i = i+1
+					self.seeds_nb = self.seed_nb+1
 					
-			self.seed_nb = i
-			self.status["status"] = True
-			self.status["msg"] = "Successfuly added %s urls in sources" %self.seed_nb	
+
+			if self.seeds_nb == 1:
+				self.status["status"] = "false"
+				self.status["msg"] = "No seeds added from expand option"	
+			else:
+				self.status["status"] = "false"
+				self.status["msg"] = "Successfuly added %s urls in sources" %self.seeds_nb	
 			return True
 				
 	def insert_url(self, url, origin="default", depth="0"):
@@ -183,26 +191,30 @@ class Crawl(object):
 	def delete_url(self, url):
 		if self.db.sources.find_one({"url": url}) is not None:
 			self.db.sources.remove({"url":url})
-			return "'%s' has been deleted from seeds" %url
+			print "'%s' has been deleted from seeds" %url
+			return True
 		else:
-			return "url %s was not in sources. Check url format" %url
+			print "url %s was not in sources. Check url format" %url
+			return False
 					
 	def delete(self):
-		e = Export(self.name, "sources")
-		print e.run_job()
-		print self.db.sources.drop()
-		return 'Every single seed has been deleted from crawl job of project %s.'%self.name		
+		e = Export(self.name, "json","sources")
+		e.run_job()
+		self.db.sources.drop()
+		print 'Every single source has been deleted from project %s.'%self.name		
+		return True
 		
 	def collect_sources(self):
 		''' collect sources from options expand key or file'''
+		self.status["scope"] = "collecting sources"
 		if self.option == "expand":
 			if self.expand() is False:
-				return self.status
-				#self.status['msg']= self.
+				return False
+				
 		if self.file is not None:
 			#print "Getting seeds from file %s" %self.file
 			if self.get_local(self.file) is False:
-				return self.status
+				return False
 				
 		if self.key is not None:
 			if self.query is None:
@@ -210,31 +222,25 @@ class Crawl(object):
 				self.status["msg"] = "Unable to start crawl: no query has been set."
 				self.status["code"] = 600.1
 				self.status["status"] = False
-				self.status["scope"] = "collecting sources"
 				return False
 			else:
 				if self.get_bing() is False:
-					return self.status
+					return False
 		return self.send_seeds_to_queue()
 			
 	def send_seeds_to_queue(self):
-		print "sending urls to queue"
 		for i, doc in enumerate(self.db.sources.find()):
-			print i
-			if doc["status"] == "false":
-				pass
-			else:
+			if doc["status"] != "false":
 				self.db.queue.insert(doc)
-			
 		return True
 				
 	def run_job(self):
-		self.status = {}
 		self.status["scope"] = "running crawl job"
 		
 		query = Query(self.query)
 			
-		self.collect_sources()
+		if self.collect_sources() is False:
+			return False
 		#~ if self.db.sources.count() == 0:
 			#~ self.status["msg"] = "Unable to start crawl: no seeds have been set."
 			#~ self.status["code"] = 600.1
@@ -243,12 +249,13 @@ class Crawl(object):
 		#~ else:
 			#~ self.send_seeds_to_queue()
 		#~ 
+		
 		start = datetime.now()
 		if self.db.queue.count == 0:
 			self.status["msg"] = "Error while sending urls into queue: queue is empty"
 			self.status["code"] = 600.1
 			self.status["status"] = False
-			return self.status
+			return False
 		else:
 			self.status["msg"] = "running crawl on %i sources with query '%s'" %(len(self.db.sources.distinct("url")), self.query)				
 			
