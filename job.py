@@ -231,6 +231,7 @@ class Crawl(object):
 	def send_seeds_to_queue(self):
 		for i, doc in enumerate(self.db.sources.find()):
 			if doc["status"] != "false":
+				doc["step"] = 0
 				self.db.queue.insert(doc)
 		return True
 				
@@ -260,16 +261,16 @@ class Crawl(object):
 			self.status["msg"] = "running crawl on %i sources with query '%s'" %(len(self.db.sources.distinct("url")), self.query)				
 			
 			while self.db.queue.count > 0:	
-				for url in self.db.queue.distinct("url"):
+				for doc in self.db.queue.find():
 					# if self.db.results.count() >= 10.000:
 					# 	self.db.queue.drop()
-						
-					if url != "":
-						page = Page(url)
+					if doc["status"] != "false":	
+					if doc["url"] != "":
+						page = Page(doc["url"],doc["step"])
 						if page.check() and page.request() and page.control():
-							article = Article(page.url, page.raw_html)
+							article = Article(page.url, page.raw_html, page.step)
 							if article.get() is True:
-								print article.status
+								#print article.status
 								if article.is_relevant(query):			
 									self.db.results.insert(article.status)
 									if article.outlinks is not None and len(article.outlinks) > 0:
@@ -292,8 +293,8 @@ class Crawl(object):
 			delta = end-start
 
 			self.status["msg"] = "%s. Crawl done sucessfully in %s s" %(self.status["msg"],str(elapsed))
-			self.status["status"] = True
-		return self.status
+			self.status["status"] = "true"
+		return True
 	
 	def stop(self):		
 		self.db.queue.drop()	

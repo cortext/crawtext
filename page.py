@@ -22,27 +22,27 @@ from scrapper.article import Article
  
 class Page(object):
 	'''Page factory'''
-	def __init__(self, url, output_format="defaut"):
+	def __init__(self, url, step = 0, output_format="defaut"):
 		self.url = url
 		#~ if query is not None:
 			#~ self.match_query = regexify(query)
-			
+		self.step = step	
 		self.crawl_date = datetime.datetime.now()
-		self.status = {"msg":None, "status": None, "code": None, "step": None, "url": self.url}
+		self.status = {"msg":None, "status": None, "code": None, "step": "page creation", "url": self.url}
 		#~ self.error_type = "Ok"
 		#~ self.status = "Ok"
 		#~ self.status_code = 0
 		self.output_format = output_format
 		
 	def check(self):
-		self.status["step"] = "check"
+		self.status["step"] = "check page"
 		self.status["status"], self.status["code"], self.status["msg"], self.status["url"] = check_url(self.url)
 		self.url = self.status["url"]
 		return self.status["status"]
 		
 	def request(self):
 		'''Bool request a webpage: return boolean and update raw_html'''
-		self.status["step"] = "request"
+		self.status["step"] = "request page"
 		try:
 			requests.adapters.DEFAULT_RETRIES = 2
 			user_agents = [u'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.1 (KHTML, like Gecko) Chrome/22.0.1207.1 Safari/537.1', u'Mozilla/5.0 (Windows NT 6.1; rv:15.0) Gecko/20120716 Firefox/15.0a2', u'Mozilla/5.0 (compatible; MSIE 10.6; Windows NT 6.1; Trident/5.0; InfoPath.2; SLCC1; .NET CLR 3.0.4506.2152; .NET CLR 3.5.30729; .NET CLR 2.0.50727) 3gpp-gba UNTRUSTED/1.0', u'Opera/9.80 (Windows NT 6.1; U; es-ES) Presto/2.9.181 Version/12.00']

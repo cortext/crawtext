@@ -25,12 +25,14 @@ class Extractor(object):
 		
 
 
-class Article(Extractor):
+class Article(object):
 	'''Article'''
-	def __init__(self, url, raw_html, lang):
+	def __init__(self, url, raw_html, step lang="en"):
 		self.status = True
 		self.url = url
+		self.step = step
 		self.lang = lang
+		
 		# title of the article
 		self.title = None	
 		#text
@@ -101,7 +103,7 @@ class Article(Extractor):
 			
 			#self.content = self.content.decode("utf-8")
 			self.links = extractor.get_links()
-			self.outlinks = [{"url":url} for url in extractor.get_outlinks()]
+			self.outlinks = [{"url":url, "step": self.step+1} for url in extractor.get_outlinks()]
 			try:
 				self.content = formatter.get_formatted_text()
 				
@@ -117,22 +119,22 @@ class Article(Extractor):
 			# self.article.publish_date = self.extractor.get_pub_date(doc)
 			# self.article.additional_data = self.extractor.more(doc)
 			
-			return self
+			return True
 			
 		except Exception as e:
-			self.status = False
-			self.logs = {
+			
+			self.status = {
 				"url": self.url,
 				"scope": "article extraction",
 				"msg": e.args,
 				"status": False,
 				"code": -2
 				}
-			return self
+			return False
 				
 	
 	def repr(self):
-		return {
+		self.status ={
 				"url": self.canonical_link,
 				"domain": self.domain,
 				"title": self.title.encode("utf-8"),
@@ -142,6 +144,7 @@ class Article(Extractor):
 				"crawl_date": self.start_date,
 				"raw_html": self.raw_html,
 				}
+		return 
 	
 	def is_relevant(self, query):
 		self.content = {"title":unicode(self.title), "content": unicode(self.content)}
@@ -149,4 +152,5 @@ class Article(Extractor):
 			self.status = {"url":self.url, "code": -1, "msg": "Not Relevant","status": False, "title": self.title, "content": self.content}
 			return False
 		else:
+			self.repr()
 			return True
