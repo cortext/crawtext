@@ -98,10 +98,10 @@ class Crawl(object):
 				return False
 		
 		
-	def get_local(self, afile = ""):
+	def get_local(self, afile = None):
 		''' Method to extract url list from text file'''
 		self.status["step"] = "file extraction"
-		if afile == "":
+		if afile is None:
 			afile = self.file
 		try:
 			i = 0
@@ -218,7 +218,6 @@ class Crawl(object):
 				
 		if self.key is not None:
 			if self.query is None:
-				print "collecting sources from bing"
 				self.status["msg"] = "Unable to start crawl: no query has been set."
 				self.status["code"] = 600.1
 				self.status["status"] = False
@@ -237,10 +236,12 @@ class Crawl(object):
 				
 	def run_job(self):
 		self.status["scope"] = "running crawl job"
-		
-		query = Query(self.query)
-			
+		if self.query is not None:
+			query = Query(self.query)
+		else:
+			return False	
 		if self.collect_sources() is False:
+			print self.status
 			return False
 		#~ if self.db.sources.count() == 0:
 			#~ self.status["msg"] = "Unable to start crawl: no seeds have been set."
@@ -265,23 +266,23 @@ class Crawl(object):
 					# if self.db.results.count() >= 10.000:
 					# 	self.db.queue.drop()
 					if doc["status"] != "false":	
-					if doc["url"] != "":
-						page = Page(doc["url"],doc["step"])
-						if page.check() and page.request() and page.control():
-							article = Article(page.url, page.raw_html, page.step)
-							if article.get() is True:
-								#print article.status
-								if article.is_relevant(query):			
-									self.db.results.insert(article.status)
-									if article.outlinks is not None and len(article.outlinks) > 0:
-										self.db.queue.insert(article.outlinks)
-								else:
-									self.db.logs.insert(article.status)	
-							else:	
-								self.db.logs.insert(article.status)
-						else:
-							print page.status
-							self.db.logs.insert(page.status)	
+						if doc["url"] != "":
+							page = Page(doc["url"],doc["step"])
+							if page.check() and page.request() and page.control():
+								article = Article(page.url, page.raw_html, page.step)
+								if article.get() is True:
+									#print article.status
+									if article.is_relevant(query):			
+										self.db.results.insert(article.status)
+										if article.outlinks is not None and len(article.outlinks) > 0:
+											self.db.queue.insert(article.outlinks)
+									else:
+										self.db.logs.insert(article.status)	
+								else:	
+									self.db.logs.insert(article.status)
+							else:
+								print page.status
+								self.db.logs.insert(page.status)	
 					self.db.queue.remove({"url": url})
 					
 					if self.db.queue.count() == 0:		
@@ -308,6 +309,7 @@ class Archive(object):
 		self.date = self.date.strftime('%d-%m-%Y_%H:%M')
 		self.name = name
 		self.url = name
+	
 	def run_job(self):
 		print "Archiving %s" %self.url
 		return True
