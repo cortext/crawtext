@@ -281,62 +281,84 @@ class Crawl(object):
 	
 	def run_job(self):
 		
-		
+		print "running crawl"
+		self.config()
 		#~ 
-		if self.config() is True:
-			start = datetime.now()
-			if self.db.queue.count == 0:
-				self.logs["msg"] = "Error while sending urls into queue: queue is empty"
-				self.logs["code"] = 600.1
-				self.logs["status"] = False
-				return False
-			else:
-				self.logs["msg"] = "running crawl on %i sources with query '%s'" %(len(self.db.sources.distinct("url")), self.query)				
+		#~ if self.config() is True:
+		start = datetime.now()
+		if self.db.queue.count() == 0:
+			self.logs["msg"] = "Error while sending urls into queue: queue is empty"
+			self.logs["code"] = 600.1
+			self.logs["status"] = False
+			return False
+		else:
+			self.logs["msg"] = "running crawl on %i sources with query '%s'" %(len(self.db.sources.distinct("url")), self.query)				
+			for doc in self.db.queue.find():
 				
-				for doc in self.db.queue.find():
-					if self.db.queue.count() == 0:		
-						break
-					# if self.db.results.count() >= 10.000:
-					# 	self.db.queue.drop()
-					if doc["url"] != "":
-						page = Page(doc["url"],doc["step"])
-						print doc["step"]
-						if page.check() and page.request() and page.control():
-							article = Article(page.url, page.raw_html, page.step)
-							if article.get() is True:
-								#print article.status
-								if article.is_relevant(self.query):		
-									if article.status not in self.db.results.find(article.status):
-										self.db.results.insert(article.status)
-									else:
-										article["status"] = False
-										article["msg"]= "article already in db"
-										self.db.logs.insert(article.status)	
-									if article.outlinks is not None and len(article.outlinks) > 0:
-										if article.outlinks not in self.db.find(article.outlinks):
-											self.db.queue.insert(article.outlinks)
-										else:
-											article["status"] = False
-											article["msg"]= "outlinks already in queue"
-											self.db.logs.insert(article.outlinks)	
-								else:
-									self.db.logs.insert(article.status)	
-							else:	
-								self.db.logs.insert(article.status)
-						else:
-							print page.status
-							self.db.logs.insert(page.status)	
-					self.db.queue.remove({"url": doc["url"]})
-					if self.db.queue.count() == 0:		
-						break
+				if self.db.queue.count() == 0:		
+					self.logs["msg"] = "No url pending"
+					self.logs["code"] = 600.2
+					self.logs["status"] = False
+					break
+					return False
 					
-			end = datetime.now()
-			elapsed = end - start
-			delta = end-start
+				# if self.db.results.count() >= 10.000:
+				# 	self.db.queue.drop()
+				if doc["url"] != "":
+					try:
+						page = Page(doc["url"],doc["depth"])
+					except KeyError:
+						page = Page(doc["url"],0)
+						
+					if page.check() and page.request() and page.control():
+						article = Article(page.url, page.raw_html, page.depth)
+						if article.get() is True:
+							print article.status
+							if article.is_relevant(self.query):		
+								if article.status not in self.db.results.find(article.status):
+									self.db.results.insert(article.status)
+								else:
+									article["status"] = False
+									article["msg"]= "article already in db"
+									self.db.logs.insert(article.status)	
+								if article.outlinks is not None and len(article.outlinks) > 0:
+									#if article.outlinks not in self.db.results.find(article.outlinks) and article.outlinks not in self.db.logs.find(article.outlinks) and article.outlinks not in self.db.queue.find(article.outlinks):
+									for url in article.outlinks:
+										if url not in self.db.queue.distinct("url"):
+											self.db.queue.insert({"url":url, "depth": page.depth+1})
+										
+									#~ else:
+										#~ article["status"] = False
+										#~ article["msg"]= "outlinks already in queue"
+										#~ self.db.logs.insert(article.outlinks)	
+							else:
+								self.db.logs.insert(article.status)	
+						else:	
+							self.db.logs.insert(article.status)
+					else:
+						print page.status
+						self.db.logs.insert(page.status)
+					#~ except KeyError:
+						#~ print "KeyError"
+						#~ doc["msg"] = "no step found"
+						#~ del doc["_id"]
+						#~ try:
+							#~ self.db.logs.insert(doc)
+						#~ except Exception as e:
+							#~ del doc["_id"]
+							#~ doc["status"]= "Duplicate: %s" %e
+							#~ self.db.logs.insert(doc)
+				self.db.queue.remove({"url": doc["url"]})
+				if self.db.queue.count() == 0:		
+					break
+				
+		end = datetime.now()
+		elapsed = end - start
+		delta = end-start
 
-			self.logs["msg"] = "%s. Crawl done sucessfully in %s s" %(self.logs["msg"],str(elapsed))
-			self.logs["status"] = "true"
-			return True
+		self.logs["msg"] = "%s. Crawl done sucessfully in %s s" %(self.logs["msg"],str(elapsed))
+		self.logs["status"] = "true"
+		return True
 	
 	def stop(self):		
 		self.db.queue.drop()	

@@ -235,7 +235,7 @@ class Worker(object):
 				print "Results will automatically added to sources to expand the crawl"
 			self.set_config(c)
 			func = getattr(c, task)
-			print func()
+			return func()
 			'''
 			if option == "delete":
 				#func = doc["action"].capitalize()
@@ -299,6 +299,7 @@ class Worker(object):
 		return
 			
 	def start_job(self):
+		
 		if self.job_list is None:
 			print "No active job found for %s" %(self.name)
 			self.create_job()
@@ -306,13 +307,14 @@ class Worker(object):
 			for doc in self.job_list:
 				func = doc["action"].capitalize()
 				instance = globals()[func]
+				
 				job = instance(self.name)
+				
 				self.get_config(job)
-				print job.query
-				print job.run_job()
-			del self.job_list
-			e = Export(self.name)
-			e.run_job()
+				return job.run_job()
+			#del self.job_list
+			#e = Export(self.name)
+			#e.run_job()
 			return "Finished"	
 			#print self.job["action"]
 			#~ c = Crawl(self.name)
@@ -348,15 +350,17 @@ class Worker(object):
 		return
 	
 	def export_job(self):	
-		self.select_task({"name":self.name, "action":"crawl"})
-		if self.task is None:
+		#next change self.action
+		self.select_jobs({"name":self.name, "action":"crawl"})
+		if self.job_list is None:
 			print "No active crawl job found for %s. Export can be executed" %self.name
 			return
 		else:
-			e = Export(self.name, self.format, self.coll_type)
+			
+			e = Export(self.name, 'json', None)
 			e.run_job()
-			self.status = e.status
-			return self.update_status()
+			#~ self.status = e.status
+			#~ return self.update_status()
 		
 				
 		
