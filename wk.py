@@ -173,7 +173,7 @@ class Worker(object):
 		return None
 		
 		
-	def update_crawl(self):
+	def __update_crawl__(self):
 		if self.job_list is None:
 			print "No project called %s" %self.name
 			return self.create_job()
@@ -197,7 +197,7 @@ class Worker(object):
 				print "oups"
 				print job.logs
 					
-	def update_sources(self, option):
+	def __update_sources__(self, option):
 		if self.job_list is None:
 			print "No project called %s" %self.name
 			return self.create_job()
@@ -210,44 +210,6 @@ class Worker(object):
 			self.set_config(c)
 			func = getattr(c, task)
 			return func()
-			'''
-			if option == "delete":
-				#func = doc["action"].capitalize()
-				#instance = globals()[func]
-				#all
-				if self.value is None:
-					self.status = c.delete()
-					return self.update_status()
-				#url
-				else:
-					
-			
-			#expand
-			elif option == "expand":
-				c.expand()
-				self.COLL.update({"_id":self.task["_id"]},{"$set":{"option": self.option, "status":status, "msg": c.status["msg"]}}) 
-				#~ if status is False:
-					#~ self.COLL.update({"_id":self.task["_id"]},{"$set":{"scope":"udpate_sources", "status":status, "msg": c.status["msg"], "error_code":600.3}}) 
-				self.status = c.status
-				print self.status["msg"]
-				return self.update_status()
-			else:	
-			#elif option == "add":
-				ext = (self.url).split(".")[-1]
-				if ext == "txt":
-					print "Adding the list of url contained in the file %s" %self.url
-					self.file = self.url
-					status = c.get_local(self.file)
-					if status is False:
-						self.COLL.update({"_id":self.task["_id"]},{"$set":c.status}) 
-					self.status = c.status
-					return self.update_status()
-				else:
-					url = check_url(self.url)[-1]
-					c.insert_url(url,"manual")
-					print "Succesfully added url %s to seeds of crawl job %s"%(url, self.name)
-					return self.update_status()
-			'''
 						
 	#~ def update_project(self):
 		#~ self.select_tasks({"name": self.name})
