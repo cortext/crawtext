@@ -311,29 +311,18 @@ class Worker(object):
 				job = instance(self.name)
 				
 				self.get_config(job)
-				return job.run_job()
-			#del self.job_list
-			#e = Export(self.name)
-			#e.run_job()
-			return "Finished"	
-			#print self.job["action"]
-			#~ c = Crawl(self.name)
-			#~ #here little trick start in 1 minute taken in charge by the daemon or the cron
-			#~ #log = os.spawnl(os.P_NOWAIT, e.run_job())
-			#~ print c.run_job()
-			#~ self.status = c.status
-			#~ 
+				job.run_job()
+				print job.logs
 			#~ self.COLL.update({"name":self.name, "action":"crawl"}, {"$inc": {"nb_run": 1}})	
 			#~ self.COLL.update({"name":self.name, "action":"crawl"},  {"$set":{"next_run":self.next_run, 'last_run': self.last_run}})
 			#~ self.refresh_task()
 			#~ return self.update_status()	
 	
 	def stop_job(self):
-		
-		e = Crawl(self.name)
-		e.stop()
-		print "Job %s of %s stopped" %(self.action, self.name)
-		return self.update_status()	
+		job = instance(self.name)		
+		self.get_config(job)
+		job.stop()
+		print job.logs
 	
 	def unschedule_job(self):
 		'''delete a specific task'''
