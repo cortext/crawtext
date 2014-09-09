@@ -63,20 +63,21 @@ class Crawl(object):
 			try:
 				if r.status_code is not None:
 					self.logs["code"] = r.status_code
-					self.logs["status"] = "false"
+					self.logs["status"] = False
 					self.logs["msg"] = "Error requestings new sources from Bing :%s" %e
 					print "Error requestings new sources from Bing :%s" %e
 					return False
-			except Exception:
-				self.logs["code"] = "601."+e.args(0)
+			except Exception as e:
+				print "Error requestings new sources from Bing :%s" %e
+				self.logs["code"] = float(str(601)+"."+str(e.args[0]))
 				self.logs["msg"] = "Error fetching results from BING API. %s" %e.args
-				self.logs["status"] = "false"
+				self.logs["status"] = False
 				return False
 		
 		
 	def get_local(self, afile = None):
 		''' Method to extract url list from text file'''
-		self.logs["step"] = "file extraction"
+		self.logs["step"] = "local file extraction"
 		if afile is None:
 			afile = self.file
 		try:
@@ -87,16 +88,16 @@ class Crawl(object):
 				url = re.sub("\n", "", url)
 				status, status_code, error_type, url = check_url(url)
 				if status is True:
-					if self.insert_url(url, origin="file") is True:
+					if self.insert_url(url, origin="file", depth=0) is True:
 						i = i+1
 				else:
 					self.db.logs.insert({"url": url, "status": status, "msg": error_type, "scope": self.logs["scope"], "code":status_code, "file": afile})
 			self.seeds_nb = i
-			self.logs["status"] = "true"
+			self.logs["status"] = True
 			self.logs["msg"] = "%s urls have been added to seeds from %s" %(self.seeds_nb, afile)
 			return True
 		except Exception as e:
-			print "Please verify that your file is in the current directory To set up a correct filename and add directly to sources:\n\t crawtext.py %s -s append your_sources_file.txt" %(e.args[1],self.file, self.name)
+			print "Please verify that your file is in the current directory. To set up a correct filename and add directly to sources:\n\t crawtext.py %s -s append your_sources_file.txt" %(e.args[1],self.file, self.name)
 			self.logs["code"] = float(str(602)+"."+str(e.args[0]))
 			self.logs["status"] = "false"
 			self.logs["msg"]= "file extraction failed : %s for '%s'." %(e.args[1],self.file, self.name)
