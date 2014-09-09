@@ -81,7 +81,6 @@ class Crawl(object):
 		if afile is None:
 			afile = self.file
 		try:
-			i = 0
 			for url in open(afile).readlines():
 				if url == "\n":
 					continue
@@ -100,8 +99,12 @@ class Crawl(object):
 			self.logs["msg"]= "Failed extraction for file %s failed : %s '." %(self.file, e.args[1])
 		
 	def delete_local(self):
+		'''delete sources contained in self.file'''
+		print "Removing the list of url contained in the file %s" %self.file
+		for url in open(self.file).readlines():
+			url = re.sub("\n", "", url)
+			self.db.sources.remove({"url":url})	
 			
-	
 	def expand_sources(self):
 		'''Expand sources url adding results urls collected from previous crawl'''
 		self.logs["step"] = "expanding sources from results"
@@ -115,12 +118,6 @@ class Crawl(object):
 			self.logs["code"] = 603
 			self.logs["msg"] = "No results to put in seeds. Expand option failed"
 			
-			
-					
-				
-		
-		
-	
 	def add_sources(self):
 		self.logs["scope"] = 
 		if hasattr(self, 'url'):
@@ -130,28 +127,18 @@ class Crawl(object):
 				self.get_local()
 			else:
 				url = check_url(self.url)[-1]
-				self.insert_url(url,"manual", depth=0)
-				
+				self.insert_url(url,"manual", depth=0)			
 		return
 		
 	def delete_sources(self):
 		if hasattr(self, 'url'):
 			ext = (self.url).split(".")[-1]
 			if ext == "txt":
-				print "Removing the list of url contained in the file %s" %self.url
 				self.file = self.url
-				for url in open(self.url).readlines():
-					if url == "\n":
-						continue
-					url = re.sub("\n", "", url)
-					status, status_code, error_type, url = check_url(url)
-					self.db.sources.remove({"url":url})
-					print "removing%s" %url
-				#print self.get_local(self.file)
-				
+				self.delete_local()
 			else:
 				url = check_url(self.url)[-1]
-				print self.db.sources.remove({"url":url})
+				self.db.sources.remove({"url":url})
 				print "Succesfully deleted url %s to seeds of crawl job %s"%(url, self.name)
 		else:
 			self.db.sources.drop()
@@ -161,7 +148,6 @@ class Crawl(object):
 	def insert_url(self, url, origin="default", depth="0"):
 		'''Inséré ou mis à jour'''
 		status, status_code, error_type, url = check_url(url)
-	
 		is_source = self.db.sources.find_one({"url": url})
 		#Incorrect url
 		if status is False:
