@@ -88,7 +88,7 @@ class Worker(object):
 				if v is True and k in self.ACTION_LIST:
 					task = k+"_job"
 				if v is not None and k in self.CRAWL_LIST:	
-					task ="update_crawl"
+					task ="__update_crawl__"
 					self.action = "crawl"
 				if v is not None and k in self.PROJECT_LIST:	
 					task = "__update_project__"
