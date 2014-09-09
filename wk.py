@@ -34,6 +34,9 @@ class Worker(object):
 		self.nb_run = 0
 		#~ self.status = {}
 		self.status = []
+		self.logs = {}
+		self.logs["date"] = self.creation_date
+		self.logs["active"] = True
 		self.__get_input__(user_input)
 		
 	
@@ -103,28 +106,31 @@ class Worker(object):
 				self.action = "crawl"
 				#sources_management
 				if user_input["-s"] is True:
-					task = "__update_source__"
+					task = "__update_sources__"
 					for k,v in user_input.items():
 						if v is True and k in self.OPTION_lIST:
-							option = k
+							self.option = k
 						if v is not None and v is not False:
 							setattr(self,re.sub("<|>","", k), v)
-					return self
+					
 				
 			
 			
 			self.job_list = self.__select_jobs__({"name":self.name})
 			
 			if self.job_list is None and task is None:
-				return self.create_job()
+				self.create_job()
 			elif self.job_list is not None and task is None:
-				return self.show_job()
+				self.show_job()
 			else:
 				func = getattr(self,task)
-				return func()
+				func()
+		print self.logs["msg"]
+		return self.logs["status"]
 		
 				
 	def show_user(self):
+		self.logs["step"] = "Showing user"
 		user_data = [n for n in self.COLL.find({"user": self.user})]
 		if len(user_data) == 0:
 			print "No user %s registered" %self.user
@@ -139,7 +145,7 @@ class Worker(object):
 			
 	def create_job(self):
 		'''create one specific task'''
-		del self.job_list
+		self.logs["step"] = "Creating new job"
 		if ask_yes_no("Do you want to create a new project?"):
 			#schedule to be run in 5 minutes
 			self.next_run = self.creation_date.replace(minute = self.creation_date.minute+1)
@@ -150,81 +156,113 @@ class Worker(object):
 					project_db.drop(collection, "results")
 					project_db.drop(collection, "logs")
 					project_db.drop(collection, "sources")		
+			del self.job_list
 			self.COLL.insert(self.__dict__)
-			print "Sucessfully created '%s' task for project '%s'."%(self.action,self.name)
-			return
+			self.logs["msg"] = "Sucessfully created '%s' task for project '%s'."%(self.action,self.name)
+			self.logs["status"] = True
+			self.COLL.update({"name":self.name, "action": self.action}, {"$push": {"status": self.logs}})
+			return self.logs["status"]
 			
-	def show_job(self):	
+	def show_job(self):
+		self.logs["step"] = "Showing job"
+		self.logs["status"] = True
+		self.logs["msg"] = "END"
 		print "\n"
 		print "===================="
 		print self.name.upper()
 		print "===================="
 		for job in self.job_list:
-			print "Job: ", job["action"]
-			print "--------------"
-			for k,v in job.items():
-				if k == '_id' or k =="action" or k == "name":
-					continue
-				if v is not False or v is not None:
-					print k+":", v
-			print "--------------"
+			if job["active"] !=  "False":
+				print "Job: ", job["action"]
+				print "--------------"
+				for k,v in job.items():
+					if k == '_id' or k =="action" or k == "name":
+						continue
+					if v is not False or v is not None:
+						print k+":", v
+				print "--------------"
+			else:
+				print "Job: ", job["action"], "is inactive."
+				print "Last task was :", job["status"][1]['step']
+				print "Error on :", job["status"][1]['msg']
 		print "____________________\n"
-		return None
+		#self.COLL.update({"name":self.name, "action": self.action}, {"$push": {"status": self.logs}})
+		return 
 		
 		
 	def __update_crawl__(self):
+		self.logs["step"] = "Updating crawl"
 		if self.job_list is None:
-			print "No project called %s" %self.name
+			self.logs["msg"] = "No project called %s" %self.name
+			print self.logs["msg"]
 			return self.create_job()
 		else:
 			job = Crawl(self.name)
 			self.get_config(job)
-			
 			#update key ==> if works inserted into job
 			if hasattr(self, 'key') and hasattr(job, 'query'):
 				if job.get_bing(self.key) is False:
+					self.COLL.update({"name":self.name}, {"$set": {"active": "False"}})	
 					self.COLL.update({"name":self.name, "action":self.action}, {"$push": {"status": job.logs}})
 					
 				else:
 					self.COLL.update({"name":self.name, "action":self.action}, {"$set": {"key": self.key}})
-					print "updated key"
 			#update query 
 			elif hasattr(self, 'query'):
 				self.COLL.update({"name":self.name, "action":self.action}, {"$set": {"query": self.query}})
-				print "Updated query"
+				
 			else:
-				print "oups"
-				print job.logs
+				print "Error updating crawl"
+				self.COLL.update({"name":self.name}, {"$set": {"active": "False"}})	
+			self.COLL.update({"name":self.name, "action":self.action}, {"$push": {"status": self.logs}})
+			print job.logs["msg"]
 					
-	def __update_sources__(self, option):
+	def __update_sources__(self):
+		self.logs["step"] = "Updating sources"
 		if self.job_list is None:
-			print "No project called %s" %self.name
+			self.logs["msg"] = "No project called %s" %self.name
+			print self.logs["msg"]
 			return self.create_job()
 		else:	
-			c = Crawl(self.name)
-			task = option+"_sources"
+			job = Crawl(self.name)
+			task = self.option+"_sources"
 			if task == "expand_sources":
 				self.COLL.update({"name":self.name, "action": self.action}, {"$set": {"option": task}})
 				print "Results will automatically added to sources to expand the crawl"
-			self.set_config(c)
-			func = getattr(c, task)
-			return func()
-						
+			self.__set_config__(job)
+			func = getattr(job, task)
+			self.COLL.update({"name":self.name, "action":self.action}, {"$push": {"status": self.logs}})
+			if func() is False:
+				self.COLL.update({"name":self.name}, {"$set": {"active": "False"}})	
+			self.COLL.update({"name":self.name, "action":self.action}, {"$push": {"status": job.logs}})
+			print job.logs["msg"]			
 	
 	def delete_job(self):
 		'''delete project and archive results'''
-		e = Export(self.project_name)
-		e.run_job()
-		print self.unschedule_job()
-		db = Database(self.project_name)
-		db.client.drop_database(self.project_name)
-		print "Project %s sucessfully deleted." %self.project_name
-		return
+		self.logs["step"] = "Deleting job"
+		self.logs["msg"] = "Project %s sucessfully deleted." %self.project_name
+		self.logs["status"] = True
+		project_db = Database(self.project_name)
+		if project_db.use_coll("results").count() > 0 or project_db.use_coll("sources").count()> 0 or project_db.use_coll("logs").count()> 0:
+			job = Export(self.project_name)
+			job.run_job()
+			
+			if ask_yes_no("Do you want to delete all data from project?"):
+				project_db.drop(collection, "results")
+				project_db.drop(collection, "logs")
+				project_db.drop(collection, "sources")
+				project_db.client.drop_database(self.project_name)
+		
+		self.COLL.update({"name":self.name}, {"$set": {"active": "False"}})	
+		return self.logs["status"]
+		
 			
 	def start_job(self):
+		self.logs["step"] = "Executing job"
 		if self.job_list is None:
-			print "No active job found for %s" %(self.name)
-			self.create_job()
+			self.logs["msg"] =  "No active job found for %s" %(self.name)
+			print self.logs["msg"]
+			return self.create_job()
 		else:
 			for doc in self.job_list:
 				func = doc["action"].capitalize()
@@ -232,42 +270,72 @@ class Worker(object):
 				
 				job = instance(self.name)
 				
-				self.get_config(job)
-				job.run_job()
-				print job.logs
+				self.__get_config__(job)
+				if job.run_job() is False:
+					self.COLL.update({"name":self.name}, {"$set": {"active": "False"}})
+					self.logs = job.logs
+				self.COLL.update({"name":self.name, "action":self.action}, {"$push": {"status": job.logs}})
+				print self.logs["msg"]
+				return self.COLL.update({"name":self.name, "action":self.action}, {"$push": {"status": self.logs}})
 			#~ self.COLL.update({"name":self.name, "action":"crawl"}, {"$inc": {"nb_run": 1}})	
 			#~ self.COLL.update({"name":self.name, "action":"crawl"},  {"$set":{"next_run":self.next_run, 'last_run': self.last_run}})
 			#~ self.refresh_task()
 			#~ return self.update_status()	
 	
 	def stop_job(self):
-		job = instance(self.name)		
-		self.get_config(job)
-		job.stop()
-		print job.logs
+		self.logs["step"] = "Stopping execution of job"
+		self.COLL.update({"name":self.name, "action":self.action}, {"$push": {"status": self.logs}})
+		for doc in self.job_list:
+			func = doc["action"].capitalize()
+			instance = globals()[func]
+			job = instance(self.name)		
+			self.__get_config__(job)
+			job.stop()
+			self.COLL.update({"name":self.name, "action":self.action}, {"$push": {"status": job.logs}})
+			print job.logs["msg"]
+			self.COLL.update({"name":self.name}, {"$set": {"active": "False"}})	
+			return self.COLL.update({"name":self.name, "action":self.action}, {"$push": {"status": self.logs}})
 	
-	def unschedule_job(self):
+	def __unschedule_job__(self):
 		'''delete a specific task'''
-		#~ self.select_jobs({"name":self.name, "action":self.action})
-		self.COLL.remove({"name":self.name, "action":self.action})
-		#here change name to archives_db_name_date
-		return "All tasks %s of project %s has been sucessfully unscheduled." %(self.action, self.name)
-	
+		self.logs["step"] = "Unscheduling job"
+		
+		print self.logs["msg"]
+		if self.name in self.COLL.distinct("name"):
+			for n in self.COLL.find({"name": self.name}):
+				self.COLL.remove({"name":n['name']})
+			self.logs["msg"] = "All tasks of project %s has been sucessfully unscheduled." %(self.name)
+			self.logs["status"] = True
+		else:
+			self.logs["msg"] = "No project %s found" %(self.name)	
+			self.logs["status"] = False
+		self.COLL.update({"name":self.name}, {"$set": {"active": "False"}})	
+		return self.COLL.update({"name":self.name, "action":self.action}, {"$push": {"status": self.logs}})	
+		
 	def report_job(self):
-		e = Report(self.name)
-		print e.run_job()
+		self.logs["step"] = "Report"
+		self.logs["msg"] = "Reporting %s" %(self.name)
+		job = Report(self.name)
+		job.run_job()
+		self.COLL.update({"name":self.name, "action":self.action}, {"$push": {"status": job.logs}})
 		#self.status = e.status
-		return
+		return self.COLL.update({"name":self.name, "action":self.action}, {"$push": {"status": self.logs}})
 	
 	def export_job(self):	
 		#next change self.action
+		self.logs["step"] = "Export"
+		self.logs["msg"] = "Exporting %s" %(self.name)
 		self.__select_jobs__({"name":self.name, "action":"crawl"})
 		if self.job_list is None:
 			print "No active crawl job found for %s. Export can be executed" %self.name
 			return
+			#return self.COLL.update({"name":self.name, "action":self.action}, {"$push": {"status": self.logs}})
 		else:
-			e = Export(self.name)
-			e.run_job()
+			job = Export(self.name)
+			job.run_job()
+			self.COLL.update({"name":self.name, "action":self.action}, {"$push": {"status": job.logs}})
+			#self.status = e.status
+			return self.COLL.update({"name":self.name, "action":self.action}, {"$push": {"status": self.logs}})
 			
 				
 		

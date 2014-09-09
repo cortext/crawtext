@@ -143,7 +143,7 @@ class Crawl(object):
 				self.file = self.url
 				self.get_local()
 			else:
-				self.logs["msg"] = "Url %s sucessfully inserted into sources" %url
+				self.logs["msg"] = "Url %s sucessfully inserted into sources" %self.url
 				url = check_url(self.url)[-1]
 				self.insert_url(url,"manual", depth=0)			
 		return self.logs["status"]
@@ -159,11 +159,14 @@ class Crawl(object):
 				self.delete_local()
 			else:
 				url = check_url(self.url)[-1]
-				self.db.sources.remove({"url":url})
-				print "Succesfully deleted url %s to seeds of crawl job %s"%(url, self.name)
+				if url in self.db.sources.distinct("url"):
+					self.db.sources.remove({"url":url})
+					self.logs["msg"] = "Succesfully deleted url %s to sources db of project %s"%(url, self.name)
+				else:
+					self.logs["msg"] = "No url %s found in sources db of %s project"%(url, self.name)
 		else:
 			self.db.sources.drop()
-			print "Succesfully deleted every url %s to seeds of crawl job %s"%(url, self.name)
+			self.logs["msg"] = "Succesfully deleted every url %s to seeds of crawl job %s"%(url, self.name)
 		return self.logs["status"]
 		
 	def insert_url(self, url, origin="default", depth=0):
