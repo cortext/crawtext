@@ -70,7 +70,7 @@ from docopt import docopt
 if __name__== "__main__":
 	from wk import Worker
 	try:		
-		w = Worker()
-		print w.process(docopt(__doc__))
+		w = Worker(docopt(__doc__))
+		
 	except KeyboardInterrupt:
 		sys.exit()

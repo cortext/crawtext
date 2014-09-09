@@ -34,7 +34,7 @@ class Worker(object):
 		self.nb_run = 0
 		#~ self.status = {}
 		self.status = []
-		self.get_input(user_input)
+		self.__get_input__(user_input)
 		
 	
 	def __select_jobs__(self, query):
@@ -83,7 +83,7 @@ class Worker(object):
 		
 		else:
 			self.project_name = re.sub('[^0-9a-zA-Z]+', '_', self.name)
-			self.job_list = self.select_jobs({"name":self.name})
+			self.job_list = self.__select_jobs__({"name":self.name})
 			for k,v in user_input.items():
 				if v is True and k in self.ACTION_LIST:
 					task = k+"_job"
@@ -261,7 +261,7 @@ class Worker(object):
 	
 	def export_job(self):	
 		#next change self.action
-		self.select_jobs({"name":self.name, "action":"crawl"})
+		self.__select_jobs__({"name":self.name, "action":"crawl"})
 		if self.job_list is None:
 			print "No active crawl job found for %s. Export can be executed" %self.name
 			return
