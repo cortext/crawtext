@@ -27,6 +27,8 @@ class Crawl(object):
 		self.db.create_colls(['sources', 'results', 'logs', 'queue'])	
 		self.logs = {}
 		self.logs["step"] = "crawl init"
+		date = datetime.now()
+		self.date = date.strftime('%d-%m-%Y_%H:%M')
 		
 	def get_bing(self, key=None):
 		''' Method to extract results from BING API (Limited to 5000 req/month) automatically sent to sources DB ''' 
@@ -34,8 +36,8 @@ class Crawl(object):
 		if key is not None:
 			self.key = key
 		
-		print "There is already %d sources in database" %nb
-		print "and %d sources with a bad status" %self.db.sources.find({"status":"false"}).count()
+		#~ print "There is already %d sources in database" %nb
+		#~ print "and %d sources with a bad status" %self.db.sources.find({"status":"false"}).count()
 		try:
 			#defaut is Web could be composite Web + News
 			#defaut nb for web is 50 could be more if manipulating offset
@@ -65,10 +67,10 @@ class Crawl(object):
 					self.logs["code"] = r.status_code
 					self.logs["status"] = False
 					self.logs["msg"] = "Error requestings new sources from Bing :%s" %e
-					print "Error requestings new sources from Bing :%s" %e
+					#~ print "Error requestings new sources from Bing :%s" %e
 					
 			except Exception as e:
-				print "Error requestings new sources from Bing :%s" %e
+				#~ print "Error requestings new sources from Bing :%s" %e
 				self.logs["code"] = float(str(601)+"."+str(e.args[0]))
 				self.logs["msg"] = "Error fetching results from BING API. %s" %e.args
 				self.logs["status"] = False
@@ -89,18 +91,21 @@ class Crawl(object):
 				self.insert_url(url, origin="file", depth=0) is True:
 				
 			self.logs["status"] = True
-			self.logs["msg"] = "Urls from file have been successfuly added to sources" %(afile)
+			self.logs["msg"] = "Urls from file %s have been successfuly added to sources" %(afile)
 			
 		
 		except Exception as e:
-			print "Please verify that your file is in the current directory. To set up a correct filename and add directly to sources:\n\t crawtext.py %s -s append your_sources_file.txt" %(e.args[1],self.file, self.name)
+			#~ print "Please verify that your file is in the current directory. To set up a correct filename and add directly to sources:\n\t crawtext.py %s -s append your_sources_file.txt" %(e.args[1],self.file, self.name)
 			self.logs["code"] = float(str(602)+"."+str(e.args[0]))
 			self.logs["status"] = False
 			self.logs["msg"]= "Failed extraction for file %s failed : %s '." %(self.file, e.args[1])
 		
 	def delete_local(self):
 		'''delete sources contained in self.file'''
-		print "Removing the list of url contained in the file %s" %self.file
+		self.logs["step"] = "deleting sources from file"
+		self.logs["status"] = True
+		self.logs["msg"] = "Urls sucessfully deleted"
+		#~ print "Removing the list of url contained in the file %s" %self.file
 		for url in open(self.file).readlines():
 			url = re.sub("\n", "", url)
 			self.db.sources.remove({"url":url})	
@@ -119,18 +124,24 @@ class Crawl(object):
 			self.logs["msg"] = "No results to put in seeds. Expand option failed"
 			
 	def add_sources(self):
-		self.logs["scope"] = 
+		self.logs["step"] = "adding sources from user_input"
+		self.logs["status"] = True
+		self.logs["msg"] = "Urls sucessfully inserted into sources"
 		if hasattr(self, 'url'):
 			ext = (self.url).split(".")[-1]
 			if ext == "txt":
 				self.file = self.url
 				self.get_local()
 			else:
+				self.logs["msg"] = "Url %s sucessfully inserted into sources" %url
 				url = check_url(self.url)[-1]
 				self.insert_url(url,"manual", depth=0)			
 		return
 		
 	def delete_sources(self):
+		self.logs["step"] = "deleting sources from user_input"
+		self.logs["status"] = True
+		self.logs["msg"] = "Urls sucessfully deleted"
 		if hasattr(self, 'url'):
 			ext = (self.url).split(".")[-1]
 			if ext == "txt":
@@ -145,188 +156,164 @@ class Crawl(object):
 			print "Succesfully deleted every url %s to seeds of crawl job %s"%(url, self.name)
 		return
 		
-	def insert_url(self, url, origin="default", depth="0"):
-		'''Inséré ou mis à jour'''
+	def insert_url(self, url, origin="default", depth=0):
+		'''Insert or updated url into sources if false inserted or updated into logs'''
+		self.logs["step"] = "inserting url"
+		self.logs["status"] = True
+		self.logs["msg"] = "Urls sucessfully inserted"
 		status, status_code, error_type, url = check_url(url)
 		is_source = self.db.sources.find_one({"url": url})
-		#Incorrect url
+		
+		#incorrect url
 		if status is False:
+			self.logs["status"] = False
+			#existing
 			if url in self.db.logs.distinct("url"):
-				self.db.logs.update({"url":url}, "$push":{"date": datetime.today(), "scope": self.logs["scope"], "msg":self.logs["msg"], "code": status_code}}
+				self.logs["msg"] = "Error inserting url: updated url %s in logs" %url
+				self.db.logs.update({"url":url}, "$push":{"date": self.date, "scope": self.logs["scope"], "msg":self.logs["msg"], "code": status_code}}
+			#new
 			else:
-				self.db.logs.insert({"url":url, "status": status, "code": [status_code], "msg":[error_type], "origin":origin, "depth":depth,"scope":[self.logs["scope"]], "date": datetime.today()})
+				self.logs["msg"] = "Error inserting url: inserted url %s in logs"%url
+				self.db.logs.insert({"url":url, "status": status, "code": [status_code], "msg":[error_type], "origin":origin, "depth":depth,"scope":[self.logs["scope"]], "date": self.date})
 			self.logs['msg'] = "Incorrect url %s.\n%s\n Not inserted into sources" %(url, error_type)
+		
 		#existing url
 		elif is_source is not None:
-			self.db.sources.update({"url":url},{"$set":{"status": status, "code": status_code, "msg":error_type, "origin":origin, "depth":depth, "scope":"inserting"},"$push":{"date": datetime.today()}})
+			self.db.sources.update({"url":url},{"$set":{"status": status, "code": status_code, "msg":error_type, "origin":origin, "depth":depth, "scope":"inserting"},"$push":{"date": self.date}})
 			self.logs['msg'] = "Succesfully updated existing url %s into sources" %url
+		
 		#new url
 		else:
-			self.db.sources.insert({"url":url, "status": status, "code": status_code, "msg":error_type, "origin":origin, "depth":depth,"scope":"inserting", "date": [datetime.today()]})
+			self.db.sources.insert({"url":url, "status": status, "code": status_code, "msg":error_type, "origin":origin, "depth":depth,"scope":"inserting", "date": [self.date]})
 			self.logs['msg'] = "Succesfully inserted new url %s into sources" %url
 		 
 		
 	def delete_url(self, url):
+		self.logs["step"] = "Deleting url"
+		self.logs["status"] = True
+		self.logs["msg"] = "Urls sucessfully deleted"
 		if self.db.sources.find_one({"url": url}) is not None:
 			self.db.sources.remove({"url":url})
-			print "'%s' has been deleted from seeds" %url
-			return True
+			
 		else:
-			print "url %s was not in sources. Check url format" %url
-			return False
+			self.logs["msg"] = "Url can't be deleted. Url %s was not in sources. Check url format" %url
+			
 					
 	def delete(self):
-		e = Export(self.name, "json","sources")
-		e.run_job()
+		''' Deleting sources from user_input'''
+		self.logs["step"] = "Deleting sources"
+		#~ e = Export(self.name, "json","sources")
+		#~ e.run_job()
 		self.db.sources.drop()
-		print 'Every single source has been deleted from project %s.'%self.name		
-		return True
+		self.logs["msg"] = 'Every single source has been deleted from project %s.'%self.name		
+		
 		
 	def collect_sources(self):
 		''' collect sources from options expand key or file'''
-		if self.query is None:
-			print "No query"
+		self.logs["step"] = "Collecting sources"
 		if self.option == "expand_sources":
-			logs = self.expand_sources()
-			print logs
+			self.expand_sources()
+			
 				
 		if self.file is not None:
 			#print "Getting seeds from file %s" %self.file
-			if self.get_local(self.file) is False:
-				return False
+			self.get_local(self.file)
 				
 		if self.key is not None:
 			if self.query is None:
-				self.logs["msg"] = "Unable to start crawl: no query has been set."
+				self.logs["msg"] = "Unable to collect sources from Bing search no query has been set."
 				self.logs["code"] = 600.1
 				self.logs["status"] = False
-				return False
+				
 			else:
-				if self.get_bing() is False:
-					return False
-		return True
+				self.get_bing() 
+		
 			
 	def send_seeds_to_queue(self):
-		for i, doc in enumerate(self.db.sources.find()):
-			try:
-				if doc["status"] is True:
-					doc["step"] = 0
-					self.db.queue.insert({"url":doc["url"], "depth":0})
-			except KeyError:
-				print doc
-			#~ else:
-				#~ del doc["_id"]
-				#~ self.db.logs.insert(doc)
-		return True
-	def config(self):
-		self.logs["scope"] = "config crawl job"
-		if self.query is not None:
-			self.query = Query(self.query)
-		else:
-			self.logs["msg"] = "Unable to start crawl: no query has been set."
-			self.logs["code"] = 600.1
-			self.logs["status"] = False
-			return False
-			
-		
-		if self.collect_sources() is False:
-			print self.status
-			return False
-		if self.db.sources.count() == 0:
-			self.logs["msg"] = "Unable to start crawl: no seeds have been set."
-			self.logs["code"] = 600.2
-			self.logs["status"] = False
-			return False
-			
-		else:
-			return self.send_seeds_to_queue()			
-	
-	def run_job(self):
-		
-		print "running crawl"
-		self.config()
-		#~ 
-		#~ if self.config() is True:
-		start = datetime.now()
+		self.logs["step"] = "Sending seeds urls to start crawl"
+		for doc in self.db.sources.find():
+			self.db.queue.insert({"url":doc["url"], "depth":doc["depth"], "status": doc["status"]})
 		if self.db.queue.count() == 0:
 			self.logs["msg"] = "Error while sending urls into queue: queue is empty"
 			self.logs["code"] = 600.1
 			self.logs["status"] = False
-			return False
+			
+				
+	def config(self):
+		'''initializing  the crawl job with required params'''
+		self.logs["scope"] = "config crawl job"
+		if self.query is not None:
+			self.query = Query(self.query)
+		
+		self.collect_sources()
+		
+		if self.db.sources.count() == 0:
+			self.logs["msg"] = "Unable to start crawl: no seeds have been set."
+			self.logs["code"] = 600.2
+			self.logs["status"] = False
+			
+			
 		else:
-			self.logs["msg"] = "running crawl on %i sources with query '%s'" %(len(self.db.sources.distinct("url")), self.query)				
-			for doc in self.db.queue.find():
-				
-				if self.db.queue.count() == 0:		
-					self.logs["msg"] = "No url pending"
-					self.logs["code"] = 600.2
-					self.logs["status"] = False
-					break
-					return False
+			self.send_seeds_to_queue()			
+	
+	def run_job(self):
+		self.config()
+		self.logs["msg"] = "Running crawl job  on %s"self.date
+		
+		
+		#~ 
+		#~ if self.config() is True:
+		start = datetime.now()
+		for doc in self.db.queue.find():
+			if doc["url"] != "":
+			page = Page(doc["url"],doc["depth"])
+			page = Page(doc["url"],0)
 					
-				# if self.db.results.count() >= 10.000:
-				# 	self.db.queue.drop()
-				if doc["url"] != "":
-					try:
-						page = Page(doc["url"],doc["depth"])
-					except KeyError:
-						page = Page(doc["url"],0)
-						
-					if page.check() and page.request() and page.control():
-						article = Article(page.url, page.raw_html, page.depth)
-						if article.get() is True:
-							print article.status
-							if article.is_relevant(self.query):		
-								if article.status not in self.db.results.find(article.status):
-									self.db.results.insert(article.status)
-								else:
-									article["status"] = False
-									article["msg"]= "article already in db"
-									self.db.logs.insert(article.status)	
-								if article.outlinks is not None and len(article.outlinks) > 0:
-									#if article.outlinks not in self.db.results.find(article.outlinks) and article.outlinks not in self.db.logs.find(article.outlinks) and article.outlinks not in self.db.queue.find(article.outlinks):
-									for url in article.outlinks:
-										if url not in self.db.queue.distinct("url"):
-											self.db.queue.insert({"url":url, "depth": page.depth+1})
-										
-									#~ else:
-										#~ article["status"] = False
-										#~ article["msg"]= "outlinks already in queue"
-										#~ self.db.logs.insert(article.outlinks)	
-							else:
-								self.db.logs.insert(article.status)	
-						else:	
-							self.db.logs.insert(article.status)
+			if page.check() and page.request() and page.control():
+				article = Article(page.url, page.raw_html, page.depth)
+				if article.get() is True:
+					print article.status
+					if article.is_relevant(self.query):		
+						if article.status not in self.db.results.find(article.status):
+							self.db.results.insert(article.status)
+						else:
+							article["status"] = False
+							article["msg"]= "article already in db"
+							self.db.logs.insert(article.status)	
+						if article.outlinks is not None and len(article.outlinks) > 0:
+							#if article.outlinks not in self.db.results.find(article.outlinks) and article.outlinks not in self.db.logs.find(article.outlinks) and article.outlinks not in self.db.queue.find(article.outlinks):
+							for url in article.outlinks:
+								if url not in self.db.queue.distinct("url"):
+									self.db.queue.insert({"url":url, "depth": page.depth+1})
+								
+							#~ else:
+								#~ article["status"] = False
+								#~ article["msg"]= "outlinks already in queue"
+								#~ self.db.logs.insert(article.outlinks)	
 					else:
-						print page.status
-						self.db.logs.insert(page.status)
-					#~ except KeyError:
-						#~ print "KeyError"
-						#~ doc["msg"] = "no step found"
-						#~ del doc["_id"]
-						#~ try:
-							#~ self.db.logs.insert(doc)
-						#~ except Exception as e:
-							#~ del doc["_id"]
-							#~ doc["status"]= "Duplicate: %s" %e
-							#~ self.db.logs.insert(doc)
-				self.db.queue.remove({"url": doc["url"]})
-				if self.db.queue.count() == 0:		
-					break
-				
+						self.db.logs.insert(article.status)	
+				else:	
+					self.db.logs.insert(article.status)
+			else:
+				print page.status
+				self.db.logs.insert(page.status)
+			self.db.queue.remove({"url": doc["url"]})
+					
 		end = datetime.now()
 		elapsed = end - start
 		delta = end-start
 
 		self.logs["msg"] = "%s. Crawl done sucessfully in %s s" %(self.logs["msg"],str(elapsed))
-		self.logs["status"] = "true"
-		return True
+		self.logs["status"] = True
+		
 	
-	def stop(self):		
-		self.db.queue.drop()	
-		r = Report(self.name)
-		r.run_job()
-		return "Current crawl job %s stopped." %self.name	
+	def stop(self):
+		self.logs["msg"] = "Stopping crawl job %s"%self.date
+		self.db.queue.drop()
+		self.logs["status"] = True	
+		#~ r = Report(self.name)
+		#~ r.run_job()
+		
 				
 class Archive(object):
 	def __init__(self, name):
