@@ -15,7 +15,7 @@ import subprocess
 from utils.url import *
 from query import Query
 from scrapper.article import Article		
-			 
+		 
 class Crawl(object):
 	def __init__(self, name): 
 		self.name = name
@@ -74,7 +74,8 @@ class Crawl(object):
 				self.logs["code"] = float(str(601)+"."+str(e.args[0]))
 				self.logs["msg"] = "Error fetching results from BING API. %s" %e.args
 				self.logs["status"] = False
-				
+		
+		return self.logs["status"]		
 		
 		
 	def get_local(self, afile = None):
@@ -98,7 +99,8 @@ class Crawl(object):
 			#~ print "Please verify that your file is in the current directory. To set up a correct filename and add directly to sources:\n\t crawtext.py %s -s append your_sources_file.txt" %(e.args[1],self.file, self.name)
 			self.logs["code"] = float(str(602)+"."+str(e.args[0]))
 			self.logs["status"] = False
-			self.logs["msg"]= "Failed extraction for file %s failed : %s '." %(self.file, e.args[1])
+			self.logs["msg"]= "Failed inserting url for file %s : %s '." %(self.file, e.args[1])
+		return self.logs["status"]		
 		
 	def delete_local(self):
 		'''delete sources contained in self.file'''
@@ -106,10 +108,17 @@ class Crawl(object):
 		self.logs["status"] = True
 		self.logs["msg"] = "Urls sucessfully deleted"
 		#~ print "Removing the list of url contained in the file %s" %self.file
-		for url in open(self.file).readlines():
-			url = re.sub("\n", "", url)
-			self.db.sources.remove({"url":url})	
-			
+		try:
+			for url in open(self.file).readlines():
+				url = re.sub("\n", "", url)
+				self.db.sources.remove({"url":url})	
+		except Exception as e:
+			#~ print "Please verify that your file is in the current directory. To set up a correct filename and add directly to sources:\n\t crawtext.py %s -s append your_sources_file.txt" %(e.args[1],self.file, self.name)
+			self.logs["code"] = float(str(602)+"."+str(e.args[0]))
+			self.logs["status"] = False
+			self.logs["msg"]= "Failed deleting url for file %s failed : %s '." %(self.file, e.args[1])
+		return self.logs["status"]
+		
 	def expand_sources(self):
 		'''Expand sources url adding results urls collected from previous crawl'''
 		self.logs["step"] = "expanding sources from results"
@@ -122,6 +131,7 @@ class Crawl(object):
 			self.logs["status"] = False
 			self.logs["code"] = 603
 			self.logs["msg"] = "No results to put in seeds. Expand option failed"
+		return self.logs["status"]
 			
 	def add_sources(self):
 		self.logs["step"] = "adding sources from user_input"
@@ -136,7 +146,7 @@ class Crawl(object):
 				self.logs["msg"] = "Url %s sucessfully inserted into sources" %url
 				url = check_url(self.url)[-1]
 				self.insert_url(url,"manual", depth=0)			
-		return
+		return self.logs["status"]
 		
 	def delete_sources(self):
 		self.logs["step"] = "deleting sources from user_input"
@@ -154,7 +164,7 @@ class Crawl(object):
 		else:
 			self.db.sources.drop()
 			print "Succesfully deleted every url %s to seeds of crawl job %s"%(url, self.name)
-		return
+		return self.logs["status"]
 		
 	def insert_url(self, url, origin="default", depth=0):
 		'''Insert or updated url into sources if false inserted or updated into logs'''
@@ -186,7 +196,7 @@ class Crawl(object):
 		else:
 			self.db.sources.insert({"url":url, "status": status, "code": status_code, "msg":error_type, "origin":origin, "depth":depth,"scope":"inserting", "date": [self.date]})
 			self.logs['msg'] = "Succesfully inserted new url %s into sources" %url
-		 
+		return self.logs["status"] 
 		
 	def delete_url(self, url):
 		self.logs["step"] = "Deleting url"
@@ -197,7 +207,9 @@ class Crawl(object):
 			
 		else:
 			self.logs["msg"] = "Url can't be deleted. Url %s was not in sources. Check url format" %url
-			
+			self.logs["status"] = False
+		
+		return self.logs["status"]
 					
 	def delete(self):
 		''' Deleting sources from user_input'''
@@ -206,11 +218,12 @@ class Crawl(object):
 		#~ e.run_job()
 		self.db.sources.drop()
 		self.logs["msg"] = 'Every single source has been deleted from project %s.'%self.name		
-		
+		return self.logs["status"]
 		
 	def collect_sources(self):
 		''' collect sources from options expand key or file'''
 		self.logs["step"] = "Collecting sources"
+		self.logs["status"] = True
 		if self.option == "expand_sources":
 			self.expand_sources()
 			
@@ -227,7 +240,7 @@ class Crawl(object):
 				
 			else:
 				self.get_bing() 
-		
+		return self.logs["status"]
 			
 	def send_seeds_to_queue(self):
 		self.logs["step"] = "Sending seeds urls to start crawl"
@@ -237,7 +250,7 @@ class Crawl(object):
 			self.logs["msg"] = "Error while sending urls into queue: queue is empty"
 			self.logs["code"] = 600.1
 			self.logs["status"] = False
-			
+		return self.logs["status"]	
 				
 	def config(self):
 		'''initializing  the crawl job with required params'''
@@ -251,15 +264,17 @@ class Crawl(object):
 			self.logs["msg"] = "Unable to start crawl: no seeds have been set."
 			self.logs["code"] = 600.2
 			self.logs["status"] = False
-			
-			
+			print self.logs	
 		else:
 			self.send_seeds_to_queue()			
-	
-	def run_job(self):
-		self.config()
-		self.logs["msg"] = "Running crawl job  on %s" %self.date
 		
+		return self.logs["status"]
+		
+	def run_job(self):
+		if self.config() is False:
+			return self.logs
+		
+		self.logs["msg"] = "Running crawl job  on %s" %self.date
 		start = datetime.now()
 		for doc in self.db.queue.find():
 			if doc["url"] != "":
@@ -298,12 +313,14 @@ class Crawl(object):
 
 		self.logs["msg"] = "%s. Crawl done sucessfully in %s s" %(self.logs["msg"],str(elapsed))
 		self.logs["status"] = True
-		
+		return self.logs
 	
 	def stop(self):
+		self.logs["step"] = "Stopping exec of job of %s project %s" %(self.action, self.name)
 		self.logs["msg"] = "Stopping crawl job on %s" %self.date
 		self.db.queue.drop()
 		self.logs["status"] = True	
+		return self.logs["status"]
 		#~ r = Report(self.name)
 		#~ r.run_job()
 		
@@ -323,7 +340,7 @@ class Export(object):
 	def __init__(self, name, form=None, coll_type=None):
 		
 		date = datetime.today()
-		self.date = self.date.strftime('%d-%m-%Y')
+		self.date = date.strftime('%d-%m-%Y')
 		self.form = form
 		if self.form is None:
 			self.form = "json"
@@ -402,10 +419,10 @@ class Export(object):
 					
 class Report(object):
 	def __init__(self, name, format="txt"):
-		self.date = datetime.now()
+		date = datetime.now()
 		self.name = name
 		self.db = Database(self.name)
-		self.date = self.date.strftime('%d-%m-%Y_%H-%M')
+		self.date = date.strftime('%d-%m-%Y_%H-%M')
 		self.format = format
 	
 	def txt_report(self):
