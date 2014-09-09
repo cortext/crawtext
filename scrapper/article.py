@@ -27,7 +27,7 @@ class Extractor(object):
 
 class Article(object):
 	'''Article'''
-	def __init__(self, url, raw_html, step lang="en"):
+	def __init__(self, url, raw_html, step, lang="en"):
 		self.status = True
 		self.url = url
 		self.step = step
