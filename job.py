@@ -26,15 +26,15 @@ class Crawl(object):
 		self.db = Database(self.name)
 		self.db.create_colls(['sources', 'results', 'logs', 'queue'])	
 		self.logs = {}
+		self.logs["step"] = "crawl init"
 		
 	def get_bing(self, key=None):
 		''' Method to extract results from BING API (Limited to 5000 req/month) automatically sent to sources DB ''' 
 		self.logs["step"] = "bing extraction"
-		nb = self.db.sources.count()
 		if key is not None:
 			self.key = key
 		
-		print "There is already %d sources in database" %self.db.sources.count()
+		print "There is already %d sources in database" %nb
 		print "and %d sources with a bad status" %self.db.sources.find({"status":"false"}).count()
 		try:
 			#defaut is Web could be composite Web + News
@@ -53,9 +53,9 @@ class Crawl(object):
 			r.raise_for_status()
 			url_list =  [e["Url"] for e in r.json()['d']['results']]
 			for url in url_list:
-				self.insert_url(url,origin="bing")
-			count = self.db.sources.count() -nb	
-			print "Inserted %s urls from Bing results. Sources nb is now : %d" %(count, self.db.sources.count())
+				self.insert_url(url,origin="bing",depth=0)
+			count = self.db.sources.count() - nb
+			print "Inserted %s urls from Bing results. Sources nb is now : %d" %(count, nb)
 			return True
 		
 		except Exception as e:
@@ -68,10 +68,7 @@ class Crawl(object):
 					print "Error requestings new sources from Bing :%s" %e
 					return False
 			except Exception:
-				if r.status_code is not None:
-					self.logs["code"] = r.status_code
-				else:
-					r.status_code = 601
+				self.logs["code"] = "601."+e.args(0)
 				self.logs["msg"] = "Error fetching results from BING API. %s" %e.args
 				self.logs["status"] = "false"
 				return False
