@@ -37,7 +37,7 @@ class Worker(object):
 		self.get_input(user_input)
 		
 	
-	def select_jobs(self, query):
+	def __select_jobs__(self, query):
 		'''mapping job database'''
 		job_list = [n for n in self.COLL.find(query)]
 		if len(job_list) == 0:
@@ -45,7 +45,7 @@ class Worker(object):
 		else:	
 			return job_list
 	
-	def update_status(self):
+	def __update_status__(self):
 		'''insert current status of the job once shceduled'''
 		raise NotImplementedError
 		
@@ -54,13 +54,13 @@ class Worker(object):
 		#~ '''mapping data parameters from db to job'''
 		#~ return [setattr(job, k, v) for k, v in self.__dict__.items() if v is not None and v is not False and k != "name"]
 	
-	def set_config(self, job):
+	def __set_config__(self, job):
 		'''mapping data parameters from current to job'''
 		for k, v in self.__dict__.items():
 			if v is not None and v is not False:
 				setattr(job, k, v)
 				
-	def get_config(self, job):
+	def __get_config__(self, job):
 		'''mapping task parameters to job'''
 		config = self.COLL.find_one({"name":self.name, "action":self.action})
 		if config is None:
@@ -71,7 +71,7 @@ class Worker(object):
 					setattr(job, k, v)
 		return 
 		
-	def get_input(self, user_input):
+	def __get_input__(self, user_input):
 		'''mapping user input into job parameters'''
 		self.name = user_input['<name>']
 		task = None
@@ -172,32 +172,6 @@ class Worker(object):
 		print "____________________\n"
 		return None
 		
-	'''
-	def archive_job(self, job_list):
-		self.action = "archive"
-		self.url = self.name
-		self.status["project"] = self.name
-		self.status["date"] = datetime.datetime.now()
-		self.select_jobs({"name": self.name, "action": "archive"})
-		
-		if self.job is None:
-			self.COLL.insert(self.__dict__)	
-			self.status["step"] = "archive creation"
-			self.status["status"] = "true"
-			print "Successfully created an archive job in project %s" %self.name
-			return self.update_status()
-		else:
-			print "Archive project for %s already exists" %self.name
-			return 	
-		
-		
-		a = Archive(self.name)
-		self.COLL.insert(a.__dict__)
-		print "Sucessfully scheduled Archive job for %s Next run will be executed in 3 minutes" %self.url
-		self.status["step"] = "schedule archive"
-		self.status["status"] = "true"
-		return self.update_status()
-		'''
 		
 	def update_crawl(self):
 		if self.job_list is None:
