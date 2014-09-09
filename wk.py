@@ -211,18 +211,6 @@ class Worker(object):
 			func = getattr(c, task)
 			return func()
 						
-	#~ def update_project(self):
-		#~ self.select_tasks({"name": self.name})
-		#~ #values = [[k, v] for k,v in doc.items() if k != "name"]
-		#~ if self.task_list is None:
-			#~ print "No project%s found" %self.name
-			#~ return self.create_task()
-		#~ else:
-			#~ for n in self.task_list:
-				#~ self.COLL.update({"_id":n["_id"]},{"$set":{self.value: getattr(self, self.value)}})
-			#~ if self.value == "repeat":
-				#~ self.refresh_task()
-			#~ return "Succesfully updated the entire project %s with new value: %s" %(self.name, getattr(self, self.value))
 	
 	def delete_job(self):
 		'''delete project and archive results'''
