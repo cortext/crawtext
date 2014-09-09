@@ -88,7 +88,7 @@ class Crawl(object):
 					continue
 				url = re.sub("\n", "", url)
 				status, status_code, error_type, url = check_url(url)
-				self.insert_url(url, origin="file", depth=0) is True:
+				self.insert_url(url, origin="file", depth=0)
 				
 			self.logs["status"] = True
 			self.logs["msg"] = "Urls from file %s have been successfuly added to sources" %(afile)
@@ -170,7 +170,7 @@ class Crawl(object):
 			#existing
 			if url in self.db.logs.distinct("url"):
 				self.logs["msg"] = "Error inserting url: updated url %s in logs" %url
-				self.db.logs.update({"url":url}, "$push":{"date": self.date, "scope": self.logs["scope"], "msg":self.logs["msg"], "code": status_code}}
+				self.db.logs.update({"url":url}, {"$push":{"date": self.date, "scope": self.logs["scope"], "msg":self.logs["msg"], "code": status_code}})
 			#new
 			else:
 				self.logs["msg"] = "Error inserting url: inserted url %s in logs"%url
@@ -258,44 +258,37 @@ class Crawl(object):
 	
 	def run_job(self):
 		self.config()
-		self.logs["msg"] = "Running crawl job  on %s"self.date
+		self.logs["msg"] = "Running crawl job  on %s" %self.date
 		
-		
-		#~ 
-		#~ if self.config() is True:
 		start = datetime.now()
 		for doc in self.db.queue.find():
 			if doc["url"] != "":
-			page = Page(doc["url"],doc["depth"])
-			page = Page(doc["url"],0)
+				page = Page(doc["url"],doc["depth"])
+				page = Page(doc["url"],0)
 					
-			if page.check() and page.request() and page.control():
-				article = Article(page.url, page.raw_html, page.depth)
-				if article.get() is True:
-					print article.status
-					if article.is_relevant(self.query):		
-						if article.status not in self.db.results.find(article.status):
-							self.db.results.insert(article.status)
-						else:
-							article["status"] = False
-							article["msg"]= "article already in db"
-							self.db.logs.insert(article.status)	
-						if article.outlinks is not None and len(article.outlinks) > 0:
-							#if article.outlinks not in self.db.results.find(article.outlinks) and article.outlinks not in self.db.logs.find(article.outlinks) and article.outlinks not in self.db.queue.find(article.outlinks):
-							for url in article.outlinks:
-								if url not in self.db.queue.distinct("url"):
-									self.db.queue.insert({"url":url, "depth": page.depth+1})
+				if page.check() and page.request() and page.control():
+					article = Article(page.url, page.raw_html, page.depth)
+					if article.get() is True:
+						print article.status
+						if article.is_relevant(self.query):		
+							if article.status not in self.db.results.find(article.status):
+								self.db.results.insert(article.status)
+							else:
+								article["status"] = False
+								article["msg"]= "article already in db"
+								self.db.logs.insert(article.status)	
+							
+							if article.outlinks is not None and len(article.outlinks) > 0:
+								#if article.outlinks not in self.db.results.find(article.outlinks) and article.outlinks not in self.db.logs.find(article.outlinks) and article.outlinks not in self.db.queue.find(article.outlinks):
+								for url in article.outlinks:
+									if url not in self.db.queue.distinct("url"):
+										self.db.queue.insert({"url":url, "depth": page.depth+1})
 								
-							#~ else:
-								#~ article["status"] = False
-								#~ article["msg"]= "outlinks already in queue"
-								#~ self.db.logs.insert(article.outlinks)	
 					else:
 						self.db.logs.insert(article.status)	
 				else:	
 					self.db.logs.insert(article.status)
 			else:
-				print page.status
 				self.db.logs.insert(page.status)
 			self.db.queue.remove({"url": doc["url"]})
 					
@@ -308,7 +301,7 @@ class Crawl(object):
 		
 	
 	def stop(self):
-		self.logs["msg"] = "Stopping crawl job %s"%self.date
+		self.logs["msg"] = "Stopping crawl job on %s" %self.date
 		self.db.queue.drop()
 		self.logs["status"] = True	
 		#~ r = Report(self.name)
@@ -329,12 +322,12 @@ class Archive(object):
 class Export(object):
 	def __init__(self, name, form=None, coll_type=None):
 		
-		self.date = datetime.today()
-		
+		date = datetime.today()
+		self.date = self.date.strftime('%d-%m-%Y')
 		self.form = form
 		if self.form is None:
 			self.form = "json"
-		self.date = self.date.strftime('%d-%m-%Y')
+		
 		
 		self.name = name
 		self.coll_type = coll_type
