@@ -91,7 +91,7 @@ class Worker(object):
 					task ="update_crawl"
 					self.action = "crawl"
 				if v is not None and k in self.PROJECT_LIST:	
-					task = "update_project"
+					task = "__update_project__"
 				if v is not None and v is not False and k != "<name>":
 					setattr(self, re.sub("--|<|>","", k), v)
 						
@@ -103,17 +103,17 @@ class Worker(object):
 				self.action = "crawl"
 				#sources_management
 				if user_input["-s"] is True:
-					task = "update_source"
+					task = "__update_source__"
 					for k,v in user_input.items():
 						if v is True and k in self.OPTION_lIST:
 							option = k
 						if v is not None and v is not False:
 							setattr(self,re.sub("<|>","", k), v)
-					return self.update_sources(option)
+					return self
 				
 			
 			
-			self.job_list = self.select_jobs({"name":self.name})
+			self.job_list = self.__select_jobs__({"name":self.name})
 			
 			if self.job_list is None and task is None:
 				return self.create_job()
@@ -154,8 +154,7 @@ class Worker(object):
 			print "Sucessfully created '%s' task for project '%s'."%(self.action,self.name)
 			return
 			
-	def show_job(self):
-		
+	def show_job(self):	
 		print "\n"
 		print "===================="
 		print self.name.upper()
@@ -223,7 +222,6 @@ class Worker(object):
 		return
 			
 	def start_job(self):
-		
 		if self.job_list is None:
 			print "No active job found for %s" %(self.name)
 			self.create_job()
@@ -256,7 +254,6 @@ class Worker(object):
 		return "All tasks %s of project %s has been sucessfully unscheduled." %(self.action, self.name)
 	
 	def report_job(self):
-		
 		e = Report(self.name)
 		print e.run_job()
 		#self.status = e.status
@@ -269,11 +266,8 @@ class Worker(object):
 			print "No active crawl job found for %s. Export can be executed" %self.name
 			return
 		else:
-			
-			e = Export(self.name, 'json', None)
+			e = Export(self.name)
 			e.run_job()
-			#~ self.status = e.status
-			#~ return self.update_status()
-		
+			
 				
 		
