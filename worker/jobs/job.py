@@ -3,17 +3,7 @@ import re
 from datetime import datetime as dt
 from ..database import Database
 from ..database import TaskDB
-<<<<<<< HEAD
 from packages.ask_yes_no import ask_yes_no
-=======
->>>>>>> db878c108d437d11ef3240683ba814f6eeabea1c
-# from .crawl_job import Crawl
-# from .archive_job import Archive
-# from .report_job import Report
-# from .export_job import Export
-# from .user_job import User
-# from .debug_job import Debug
-# from .list_job import List
 
 
 class Job(object):
