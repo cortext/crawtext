@@ -1,0 +1,12 @@
+*.pyc
+worker/jobs/archive_job.pyc
+worker/jobs/crawl_job.pyc
+worker/jobs/debug_job.pyc
+worker/jobs/export_job.pyc
+worker/jobs/__init__.pyc
+worker/jobs/job.pyc
+worker/jobs/list_job.pyc
+worker/jobs/private.pyc
+worker/jobs/report_job.pyc
+worker/jobs/stats_job.pyc
+worker/jobs/user_job.pyc
