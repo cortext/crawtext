@@ -81,12 +81,8 @@ class Job(object):
 			self._logs["msg"] = "Sucessfully created project %s with task %s" %(self.name,self.action)
 			if self.debug is True:
 				print self._logs["msg"]
-<<<<<<< HEAD
 			self.__update_logs__()
 			return self.show()
-=======
-			return self.__update_logs__()
->>>>>>> db878c108d437d11ef3240683ba814f6eeabea1c
 		
 	def update(self):
 		if self.__data__ is None:
@@ -218,11 +214,6 @@ class Job(object):
 		print "\n===================="
 		print (self.name.upper())
 		print "===================="
-<<<<<<< HEAD
-		#print self.__COLL__.find_one({"name": self.name})
-=======
-		
->>>>>>> db878c108d437d11ef3240683ba814f6eeabea1c
 		print "Activated job:%i\n" %(self.__COLL__.find({"name": self.name, "active":True}).count())
 		for i, job in enumerate(self.__COLL__.find({"name": self.name})):
 			i = i+1
