@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+<<<<<<< HEAD
 '''Crawtext.
 
 Usage:
@@ -156,3 +157,18 @@ if __name__ == "__main__":
 	crawtext(docopt(__doc__))
 	sys.exit()
 
+=======
+
+from config import CMD
+from packages.docopt import docopt
+from worker import *
+import os, sys
+
+ABSPATH = os.path.dirname(os.path.abspath(sys.argv[0]))
+
+if __name__== "__main__":
+	try:		
+		w = Worker(docopt(CMD))		
+	except KeyboardInterrupt:
+		sys.exit()
+>>>>>>> 7c15e8a7fac3a9d8d5d571095c843dfef94a08a4
