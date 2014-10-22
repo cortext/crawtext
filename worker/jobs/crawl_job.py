@@ -4,7 +4,7 @@
 from job import Job
 from datetime import datetime as dt
 import requests
-#from newspaper.query import Query
+
 from packages.query import Query
 from packages.links import check_url
 from extractor.article import Article, ArticleException
@@ -16,7 +16,7 @@ class Crawl(Job):
 			print "No existing project %s with %s job" %(self.name, self.action)
 			self.create()
 			return self.__update_logs__()
-	
+
 	def get_bing(self, key=None):
 		''' Method to extract results from BING API (Limited to 5000 req/month) automatically sent to sources DB ''' 
 		self._logs["step"] = "bing extraction"
@@ -324,7 +324,7 @@ class Crawl(Job):
 								page.is_relevant(self.woosh_query)
 								existing = self.__db__.results.find_one({"url": page.url})
 								if existing is not None:
-									existing = self.__db__.results.udpate({"_id": existing['_id']},{"$push":{"date": page.date}})
+									existing = self.__db__.results.update({"_id": existing['_id']},{"$push":{"date": page.date}})
 								else:
 									self.__db__.results.insert(page.json())
 								for link in page.outlinks:

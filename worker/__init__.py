@@ -35,6 +35,14 @@ class Worker(object):
 		'''mapping user input into job parameters'''		
 		self.name = user_input['<name>']
 		
+		'''Shortcut for showing project'''
+		'''
+		if len([n for n in user_input.values() if not n is None and not n is False]) == 1:
+		 	self._task = "show"
+		 	self.action = "job"
+		 	return self
+		'''	
+				
 		if self.name in self._ACTION_LIST :
 			self.action = self.name
 			self._task = "show"
