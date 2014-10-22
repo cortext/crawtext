@@ -1,0 +1,15 @@
+BeautifulSoup==3.2.1
+PyYAML==3.11
+Whoosh==2.6.0
+argparse==1.2.1
+cssselect==0.9.1
+docopt==0.6.2
+lxml==3.3.5
+nltk==2.0.4
+pymongo==2.7.2
+requests==2.3.0
+six==1.7.3
+tld==0.7
+validate-email==1.2
+w3lib==1.10.0
+wsgiref==0.1.2
