@@ -88,13 +88,9 @@ class Database(object):
 			#if n not in ["projects", "tasks"]:
 			self.use_db(n)
 			self.drop("database", n)
-<<<<<<< HEAD
-		
-=======
 	def get_error_list(self):
 		for n in self.db.logs.find():
 			print n['code'], n['msg'], n['url']
->>>>>>> 7285a69bf6a75db664c11c40a08cf2fe84d18215
 	def stats(self):
 		'''Output the current stats of database in Terminal'''
 		title = "===STATS==="
@@ -108,13 +104,9 @@ class Database(object):
 		res2 = "\t-Nombre d'erreurs: %d" %(self.db.logs.count())
 		
 		h2 = "#Sources"
-<<<<<<< HEAD
-		sources = "\t-Nombre de seeds: %d" % self.db.sources.count() 
-=======
 		sources = "\t-Nombre de sources: %d" % self.db.sources.count()
 		inactive_sources = "\t-Nombre de sources inactives: %d" % self.db.sources.find({"status":False}).count()
 		active_sources = "\t-Nombre de sources actives: %d\n" % (self.db.sources.count() - self.db.sources.find({"status":False}).count())
->>>>>>> 7285a69bf6a75db664c11c40a08cf2fe84d18215
 		from_bing="\t-Sources ajoutées depuis une recherche bing: %d" %self.db.sources.find({"origin":"bing"}).count()
 		#from_bing="* Sources ajoutées depuis une recherche bing: %d" %len([n for n in self.db.sources.find({"origin":"bing"})])
 		from_file="\t-Sources ajoutées depuis une fichier: %d" %len([n for n in self.db.sources.find({"origin":"file"})])
@@ -124,23 +116,6 @@ class Database(object):
 		url = "\t-urls en cours de traitement: %d" % (self.db.queue.count())
 		url2 = "\t-urls traitees: %d" % int(self.db.results.count()+ self.db.logs.count())
 		url3 = "\t-urls erronees: %d" % int(self.db.logs.count())
-<<<<<<< HEAD
-		url4 = "\t-urls non pertinentes: %d" %int(self.db.logs.find({"code": -1, "msg": "Not Relevant"}).count())
-		size = "\t-Size of the database %s: %d MB" %(self.db_name, (self.db.command('dbStats', 1024)['storageSize'])/1024/1024.)
-		result = [title, date,  h1, name, res, res2, h2, sources, from_bing, from_file, automatic, manual, h3, url, url2, url3, url4, size]
-		
-		return "\n".join(result) 
-	
-	def report(self):
-		''' Output the currents of database for Email Report'''
-		res = "<li>Nombre de resultats dans la base: %d</li>" % (self.db.results.count())
-		sources = "<li>Nombre de sources: %d</li>" % len(self.db.sources.distinct('url')) 
-		url = "<li>urls en cours de traitement: %d\n</li>" % (self.db.queue.count())
-		url2 = "<li>urls traitees: %d</li>" % (self.db.results.count()+ self.db.log.count())
-		size = "<li>Size of the database %s: %d MB</li>" % (self.db_name, (self.db.command('dbStats', 1024)['storageSize'])/1024/1024.)
-		result = [res, sources, url, 	url2, size]
-		return "".join(result)
-=======
 		url4 = "\t-urls non pertinentes: %d" %int(self.db.logs.find({"code": 800, "msg": "Not Relevant"}).count())
 		size = "\t-Size of the database %s: %d MB" %(self.db_name, (self.db.command('dbStats', 1024)['storageSize'])/1024/1024.)
 		self.result = [title, date,  h1, name, res, res2, h2, sources, inactive_sources, active_sources, from_bing, from_file, automatic, manual, h3, url, url2, url3, url4, size]
@@ -181,7 +156,6 @@ class Database(object):
 		
 		return "".join(template)
 		#return "\n".join(self.result) 
->>>>>>> 7285a69bf6a75db664c11c40a08cf2fe84d18215
 	
 	# Define export gephi inside report option
 	# def create_node(self):

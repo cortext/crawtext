@@ -1,0 +1,204 @@
+######################################################################
+# Artificial Intelligence Center
+# SRI International
+# Copyright (c) 1995-1999
+# All Rights Reserved.
+# 
+# This data was developed at SRI International by John Dowding, Robert
+# Moore, Mark Gawron and Elizabeth Owen Bratt.  Permission is hereby
+# granted, free of charge, to use and distribute this data and its
+# documentation without restriction, including without limitation the
+# rights to use, copy, modify, merge, publish, distribute, sublicense,
+# and/or sell copies of this work, and to permit persons to whom this
+# work is furnished to do so, subject to the following conditions:
+# 
+#       1. The data must retain the above copyright notice, this list of
+#          conditions and the following disclaimer.
+#       2. Any modifications must be clearly marked as such or accompanied by an
+# 	   intact copy of the original data.
+#       3. Original authors' names are not deleted.
+#       4. The authors' names are not used to endorse or promote products
+#          derived from this software without specific prior written
+#          permission.
+# 
+#     SRI INTERNATIONAL AND THE CONTRIBUTORS TO THIS WORK
+#     DISCLAIM ALL WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING
+#     ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO EVENT
+#     SHALL SRI INTERNATIONAL NOR THE CONTRIBUTORS BE LIABLE
+#     FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+#     WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN
+#     AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
+#     ARISING OUT OF OR IN CONNECTION WITH THE USE OF
+#     THIS DATA.
+######################################################################
+
+######################################################################
+# The original file can be found at URL:
+# http://www.informatics.sussex.ac.uk/research/groups/nlp/carroll/cfg-resources/
+#
+# Modified for NLTK by Peter Ljunglöf <peter.ljunglof@heatherleaf.se>
+# Each line begins with the number of parse trees according to the grammar.
+######################################################################
+
+12 : draw a line from nine five five one to nine five five two
+4 : move out
+6 : create point at nine five five one
+4 : create point at nine five five one and call it objective alpha
+4 : attack the enemy position by fire
+4 : withdraw to objective bravo
+4 : attack by fire
+0 : create a platoon of bmps with dismounted infantry
+4 : xray seven two and golf one four move to enemy position niner one six niner seven zero and then move to checkpoint two
+4 : victor two one and whiskey four six move to checkpoint one
+2 : charlie four five hotel five nine seize objective hotel
+4 : all units move to objective quebec
+4 : golf four two this is hotel five nine move out in column to grid niner four niner niner six two
+4 : golf four four this is hotel five nine move out to niner five zero niner six three
+4 : golf four three this is hotel five nine move out to niner four five niner seven zero
+4 : golf four two move out to niner four four niner six six
+4 : golf four four this is hotel five nine open fire on objective whiskey
+4 : golf four four this is hotel five nine cease fire
+4 : golf four three this is hotel five nine open fire on objective whiskey
+4 : golf four two get on line and assault and secure enemy position
+4 : golf four three this is hotel five nine cease fire
+4 : golf four two this is hotel five nine move to checkpoint one
+4 : first platoon attack by fire
+8 : first platoon move to eight three zero one four five and attack by fire
+4 : close with and destroy the enemy at location one two three four
+4 : close with and destroy the enemy at battle position two two one
+8 : assault the enemy position at one two three four
+4 : assault objective hotel in a wedge formation
+4 : destroy the enemy at eight six three four five one
+4 : attack objective echo
+4 : assault enemy firing position at battle position two two one
+4 : move to battle position two two one and engage the enemy with direct fire at eight three four six seven five
+4 : first and second platoon advance to objective hotel
+4 : first and second platoons advance to objective hotel
+2 : first and third machine gun teams advance to objective charlie
+2 : first and third dragon teams advance to objective charlie
+4 : first and third teams advance to objective charlie
+4 : suppress objective zulu
+4 : suppressive fire on objective whiskey
+4 : suppression fire on objective whiskey
+4 : main body conduct road march to phase line green
+4 : establish a base of fire at battle position two two one and suppress the enemy at two three one four five six
+4 : set up a base of fire at battle position two two one and suppress the enemy at two three one four five six
+4 : set up as a base of fire at battle position two two one and suppress the enemy at two three one four five six
+4 : create an m1a1 platoon
+4 : create an m1a2 platoon
+4 : create an m1 platoon
+4 : create a red t72 platoon
+4 : create a blue m1 platoon
+2 : create a blue fire team
+2 : create a blue rifle squad
+4 : create an m2 company
+4 : create a hmmwv platoon
+4 : create a hmmwv section with tows
+2 : create an infantry platoon
+2 : create a platoon of infantry
+2 : create a mortar squad
+2 : create a machine gun squad
+2 : create a caat team
+0 : create two infantry platoons
+2 : create an lar platoon
+4 : create an aav platoon
+2 : create a dragon team
+2 : create a machine gun squad
+4 : drop an m1 platoon at checkpoint one
+6 : place a point at coordinates three zero four one
+6 : place a point at coordinates three zero five four six one
+6 : place a point at coordinates three zero five one four six two one
+4 : drop a checkpoint at checkpoint one
+8 : place it at checkpoint one
+8 : create an m1 platoon and place it at checkpoint one
+4 : change formation to echelon right
+4 : set formation to echelon right
+4 : first platoon set formation to echelon right
+4 : speed up to five oh miles per hour
+4 : slow down to five oh miles per hour
+4 : speed up to fifty miles per hour
+4 : speed up by fifty miles an hour
+2 : movement technique traveling overwatch
+2 : formation vee
+4 : all units move out
+4 : first platoon advance to objective alpha
+4 : second platoon on my order advance to objective alpha
+2 : platoon one assault objective alpha
+4 : withdraw to three two one four
+2 : platoon one assault checkpoint one in vee formation
+2 : platoon one assault checkpoint one at fifty miles per hour
+2 : platoon one assault checkpoint one in vee formation at fifty miles per hour
+17 : zoom in
+17 : zoom out
+2 : zoom in on platoon two
+2 : zoom in closer on platoon two
+17 : zoom in closer
+17 : zoom closer in
+2 : zoom closer in on platoon two
+17 : zoom out farther
+17 : zoom farther out
+17 : cancel that
+15 : belay that
+17 : undo that
+0 : delete that
+4 : center on objective alpha
+4 : create an m1 platoon at checkpoint one
+4 : create an m1 platoon at checkpoint one and set formation to vee
+4 : create an m1 platoon at checkpoint one and change to vee formation
+4 : create an m1 platoon formation wedge
+4 : create an m1 platoon in a wedge
+4 : create an m1a1 platoon at three two four five
+4 : create a point named checkpoint two
+4 : create an objective named objective alpha
+4 : create a checkpoint labeled checkpoint one
+4 : create a checkpoint labeled one
+4 : create an objective named alpha
+4 : create a checkpoint at coordinates five three zero one
+37 : checkpoint one is two three four five
+4 : checkpoint one is at two three four five
+4 : create a point at coordinates five three zero one and call it checkpoint two
+4 : create a point at coordinates five three zero one and label it checkpoint two
+4 : create a checkpoint at coordinates five three zero one and call it checkpoint two
+4 : create an point at coordinates five three zero one and call it objective alpha
+4 : create an objective at coordinates five three zero one and call it objective alpha
+4 : draw a phase line from one two three four to one two three five
+24 : create a line and put it at one two three four
+15 : delete phase line green
+6 : proceed to next phase
+4 : first platoon proceed to next phase
+2 : create a tow squad
+0 : create a recon aav
+4 : create a hmmwv
+2 : create an lar platoon
+2 : create a hmmwv with tows
+8 : create an m1 platoon facing southwest
+4 : create an m1 platoon pointing to the southwest
+8 : create an m1 platoon facing two one five magnetic
+0 : create a platoon of bmps with dismounted infantry at eight six two zero four eight
+0 : create a bmp platoon with dismounted infantry at eight six two zero four eight
+2 : create a platoon of lars at eight six two zero four eight
+0 : create a platoon of bmps with dismounted infantry at eight six two zero four eight named romeo four bravo
+2 : create a platoon of lars at eight six two zero four eight named charlie four five
+0 : create a platoon of bmps with dismounted infantry romeo four bravo at eight six two zero four eight
+0 : set up a platoon of t72 tanks romeo one tango at eight seven three niner niner four
+0 : set up a platoon of bmps with dismounted infantry romeo two bravo at eight seven zero zero zero five
+0 : set up a platoon of bmps with dismounted infantry romeo three bravo at eight niner five niner seven zero
+0 : set up a platoon of bmps with dismounted infantry romeo four bravo at niner three seven niner six seven
+4 : set up objective zulu at eight seven eight zero zero one
+4 : set up objective whiskey at niner three niner niner six niner
+4 : set up objective echo at eight niner two niner six seven
+4 : set up objective foxtrot at niner three two niner five eight
+4 : set up objective quebec at eight niner one niner one four
+4 : set up objective hotel at eight eight zero niner two eight
+4 : set up checkpoint one at eight niner three niner two two
+8 : set up the lod from eight five niner niner eight five to eight seven five zero niner zero
+8 : set up phase line green from eight six five niner niner five to eight niner six zero one eight
+16 : simulation mode
+16 : list entities
+16 : list tasks
+16 : list task frames
+16 : list points
+16 : list states
+16 : list lines
+16 : list text
+1 : stand by nine line brief

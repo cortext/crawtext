@@ -1,0 +1,110 @@
+##########################################################################################
+# The test set for the ATIS grammar is a randomly selected subset of 
+# the DARPA ATIS3 development test set. 
+# (The full ATIS corpus is distributed by the Linguistic Data Consortium). 
+#
+# The original file can be found at URL:
+# http://www.informatics.sussex.ac.uk/research/groups/nlp/carroll/cfg-resources/
+#
+# Modified for NLTK by Peter Ljunglöf <peter.ljunglof@heatherleaf.se>
+# Each line begins with the number of parse trees according to the grammar.
+##########################################################################################
+
+2085 : i need a flight from charlotte to las vegas that makes a stop in saint louis .
+1380 : what is the cheapest one way flight from phoenix to san diego that arrives in the morning on thursday june second .
+50 : what is the cheapest one way flight from columbus to indianapolis .
+18 : is there a flight from memphis to los angeles .
+0 : what aircraft is this .
+20 : please show me the flights from chicago to detroit that arrive at six p.m. next tuesday .
+0 : what flights are available between chicago and indianapolis next wednesday between eleven a.m. and one p.m .
+0 : please book a one way coach fare from chicago to indianapolis on united flight two ninety two next wednesday .
+1059 : show me flights from chicago to kansas city leaving around seven p.m. thursday .
+0 : show american flights after twelve p.m. from miami to chicago .
+0 : does united flight four seven four slash fourteen eighty four serve dinner .
+0 : what kind of aircraft is american 's flight fifteen oh one that departs at six fifty nine p.m .
+0 : show me flights from detroit to san diego on tuesday may third .
+0 : i 'd like to fly from indianapolis to houston on t w a and the plane should arrive around eleven a.m .
+54 : how much does first class on that flight cost and how much does coach on that flight cost .
+3 : can you tell me about the flights from saint petersburg to toronto again .
+55 : i would like to find a flight from charlotte to las vegas .
+0 : what if i wanted to leave on may fifth .
+0 : i would like to leave on thursday morning may fifth before six a.m .
+1 : how far is it from the airport to the city .
+1 : can i have the fare .
+3 : show availability .
+17 : show me northwest flights to detroit .
+2 : show the flights .
+2 : prices .
+11 : list those flights that stop over in salt lake city .
+0 : list these economy fares .
+1 : what is e w r .
+0 : list these city destinations .
+597 : list u s air flights from dallas to boston .
+44 : please list the flights leaving newark stopping over in seattle for approximately five hours and then on to san francisco .
+0 : what area does canadian airlines international service .
+437 : please list all flights from pittsburgh to toronto on nationair and canadian airlines international .
+1 : i want to leave before noon .
+6 : how long is the stop in dallas on flight d l nine thirty one .
+15 : i want first class on flight one one one nine .
+0 : count the number of flights between nine a.m. and twelve noon .
+0 : please give me the number of flights that depart from lester b pearson international airport on april twenty fifth .
+0 : how many flights leave from lester b pearson international airport between nine a.m. and twelve noon .
+598 : please show me all first class flights from pittsburgh to newark on monday morning .
+8913 : how much does flight number a nineteen cost from new york to los angeles on monday morning .
+569 : please show me all first class flights from indianapolis to memphis leaving monday morning .
+28250 : how much does a first class round trip ticket from detroit to saint petersburg cost .
+9 : please show me all flights from montreal to las vegas .
+1010 : please show me all flights from ontario to salt lake city leaving monday morning .
+6153 : i need a first class round trip airfare from detroit to saint petersburg .
+32 : i need the shortest evening flight from tampa to cincinnati .
+7 : how far is the airport from new york 's la guardia to downtown .
+8 : how much is the fare limousine san francisco to downtown .
+136 : i need a flight from pittsburgh to newark on monday .
+295 : i need a flight from los angeles to minneapolis thursday afternoon .
+21 : i need a flight from philadelphia to westchester county .
+10 : what flights leave los angeles arriving in minneapolis .
+5 : what is the cheapest ticket from memphis to miami .
+3 : what flights leave boston to pittsburgh .
+10 : what meals are served on flight h p five four .
+3 : what flights leave las vegas to oakland .
+0 : how many times a day can i fly from boston to pittsburgh to newark to boston .
+10 : show me the airlines and flight numbers .
+36122 : i 'd like the cheapest round trip ticket from minneapolis to san diego arriving in san diego before seven p.m .
+6 : what airlines fly from toronto to detroit .
+9 : i 'd like an afternoon flight .
+293 : what flights departing montreal have less than one hundred and fifty dollars round trip fare .
+0 : which city is cheapest to fly into .
+0 : are any fares cheaper than these .
+2 : what is the fare .
+0 : i 'll be leaving on a friday at four o'clock .
+5 : i 'd like to leave before eight o'clock at night .
+0 : i 'd like to fly from buffalo to either orlando or long beach .
+0 : i 'd like to fly out of chicago for less than a hundred fifty dollars round trip .
+0 : i can only spend a hundred fifty dollars .
+13 : i 'd like to leave on a saturday .
+0 : which flights are cheapest .
+716 : what is the cheapest first class ticket available flying from new york to miami one way but also round trip .
+0 : what flights do you have available on march twenty fourth leaving minneapolis arriving in seattle by .
+22 : does delta fly to boston from denver .
+0 : what is the duration of this flight .
+0 : what is the flying time from .
+5 : list flights from cleveland .
+19 : oakland to salt lake city .
+2 : milwaukee to detroit .
+2 : indianapolis to seattle .
+11 : list round trips .
+5 : list saturday flights .
+24 : what type of aircraft is used on a flight from cleveland to dallas that leaves before noon .
+0 : the flight going to san diego from toronto should stop in denver .
+200 : find a flight from washington d c to milwaukee .
+200 : find a flight from washington d c to montreal .
+72 : please tell me the round trip cost for these flights .
+4 : what are the costs .
+354 : please list flights departing from toronto canada to washington on saturday .
+229 : please list costs of round trip fares from denver to atlanta .
+46 : orlando to kansas city and then to minneapolis .
+106 : please give me a one way flight from washington to cincinnati .
+85 : i would like a flight from orlando to kansas city .
+17 : which flights use a large plane .
+1645 : i need an american airlines flight number from chicago to philadelphia departing six p.m .
+7 : for american airlines i need round trip airfare from new york to san diego .

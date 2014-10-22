@@ -4,10 +4,7 @@
 from job import Job
 
 class Debug(Job):
-<<<<<<< HEAD
-=======
 	'''
->>>>>>> 7285a69bf6a75db664c11c40a08cf2fe84d18215
 	def export(self):
 		msg_log = []
 		for job in self.__COLL__.find({"name": self.name}):
@@ -22,20 +19,6 @@ class Debug(Job):
 					#m_row = str(i)+" "+",".join(["Undef", row['msg'], str(row['status'])])
 				msg_log.append(m_row)
 		return "\n".join(msg_log)		
-<<<<<<< HEAD
-	
-	def start(self):
-		msg_log = []
-		msg_log.append("\n====================\nDEBUG:%s\n====================") %(self.name.upper())
-		
-		for job in self.__COLL__.find({"name": self.name}):
-			msg_log.append("Job is still active?\n"+ str(job["active"]))
-			status = job['status']
-			for i, row in enumerate(status):
-				m_row = str(i)+" "+",".join([row['step'], row['msg'], str(row['status'])])
-				msg_log.append(m_row)
-		return "\n".join(msg_log)
-=======
 	'''
 	
 	def start(self):
@@ -58,4 +41,3 @@ class Debug(Job):
 				#
 				#msg_log.append([i,row.items])
 		return 
->>>>>>> 7285a69bf6a75db664c11c40a08cf2fe84d18215

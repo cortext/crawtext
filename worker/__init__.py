@@ -2,29 +2,18 @@
 # -*- coding: utf-8 -*-
 
 import re
-<<<<<<< HEAD
-from .database import TaskDB
-from validate_email import validate_email
-from utils.validate_url import validate_url
-from .jobs import *
-=======
 from database import TaskDB
 from packages.links import validate_url
 from packages.emails import validate_email
 from jobs import *
 
->>>>>>> 7285a69bf6a75db664c11c40a08cf2fe84d18215
 
 TASKDB = TaskDB()
 
 class Worker(object):
 	''' main access to Job Database'''
 	__COLL__ = TASKDB.coll
-<<<<<<< HEAD
-	_ACTION_LIST = ["report", "extract", "export", "archive", "user", "debug", "wos", "list", "crawl"]
-=======
 	_ACTION_LIST = ["report", "extract", "export", "archive", "user", "debug", "wos", "list", "crawl", "stats"]
->>>>>>> 7285a69bf6a75db664c11c40a08cf2fe84d18215
 	_TASK_LIST = ["start","stop", "delete",'schedule', "unschedule"]
 	_PROJECT_LIST = ["--user", "--repeat", "--format", "--coll_type"]
 	_CRAWL_LIST = ["--query", "--key"]	
@@ -38,14 +27,9 @@ class Worker(object):
 		self._logs = {}
 		
 		self.active = True
-<<<<<<< HEAD
-		self.__get_input__(user_input)
-		self.dispatch(debug)
-=======
 		self.debug = debug
 		self.__get_input__(user_input)
 		self.dispatch()
->>>>>>> 7285a69bf6a75db664c11c40a08cf2fe84d18215
 	
 	def __get_input__(self, user_input):
 		'''mapping user input into job parameters'''		
@@ -116,12 +100,8 @@ class Worker(object):
 			self.action = "job"
 		return self
 							
-<<<<<<< HEAD
-	def dispatch(self, debug):
-=======
 	def dispatch(self):
 		
->>>>>>> 7285a69bf6a75db664c11c40a08cf2fe84d18215
 		if self.action == "user":
 			item = self.__COLL__.find_one({"user":self.name})
 		else:	
@@ -134,15 +114,6 @@ class Worker(object):
 				self._task = "show"
 			else:
 				self._task = "create"
-<<<<<<< HEAD
-				
-		_class = (self.action).capitalize()
-		instance = globals()[_class]
-		
-		job = instance(self.__dict__)
-		instanciate = getattr(job,self._task)
-		if debug is True:
-=======
 
 		_class = (self.action).capitalize()
 		instance = globals()[_class]
@@ -151,7 +122,6 @@ class Worker(object):
 		instanciate = getattr(job,self._task)
 		
 		if self.debug is True:
->>>>>>> 7285a69bf6a75db664c11c40a08cf2fe84d18215
 		
 			print instance, self._task
 

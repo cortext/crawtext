@@ -5,3 +5,4 @@ database.pyc
 page.pyc
 report.pyc
 scheduler.pyc
+*.pyc
