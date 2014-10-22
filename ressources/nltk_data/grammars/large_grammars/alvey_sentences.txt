@@ -1,0 +1,246 @@
+################################################################################
+# Test data for experiments in 'Relating Complexity to Practical Performance
+# in Parsing with Wide-coverage Unification Grammars', John Carroll, ACL-94.
+#
+# The original files can be found at URL: 
+# http://odur.let.rug.nl/~vannoord/CL97/
+#
+# Modified for NLTK by Peter Ljunglöf <peter.ljunglof@heatherleaf.se>
+# Each line begins with the number of parse trees according to the grammar.
+################################################################################
+
+# Initial set of 129 (shorter) sentences
+
+1: he doesn't help
+1: he confidently accepted their conditions
+1: don't help him
+1: do be more resolute
+1: help me
+1: apologize to him
+1: he accepted their conditions confidently
+1: in the abbey he helped the abbot
+2: he helped the abbot in the abbey
+2: in an anxious mood he helped the abbot
+4: he helped the abbot in an anxious mood
+2: with some anxiety he helped the abbot
+4: he helped the abbot with some anxiety
+1: without a doubt he helped the abbot
+2: he helped the abbot without a doubt
+4: he helped the abbot without a doubt but with some anxiety
+1: he helped them down at the abbey
+2: this mood of lee 's is not very characteristic
+6: he couldn't help hearing that admission of the abbot 's
+1: she anticipates that he will help
+1: she anticipates he will help
+1: it appears that she knows him
+1: it appears she knows him
+1: that he didn't help mattered
+1: it mattered that he didn't help
+1: it mattered he didn't help
+1: he promised her that he would help
+1: he promised her he would help
+1: that he apologized amuses her
+1: she agrees with him that he should help
+1: that lee helps matters to her
+1: she is busy and in the mood
+2: she is not busy and in the mood
+1: there is an abbot in the abbey
+1: it is to the abbot that he gives the message
+1: he is agreed with
+1: she helps busily
+1: she busily helps
+1: she helps in the abbey
+1: she is busily helping
+1: she helps busily and with abandon
+1: she does not help
+2: whose abacus is this
+1: which of the abbots is here
+2: which abbot did you see
+1: the abbot my doubts about whom they are aware of is here
+1: which abbot do i have my doubts about
+1: which abbot do i agree with lee 's doubts about
+1: which abbot do i have some doubts about
+1: my doubts all of which are crazy don't help me
+1: who did he have a desire to help
+1: who did he have a characteristic desire to help
+1: how confident is he
+1: who is he eager to help
+2: who is he resolutely eager to help
+3: to whom was it clear that he wouldn't apologize
+1: who is he certain to help
+1: who is he busy helping
+1: who was he abandoned by
+1: who does she know to be crazy
+1: what did she anticipate him doing
+3: who did she anticipate helping
+2: who could she hear apologizing
+2: who did she see help the abbot
+5: who did she see accepted by them
+1: which abbey is he in
+1: in which abbey is he
+1: how crazy is he
+3: what was there
+1: who was it that he helped
+1: who was it who he helped
+3: with whom is it that he agrees
+1: what was she not appearing to do
+1: what was she appearing not to do
+1: how can she help him
+1: how easily can she do it
+2: in which abbey did he see her
+1: how easily was he being abandoned
+2: who will help and who won't help
+8: the abbot lee knows but kim doesn't know
+2: which abbot and which abbey did you see
+0: what do you have a desire to do but anxieties about 
+1: what is he scared to do but resolute that he will do
+1: in which abbey and with which abbot did he see them
+2: what does lee see and hear
+1: he is abandoned
+2: he is abandoned by her
+1: he is given back his abacus
+3: he is given back his abacus by kim
+2: he is allowed into the abbey
+5: he is allowed into the abbey by them
+4: he is allowed by them into the abbey
+1: she was promised that he would help
+1: she was promised by him that he would help
+2: she was promised that he would help by him
+1: she was bet an abacus that he could do it
+2: she was bet an abacus by him that he could do it
+2: he was asked what he would do
+1: he was asked by them what he would do
+1: he was asked whether he would help
+1: he was asked by them whether he would help
+1: he was asked what to do
+1: he was asked by them what to do
+1: he was asked whether to help
+1: he was asked by them whether to help
+2: lee won't help but he will allow kim to help
+4: lee won't help and kim won't apologize
+4: either kim helps or lee helps
+1: he is crazy and anxious
+1: he is crazy or anxious
+1: he is crazy and in the abbey
+1: kim and lee are here
+2: kim and lee and sandy are here
+3: kim lee and sandy are here
+2: both kim and sandy are here
+3: either kim or lee is here
+1: the abbot or his host has apologized
+3: the abbot or his host have apologized
+2: the abbots or lee have apologized
+1: lee or the abbots have apologized
+1: the abbots or their hosts have apologized
+1: neither the abbots nor their hosts are here
+1: neither the abbot nor his host are here
+1: neither the abbots nor their host are here
+1: neither their host nor the abbots are here
+1: either the abbots or the hosts are here
+1: either the abbot or his host are here
+3: his crazy doubt or anxiety is not helping him
+3: his crazy doubts or anxieties are not helping him
+
+# Additional set of 100 longer sentences
+
+2: he accepted their conditions confidently but with some anxiety he helped the abbot
+14: he helped the abbot with some anxiety and may accept their conditions confidently
+31: either the abbot who sees the abbey helps or kim or lee helps
+15: neither kim lee the abbot who sees the abbey nor sandy help him
+10: the abbot who sees the abbey with some anxiety accepted their conditions confidently
+4: without a doubt but with some anxiety he helped the abbot in the abbey
+4: with some anxiety neither kim lee nor the abbot who sees the abbey helped
+4: she knows that kim is busy apologizing to the abbot he wouldn't apologize to
+14: he helped the abbot in the abbey with some anxiety but not without a doubt
+2: the abbot in the abbey my doubts about whom they are aware of is here
+2: is the abbot in the abbey my doubts about whom they are aware of here
+3: to which abbot whom they are aware of was it clear that he wouldn't apologize
+2: which abbot of whom they are aware was it clear that he wouldn't apologize to
+4: who does she know to be busy helping the abbot who was confident of having helped
+59: the abbot who she knows to be busy helping the abbot was confident of having helped
+10: wasn't she appearing to help the abbot who appeared not to be confident of having helped
+10: the abbot apologizing in the abbey who is confident of having helped wasn't anxious to hear
+12: which abbot who is confident of having helped the abbot in the abbey could she hear apologizing
+34: did she hear the abbot who is confident of having helped the abbot in the abbey apologizing
+8: which abbot who appeared not to be confident of having helped was she not appearing to help
+33: the abbot in the abbey that he is confident of having helped she knows to be crazy
+6: he might never agree with the abbot about whom there were messages all of which were crazy
+5: the abbots all of whom are crazy promised her that don't have a desire to help me
+2: it was clear that he wouldn't help me apologize to the abbots all of whom are crazy
+1: about which abbot were there messages which the abbey in the abbey is confident of agreeing with
+64: that admission of the abbot 's about whom there were messages lee wasn't able to help hearing
+4: he promised her he would have him on that she knows that the abbot is in the abbey
+2: he promised her that she would help the abbot in the abbey and that she would hear him
+12: my doubts about the abbots all of which are crazy don't help me have a desire to help
+4: my doubts they don't help me have a desire to help the abbots all of whom are crazy
+3: which abbey to whom it was clear that he wouldn't apologize is the abbot who kim helps in
+6: in which abbey is the abbot whom kim helps to whom it was clear that he wouldn't apologize
+2: who is he confident of having helped the abbot who is in the abbey know to be crazy
+6: with which abbot about whom there were messages all of which were crazy is it that he agrees
+17: that message of the abbot 's that he could hear was accepted by the abbots who were anxious
+24: the abbots appeared not to see the message about the abbot 's crazy anxieties for which he apologizes
+24: lee wasn't able to help hearing that admission of the abbot 's although he had promised that he would
+12: although he had promised that he would lee wasn't able to help hearing that admission of the abbot 's
+2: to which abbot that she knows to be crazy was it clear that he was confident of having helped
+2: it was clear to the abbot who she knows to be crazy that he was confident of having helped
+3: because she appeared not to see the message the abbot and the abbey will agree but not do it
+52: the abbot 's crazy doubts anxieties or doubts are not helping the abbey or the abbots who have apologized
+78: he is in the abbey with him and the abbots whose messages appear to be more anxious than crazy
+18: while he was in the abbey the abbots whose messages appeared to be more anxious than crazy were confident
+18: he was confident of having promised that lee would help the abbot that she knows was hearing that admission
+48: which message that she appeared to see near the abacus will the abbot agree to accept but not ask for
+14: kim will have him on when she promises him that he was confident of being helped by the anxious abbot
+40: kim anticipated that he would help with the message that the anxious abbot could hear was accepted in the abbey
+12: the confident abbots who kim had anticipated she would help appeared to be anxious while they were in the abbey
+20: in which abbey does kim know an abbot who is anxious but resolute that the abbey will agree with lee
+2: he is confident of having helped the abbot because he promised that the abbey would be given back to her
+54: why aren't the abbot 's crazy doubts helping the abbey and will he ask the abbots who have apologized to help
+268: what message that the abbot could hear being accepted by the abbots who kim anticipated helping did she anticipate him helping
+249: the abbot in the abbey which kim sees and hears is promised an abbot who is anxious and scared by her
+28: the abbot who kim can see was accepted by them won't help but will abandon the crazy abbot or the abbey
+4: kim accepts that the abbot about whom the abbot who she could hear knows will ask lee to promise to help
+528: why is the abbot in the abbey which kim sees and hears who is promised an abbot anxious and scared by her
+15: which abbot who i have my doubts about did she see accepted by the abbey who promised her that they would help
+311: the abbey that was abandoned by the abbot who kim can see accepted by them has an abbot who can help him
+420: the abbot who is not crazy but anxious or crazy won't help but he will allow the message or abbey to help
+10: will the abbot who is not crazy but appears to help while kim apologizes ask them to help although the abbey cannot
+64: does the message that kim appears to apologize to him allow the anxious abbot to promise them an abacus in the abbey
+28: an abbot about whom i have my doubts and who promised her that he would help appeared to be accepted by the abbey
+21: which abbot who kim knows does the abbot whom she could hear know but the abbot in the abbey she can't hear doesn't
+132: what is the abbot who is anxious and scared scared to do but resolute that the abbey with whom he agrees will do
+10: they asked the abbot what to do but the abbots who see but don't help kim did not allow them into the abbey
+12: did she see the abbey which i have my doubts about and which is promised an abbot while she promised she would help
+8: neither the message with which kim agrees nor the abbots can know that it mattered that the message wasn't accepted by the abbot
+54: the anxious scared abbot who is crazy to ask kim must be resolute that the abbey with whom he agrees will not do it
+34: the abbot who was asked by them what to do is allowed by the abbots who see but don't help kim into the abbey
+20: which abbot who she promised he would have him on is the message that kim appears to help is he confident of having helped
+596: the abbot and abbey which were given back by her promised her that the abbot who is abandoned by kim would help
+150: in an anxious mood the abbot allowed them into the abbey to which kim was carried back with the messages from lee and sandy
+168: the abbot and abbey which were given back by her must promise that the abbot abandoned by kim will help them to accept a message
+12: the abbot who allowed them into the abbey which he abandoned asked the abbot in the abbey in the message whether to help or agree
+6: must the abbot who she could hear be allowed to help or will kim accept the message that the abbot in the abbey can't hear
+24: she knows that the message accepted by the abbot in the abbey asked the abbot who allowed them into the abbey whether he would agree
+18: the abbot who was promised that she would have him on and is confident of having helped may see the message that kim appears to help
+1070: how can the abbot in the abbey that had been abandoned by the many abbots who kim can see accepted by them help the message
+36: he hears the abbot who did appear to see neither the message with which kim agrees in the abbey nor the abbots whom he agrees with
+165: when was the anxious and scared abbot asked what to do by the abbots who are resolute that the abbot will help kim into the abbey
+78: that admission accepted in the abbey by the abbot who bet her an abacus and who sees the message that he could do it is crazy
+54: she may have the abbot she knows on that she knows that it mattered that the message which is accepted by her didn't anticipate he will help
+447: why is she having the abbot she knows on that because it mattered that the message accepted by her wasn't in the abbey she didn't anticipate helping
+12: the abbot in the abbey in the message was asked by the abbot who allowed them into the abbey which he abandoned whether to help or agree
+48: kim bet her an abacus and a message by the abbot in an anxious mood that the abbey which was carried back to the abbey could do it
+464: he can hear the abbot who is appearing to promise that the abbey abandoned by kim with which he agrees will not accept any of the several messages
+252: the abbey abandoned by kim with which he agrees cannot hear the abbot who is appearing to promise that he will never accept any of the several messages
+20: it matters that the abbot who kim sees but does not hear knows that he didn't help lee to promise to help with the crazy abacus
+72: why did lee have a characteristic desire to help give kim 's message to the anxious abbot or to an abbot with whom he agrees in the abbey
+117: to help lee and ask the abbot about the resolute message or abacus must be crazy but the abbot who apologizes has a characteristic desire to do it
+108: giving kim 's or sandy 's message to the anxious abbot was a characteristic desire to help the abbot who they agree with apologize to lee in the abbey
+24: although the abbot who apologizes has a characteristic desire to do it it must be crazy to help lee and not ask the abbot about the resolute message
+72: does it turn out that it mattered that the anxious and scared abbot in the abbey knows that he didn't help the abbot to agree with kim about it
+704: she anticipates that the abbot who sees the message or is asked by the abbots will hear that admission accepted in the abbey or message of the abbot 's
+320: kim was asked whether she anticipated that the anxious abbot who did see the message would hear the admission or message which the abbey accepted but didn't ask
+16: it turns out that both the abbot and the abbey know that the abbot who kim sees but does not hear will promise to help the abacus in the abbey
+2736: in which abbey or message with which he agrees did he see the crazy anxious abbot who was not appearing to see the message with which kim agrees
+28: by which of the abbots in an anxious mood was she bet an abacus and a message that the message which they carried back to the abbey could do it
+52: who did either the abbot or the message but not the abbey in the abbey have a characteristic desire to help give the message to the abbot who is here
+
