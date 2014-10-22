@@ -3,11 +3,20 @@
 
 from job import Job
 from datetime import datetime as dt
+<<<<<<< HEAD
 from packages import requests
 from newspaper.query import Query
 
 from utils.url import check_url
 from newspaper.article import Article, ArticleException
+=======
+import requests
+#from newspaper.query import Query
+from packages.query import Query
+from packages.links import check_url
+from extractor.article import Article, ArticleException
+from packages.urls import Link, LinkException
+>>>>>>> 7285a69bf6a75db664c11c40a08cf2fe84d18215
 
 class Crawl(Job):	
 	def update_sources(self):
@@ -235,12 +244,22 @@ class Crawl(Job):
 	def send_seeds_to_queue(self):
 		self._logs["step"] = "Sending seeds urls to start crawl"
 		for doc in self.__db__.sources.find():
+<<<<<<< HEAD
 			self.__db__.queue.insert({"url":doc["url"], "depth":doc["depth"], "status": doc["status"]})
 		if self.__db__.queue.count() == 0:
 			self._logs["msg"] = "Error while sending urls into queue: queue is empty"
 			self._logs["code"] = 600.1
 			self._logs["status"] = False
 			self.__update_logs()
+=======
+			if doc["status"] is True:
+				self.__db__.queue.insert({"url":doc["url"], "depth":doc["depth"]})
+		if self.__db__.queue.count() == 0:
+			self._logs["msg"] = "Error while sending urls into queue: queue is empty. check sources status"
+			self._logs["code"] = 600.1
+			self._logs["status"] = False
+			self.__update_logs__()
+>>>>>>> 7285a69bf6a75db664c11c40a08cf2fe84d18215
 		return self._logs["status"]	
 				
 	def config(self):
@@ -251,7 +270,11 @@ class Crawl(Job):
 		self.option = None
 		self.key = None
 		self._logs["status"] = True
+<<<<<<< HEAD
 		self._logs["msg"] = "Configuration ..."
+=======
+		self._logs["msg"] = "Configuration"
+>>>>>>> 7285a69bf6a75db664c11c40a08cf2fe84d18215
 		
 		for k, v in self.__data__.items():
 			setattr(self,k,v)
@@ -296,16 +319,26 @@ class Crawl(Job):
 			self.__update_logs__()
 			return False
 		
+<<<<<<< HEAD
 		if self._logs["status"] is True:
 			self._logs['status'] = self.send_seeds_to_queue()
 			self._logs["msg"] = "Config Ok!"			
 		print self._logs["msg"]
 		self.__update_logs__()
 		return True
+=======
+		self._logs['status'] = self.send_seeds_to_queue()
+		
+		return self._logs['status']
+
+		
+		
+>>>>>>> 7285a69bf6a75db664c11c40a08cf2fe84d18215
 		
 	def start(self):
 		if self.config():
 			self._logs["msg"] = "Running crawl job  on %s" %self.date
+<<<<<<< HEAD
 			print self._logs["msg"] 
 			start = dt.now()
 			for doc in self.__db__.queue.find():
@@ -327,6 +360,71 @@ class Crawl(Job):
 
 						except ArticleException:
 							pass
+=======
+
+			print self._logs["msg"] 
+			start = dt.now()
+			for doc in self.__db__.queue.find():
+				print self.__db__.queue.find().count(), "in queue"
+				link = Link(doc["url"])
+				if link.url not in self.__db__.results.distinct('url') or link.url not in self.__db__.logs.distinct('url'):
+					if link.is_valid():
+						page = Article(link, depth= doc["depth"])
+
+						try:
+							page.build()
+							try:
+								page.is_relevant(self.woosh_query)
+								existing = self.__db__.results.find_one({"url": page.url})
+								if existing is not None:
+									existing = self.__db__.results.udpate({"_id": existing['_id']},{"$push":{"date": page.date}})
+								else:
+									self.__db__.results.insert(page.json())
+								for link in page.outlinks:
+									if link not in self.__db__.results.distinct('url'):
+										self.__db__.queue.insert({"url":link, "depth": page.depth+1})
+								print page.title
+							except ArticleException:
+								res = self.__db__.logs.find_one({"url": page.url})
+								if res is not None:
+									print self.__db__.logs.update({"_id": res['_id']},{"$push":{"date": page.date}})
+									del page.date
+									print self.__db__.sources.update({"_id": res['_id']},{"$set":page.log})
+								else:
+									print self.__db__.logs.insert(page.log)
+
+						except LinkException:
+							source = self.__db__.sources.find_one({"url": page.url})
+							if source is not None:
+								print self.__db__.sources.update({"_id": source['_id']},{"$push":{"date": page.date}})
+								del page.date
+								print self.__db__.sources.update({"_id": source['_id']},{"$set":page.log})
+							else:
+								print self.__db__.logs.insert(page.log)
+						except ArticleException:
+							res = self.__db__.logs.find_one({"url": page.url})
+							if res is not None:
+								print self.__db__.logs.update({"_id": res['_id']},{"$push":{"date": page.date}})
+								del page.date
+								print self.__db__.sources.update({"_id": res['_id']},{"$set":page.log})
+							else:
+								print self.__db__.logs.insert(page.log)
+
+								#print self.__db__.logs.upsert({"url": page.url}, {page.log, {"date":[page.log.date]})
+						#print page.url
+						#if page.build() is not False:
+						#	print page.title
+							#print page.links
+					# print url, page.depth
+					# try:
+					# 	if page.is_relevant(self.woosh_query):
+					# 		self.__db__.results.insert(page.pretty())
+					# 		next_links = [{"url":link, "depth": doc['depth']+1} for link in page.outlinks]
+					# 		if len(next_links) != 0:
+					# 			self.__db__.queue.insert(next_links)
+						
+					'''
+>>>>>>> 7285a69bf6a75db664c11c40a08cf2fe84d18215
 						# else:
 						# 	if page.url not in self.__db__.results.distinct("url"):
 						# 		self.__db__.results.insert(page)
@@ -334,8 +432,13 @@ class Crawl(Job):
 					# 		self.__db__.sources.insert(article._logs)
 					# else:
 					# 	self.__db__.sources.insert(page._logs)
+<<<<<<< HEAD
 
 				self.__db__.queue.remove({"url": doc["url"]})
+=======
+					'''
+					self.__db__.queue.remove({"url": doc["url"]})
+>>>>>>> 7285a69bf6a75db664c11c40a08cf2fe84d18215
 					
 			end = dt.now()
 			elapsed = end - start
@@ -350,7 +453,11 @@ class Crawl(Job):
 			return self.__update_logs__()
 	
 	def stop(self):
+<<<<<<< HEAD
 		self._logs["step"] = "Stopping exec of job of %s project %s" %(self.action, self.name)
+=======
+		self._logs["step"] = "Stopping exec of job of crawl project %s" %(self.name)
+>>>>>>> 7285a69bf6a75db664c11c40a08cf2fe84d18215
 		self._logs["msg"] = "Stopping crawl job on %s" %self.date
 		self.__db__.queue.drop()
 		self._logs["status"] = True	

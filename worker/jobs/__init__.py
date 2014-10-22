@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> 7285a69bf6a75db664c11c40a08cf2fe84d18215
 from .crawl_job import Crawl
 from .archive_job import Archive
 from .report_job import Report
@@ -8,20 +12,33 @@ from .export_job import Export
 from .user_job import User
 from .debug_job import Debug
 from .list_job import List
+<<<<<<< HEAD
 
+=======
+from .stats_job import Stats
+>>>>>>> 7285a69bf6a75db664c11c40a08cf2fe84d18215
 import re
 from datetime import datetime as dt
 from ..database import Database
 from ..database import TaskDB
+<<<<<<< HEAD
 from utils import *
+=======
+from packages.ask_yes_no import *
+>>>>>>> 7285a69bf6a75db664c11c40a08cf2fe84d18215
 
 class Job(object):
 	'''defaut job class for worker'''
 	DB = TaskDB()
 	__COLL__ = DB.coll
 	
+<<<<<<< HEAD
 	def __init__(self, doc): 
 		
+=======
+	def __init__(self, doc):
+
+>>>>>>> 7285a69bf6a75db664c11c40a08cf2fe84d18215
 		self.name = doc['name']
 		self.action = doc["action"]
 		self.__data__ = self.__COLL__.find_one({"name":self.name})		
@@ -36,6 +53,7 @@ class Job(object):
 		self.date = dt.now()
 		self._doc = doc
 		self._logs = {}
+<<<<<<< HEAD
 		self._logs["date"] = self.date
 		self.active = True
 		
@@ -45,6 +63,18 @@ class Job(object):
 		except KeyError:
 			self._logs["msg"] = ""
 			
+=======
+		self._logs["date"] = [self.date]
+		self.active = True
+	
+	def get_values(self):
+		self.__data__ = self.__COLL__.find_one({"name":self.name})
+		if self.__data__ is not None:
+			for n in self.__data__.items():
+				setattr(self,k,v)
+
+	def __update_logs__(self):	
+>>>>>>> 7285a69bf6a75db664c11c40a08cf2fe84d18215
 		if self.__data__ is None:
 			if self._logs["status"] is True:
 				self._logs["msg"]  = "No active '%s' job for project '%s'found" %(self.action, self.name)
@@ -105,6 +135,7 @@ class Job(object):
 			instance = globals()[_class]
 			job = instance(self.__data__)
 			return job.start()
+<<<<<<< HEAD
 			
 	def stop(self):
 		self._logs["step"] = "Stopping execution of job"
@@ -119,6 +150,22 @@ class Job(object):
 			print (job.logs["msg"])
 			self.COLL.update({"name":self.name}, {"$set": {"active": "False"}})	
 			return self.COLL.update({"name":self.name, "action":self.action}, {"$push": {"status": self._logs}})
+=======
+
+	def stop(self):
+		self._logs["step"] = "Stopping execution of job"
+		self.__COLL__.update({"name":self.name, "action":self.action}, {"$push": {"status": self._logs}})
+		for doc in self.__COLL__.find({"name": self.name}):
+			func = doc["action"].capitalize()
+			instance = globals()[func]
+			job = instance(self.name)		
+			
+			job.stop()
+			self.__COLL__.update({"name":job.name, "action":doc["action"]}, {"$push": {"msg": job._logs}})
+			print (job._logs["msg"])
+			self.__COLL__.update({"name":self.name}, {"$set": {"active": "False"}})	
+			return self.__COLL__.update({"name":self.name, "action":self.action}, {"$push": {"status": self._logs}})
+>>>>>>> 7285a69bf6a75db664c11c40a08cf2fe84d18215
 			
 	def schedule(self):
 		self._logs["step"] = "Scheduling project"
@@ -224,3 +271,8 @@ class Job(object):
 	def list(self):
 		for doc in self.__COLL__.find({"name":self.project_name}):
 			print doc['name'], doc['action'], doc['active']
+<<<<<<< HEAD
+=======
+
+
+>>>>>>> 7285a69bf6a75db664c11c40a08cf2fe84d18215
