@@ -9,12 +9,12 @@ from packages.ask_yes_no import *
 class Report(Job):
 	
 	def start(self):
-		self._logs['step'] = "Generate report"
+		self.log.step= "Generate report"
 
 		if self.__data__ is None:
-			self._logs['status']= False
-			self._logs['msg'] =  "No job found for %s. Exiting" %self.name
-			return self.__update_logs__()
+			self.log.status = False
+			self.log.msg =  "No job found for %s. Exiting" %self.name
+			return self.log.update()
 		if self.__data__['user'] is not None:
 			print "Hello %s !" %self.__data__['user']
 			if ask_yes_no("Do you want to receive the report by email?"):
@@ -22,7 +22,7 @@ class Report(Job):
 					print "A report email will be send to %s\nCheck your mailbox!" %self.__data__['user']
 					return 
 
-		self._logs['status']= True
+		self.log.status = True
 		self.report_date = self.date.strftime('%d-%m-%Y_%H-%M')
 		self.directory = "%s/reports" %self.project_name
 		if not os.path.exists(self.directory):
@@ -39,8 +39,8 @@ class Report(Job):
 				f.write(logs)
 		# print self.__db__.stats()
 		
-		self._logs['msg'] = ("Successfully generated report for %s\nReport name is: %s") %(self.name, filename)
-		return self.__update_logs__()
+		self.log.msg= ("Successfully generated report for %s\nReport name is: %s") %(self.name, filename)
+		return self.log.update()
 
 	def send_mail(self, user):
 		from packages.format_email import createhtmlmail

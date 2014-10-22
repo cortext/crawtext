@@ -4,7 +4,7 @@ from datetime import datetime as dt
 from ..database import Database
 from ..database import TaskDB
 from packages.ask_yes_no import ask_yes_no
-
+from ..log import Log
 
 class Job(object):
 	'''defaut job class for worker'''
@@ -26,42 +26,24 @@ class Job(object):
 		#value from db
 		self.__db__ = Database(self.project_name)
 		self.__db__.create_colls(["results","sources", "logs", "queue", "treated"])
-		self.active = True
-		self.date = dt.now()
-		self._doc = doc
-		self._logs = {}
-		self._logs["date"] = [self.date]
-		self.active = True
+		self.log = Log()
+		self.log.date = self.date
+		# self._logs = {}
+		# self._logs["date"] = [self.date]
+		# self.active = True
 	
 	def get_values(self):
+		'''mapping existing values from TASKDB'''
 		self.__data__ = self.__COLL__.find_one({"name":self.name})
 		if self.__data__ is not None:
 			for n in self.__data__.items():
-				setattr(self,k,v)
-
-	def __update_logs__(self):	
-		if self.__data__ is None:
-			if self._logs["status"] is True:
-				self._logs["msg"]  = "No active '%s' job for project '%s'found" %(self.action, self.name)
-				self.create()
-			
-		try:		
-			_id = self.__data__['_id']
-			self.__COLL__.update({"_id":_id}, {"$set":{"active":self._logs["status"]}})
-			self.__COLL__.update({"_id":_id}, {"$push":{"status":self._logs}})
-		except KeyError:
-			pass
-		if self.debug is True:
-			print self._logs["msg"]
-
-		return self._logs["status"]
-		
+				setattr(self,k,v)	
 										
 	def create(self):
-		self._logs['step'] = "creation"
+		'''Create a new project'''
+		self.log.step = "creation"
 		question = "Do you want to create a new project with a %s job?" %self.action
 		if ask_yes_no(question):
-			
 			for k,v in self._doc.items():
 				 if k[0] != "_" and k[0] != "-" and k not in ["add", "delete", "expand"]:
 					 setattr(self,k,v)
@@ -69,9 +51,8 @@ class Job(object):
 			self.__data__ = self.__COLL__.find_one({"_id":_id})
 			self._logs['status'] = True
 			self._logs["msg"] = "Sucessfully created project %s with task %s" %(self.name,self.action)
-			if self.debug is True:
-				print self._logs["msg"]
-			self.__update_logs__()
+			print self._logs["msg"]
+			print Log()
 			return self.show()
 		
 	def update(self):
