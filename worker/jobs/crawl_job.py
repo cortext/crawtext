@@ -10,7 +10,21 @@ from packages.links import check_url
 from extractor.article import Article, ArticleException
 from packages.urls import Link, LinkException
 
-class Crawl(Job):	
+class Crawl(Job):
+	def add(self):
+		try:
+			if self.params['url']:
+				self.insert_url(self.params['url'])
+			elif self.params['file']:
+				self.file = self.params['file']
+				self.get_local()
+			elif self.params['email']:
+				return self.task.update({'_id': self.id}, {"$push":{"user": self.params["email"]}})
+			elif self.params['user']:
+				return self.task.update({'_id': self.id}, {"$push":{"user": self.params["user"]}})
+		except KeyError:
+			print "Error: Unable to add url file or user to project %s.\nYou can only add file , url or user to project\nPlease add one of the following parameters:\n\t--url='www.yoururl.com'\n\t--file='yourfile.txt'\n\t--user='you@cortext.net'" %self.name
+	
 	def update_sources(self):
 		if self.__data__ is None:
 			print "No existing project %s with %s job" %(self.name, self.action)
@@ -186,24 +200,34 @@ class Crawl(Job):
 		
 	def insert_url(self, url, origin="default", depth=0):
 		'''Insert or updated url into sources if false inserted or updated into logs'''
-		self._logs["step"] = "inserting url"
-		self._logs["status"] = True
-		self._logs["msg"] = "Urls sucessfully inserted"
-		status, status_code, error_type, url = check_url(url)
-		is_source = self.__db__.sources.find_one({"url": url})
+		# self._logs["step"] = "inserting url"
+		# self._logs["status"] = True
+		# self._logs["msg"] = "Urls sucessfully inserted"
+		link = Link(url)
+		link.parse()
+		print link.is_valid()
+		print link.__dict__
+		return self.db.sources.insert(link.__dict__, upsert=False)
+		'''
+		link = Link(url)
+		if link.is_valid():
+
+		is_source = self.db.sources.find_one({"url": url})
 		
 		#incorrect url
 		if status is False:
 			self._logs["status"] = False
 			#existing
-			if url in self.__db__.logs.distinct("url"):
-				self._logs["msg"] = "Error inserting url: updated url %s in logs" %url
-				self.__db__.logs.update({"url":url}, {"$push":{"date": self.date, "scope": self._logs["scope"], "msg":self._logs["msg"], "code": status_code, "status": "False"}})
+			if url in self.db.logs.distinct("url"):
+				pass
+				#self._logs["msg"] = "Error inserting url: updated url %s in logs" %url
+				#self.__db__.logs.update({"url":url}, {"$push":{"date": self.date, "scope": self._logs["scope"], "msg":self._logs["msg"], "code": status_code, "status": "False"}})
 			#new
 			else:
+				pass
 				#self._logs["msg"] = "Status is false error inserting url"
-				self.__db__.logs.insert({"url":url, "status": status, "code": [status_code], "msg":[error_type], "origin":[origin], "depth":[depth],"scope":[self._logs["scope"]], "date": [self.date]})
-				self._logs['msg'] = "Incorrect url %s.\n%s\n Not inserted into sources but logs" %(url, error_type)
+				#self.db.logs.insert({"url":url, "status": status, "code": [status_code], "msg":[error_type], "origin":[origin], "depth":[depth],"scope":[self._logs["scope"]], "date": [self.date]})
+				#self._logs['msg'] = "Incorrect url %s.\n%s\n Not inserted into sources but logs" %(url, error_type)
 			
 		#existing url
 		elif is_source is not None:
@@ -215,7 +239,8 @@ class Crawl(Job):
 			self.__db__.sources.insert({"url":url, "status": status, "code": status_code, "msg":error_type, "origin":origin, "depth":depth,"scope":"inserting", "date": [self.date]})
 			self._logs['msg'] = "Succesfully inserted new url %s into sources" %url
 		self.__update_logs__()
-		
+		'''
+
 		return status 
 		
 	def delete_url(self, url):
