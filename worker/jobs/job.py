@@ -11,8 +11,8 @@ class Job(object):
 	DB = TaskDB()
 	__COLL__ = DB.coll
 	
-	def __init__(self, doc, debug):
-		self.debug = debug
+	def __init__(self, doc):
+		self.debug = False
 		if type(doc) == str:
 			self.name = doc
 		else:	
