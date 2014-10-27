@@ -126,7 +126,7 @@ class Worker(object):
 		_class = (self.action).capitalize()
 		instance = globals()[_class]
 		
-		job = instance(self.__dict__, self.debug)
+		job = instance(self.__dict__)
 		instanciate = getattr(job,self._task)
 		
 		if self.debug is True:
