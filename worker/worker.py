@@ -164,7 +164,7 @@ class Worker(object):
 		print "Project still active:", self._doc["active"]
 		print "- Last activity:"
 		print self._doc["date"]
-		print self._doc["msg"][-1]['msg']
+		print self._doc["msg"]
 		print "Owner :", self._doc["user"]
 		#Tasks?
 		try:
