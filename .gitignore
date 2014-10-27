@@ -1,3 +1,17 @@
+<<<<<<< HEAD
+*.pyc
+worker/jobs/archive_job.pyc
+worker/jobs/crawl_job.pyc
+worker/jobs/debug_job.pyc
+worker/jobs/export_job.pyc
+worker/jobs/__init__.pyc
+worker/jobs/job.pyc
+worker/jobs/list_job.pyc
+worker/jobs/private.pyc
+worker/jobs/report_job.pyc
+worker/jobs/stats_job.pyc
+worker/jobs/user_job.pyc
+=======
 abpy.pyc
 cfg.pyc
 crawtext_options.pyc
@@ -5,6 +19,7 @@ database.pyc
 page.pyc
 report.pyc
 scheduler.pyc
+<<<<<<< HEAD
 crawtext.pyc
 job.pyc
 page.pyc
@@ -14,3 +29,44 @@ scheduler.pyc
 task.pyc
 wk.pyc
 worker.pyc
+=======
+*.pyc
+>>>>>>> db878c108d437d11ef3240683ba814f6eeabea1c
+worker/index/MAIN_04uln0ckghc0mhsw.pst
+worker/index/MAIN_04uln0ckghc0mhsw.trm
+worker/index/MAIN_0pf9a0rjy5yk25zr.seg
+worker/index/_MAIN_340.toc
+worker/index/MAIN_60ccp7t5h4q2v7rw.seg
+worker/index/MAIN_6s1bbyryok1zi47b.seg
+worker/index/MAIN_d9z1h8z67eklpndt.seg
+worker/index/MAIN_kn0kzhj965l7qknh.seg
+worker/index/MAIN_ntqmfs99mfenv5kg.seg
+worker/index/MAIN.tmp
+worker/index/MAIN_WRITELOCK
+worker/index/MAIN_wro5lyr8jmoo6hbc.seg
+worker/jobs/archive_job.pyc
+worker/jobs/crawl_job.pyc
+worker/jobs/debug_job.pyc
+worker/jobs/export_job.pyc
+worker/jobs/__init__.pyc
+worker/jobs/job.pyc
+worker/jobs/list_job.pyc
+worker/jobs/private.pyc
+worker/jobs/report_job.pyc
+worker/jobs/stats_job.pyc
+worker/jobs/user_job.pyc
+worker/index/
+worker/index/MAIN_04uln0ckghc0mhsw.pst
+worker/index/MAIN_04uln0ckghc0mhsw.trm
+worker/index/MAIN_0pf9a0rjy5yk25zr.seg
+worker/index/_MAIN_340.toc
+worker/index/MAIN_60ccp7t5h4q2v7rw.seg
+worker/index/MAIN_6s1bbyryok1zi47b.seg
+worker/index/MAIN_d9z1h8z67eklpndt.seg
+worker/index/MAIN_kn0kzhj965l7qknh.seg
+worker/index/MAIN_ntqmfs99mfenv5kg.seg
+worker/index/MAIN.tmp
+worker/index/MAIN_WRITELOCK
+worker/index/MAIN_wro5lyr8jmoo6hbc.seg
+worker/__init__.pyc
+>>>>>>> V3

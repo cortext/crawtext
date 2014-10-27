@@ -1,0 +1,21 @@
+
+======DATABASE INFO======
+===STATS===
+Report  Database test -20/33/2014 at 16:33 -
+#Overview
+Stored results in Mongo Database: test 
+	-Nombre de resultats dans la base: 0
+	-Nombre d'erreurs: 0
+#Sources
+	-Nombre de seeds: 1
+	-Sources ajoutées depuis une recherche bing: 0
+	-Sources ajoutées depuis une fichier: 0
+	-Sources ajoutées depuis les résultats: 0
+	-Sources ajoutées par l'utilisateur: 0
+#Working process
+	-urls en cours de traitement: 0
+	-urls traitees: 0
+	-urls erronees: 0
+	-urls non pertinentes: 0
+	-Size of the database test: 0 MB
+======PROCESS INFO======
