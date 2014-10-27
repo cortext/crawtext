@@ -8,24 +8,13 @@ from ..logs import Log
 
 class Job(object):
 	'''defaut job class for worker'''
-	
-<<<<<<< HEAD
-	def __init__(self, doc):
-		self.debug = False
-		if type(doc) == str:
-			self.name = doc
-		else:	
-			self.name = doc["name"]
-			self.action = doc["action"]
-		self.__data__ = self.__COLL__.find_one({"name":self.name})		
-=======
+
 	def __init__(self, doc, debug):
 		self.debug = debug
 		self.name = doc["name"]
 
 		self.action = doc["action"]
 		#self.type = doc["type"]
->>>>>>> logs_job
 		self.project_name = re.sub('[^0-9a-zA-Z]+', '_', self.name)
 		now = dt.now()
 		self.date = now.replace(second=0, microsecond=0)
