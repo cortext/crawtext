@@ -39,6 +39,6 @@ ABSPATH = os.path.dirname(os.path.abspath(sys.argv[0]))
 
 if __name__== "crawtext":
 	try:		
-		w = Worker(docopt(__doc__))		
+		w = Worker(docopt(__doc__), debug=True)		
 	except KeyboardInterrupt:
 		sys.exit()
