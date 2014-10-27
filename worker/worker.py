@@ -4,14 +4,9 @@ from packages.links import validate_url
 from packages.emails import validate_email
 from packages.ask_yes_no import ask_yes_no
 from jobs import *
-
+from logs import Log
 
 TASKDB = TaskDB()
-class Log(object):
-	def __init__(self,params={}):
-		pass
-	def update_logs(self):
-		pass
 
 class Worker(object):
 	''' main access to Job Database'''
@@ -21,15 +16,19 @@ class Worker(object):
 		'''Job main config'''
 		self.name = user_input['<name>']
 		self.debug = debug
+		self.log = Log(self.name)
 		self.set_type()
 		print "Worker init %s for %s" %(self.type,self.name)
 		self.set_params(user_input)
 		self.map_ui()
 
 	def map_ui(self):
+		
 		if self.is_valid_name() is False:
+			self.log.push()
 			return
 		self.set_doc()
+		
 		if self.exists():
 			if self.has_params():
 				if self.has_action():
@@ -41,6 +40,7 @@ class Worker(object):
 					return self.dispatch()
 					
 				else:
+					
 					if self.debug:
 						print "No action"
 						print "Updating %s project: %s" %(self.type, self.name)
@@ -66,6 +66,7 @@ class Worker(object):
 
 				return self.create()
 			else:
+				print "End"
 				if self.debug:
 					print "creating a defaut %s" %(self.type)
 				return self.create(mode="default")	
@@ -146,25 +147,58 @@ class Worker(object):
 		return self._doc
 
 	def update(self):
+		self.log.step = "Updating task"
+		self.log.msg = "Sucessfully updated task with %s parameters"%(",".join(self.params.keys()))
 		if self._doc is None:
 			self.set_doc()
-		return self.__COLL__.update({"_id": self._doc['_id']}, {"$set":self.params})
-		
+		try:
+			self.__COLL__.update({"_id": self._doc['_id']}, {"$set":self.params})
+			self.log.status = True
+		except Exception as e:
+			self.log.msg = "Unable to updated task with %s parameters: %s" %(",".join(self.params.keys()), e)
+			self.log.status = False
+		return self.log.push()
 		
 	def show(self,):
-		print self.__COLL__.find_one({"name": self.name, "type": self.type})
+		print "=== PARAMS for %s===" %self.name
+		print "Project still active:", self._doc["active"]
+		print "- Last activity:"
+		print self._doc["date"]
+		print self._doc["msg"][-1]['msg']
+		print "Owner :", self._doc["user"]
+		#Tasks?
+		try:
+			if self._doc["type"] == "crawl":
+				try:
+					print "Query:", self._doc["query"]
+					print "Source file:", self._doc["file"]
+					print "API key:", self._doc["key"]
+				except IndexError:
+					pass
+		except Exception as e:
+			print e
+		# for n in self.__COLL__.find({"name": self.name}):
+		# 	print n['type']
+		
+
+		print Database(self._doc["project_name"]).stats()
 		return 
 
 	def dispatch(self):
 		self.params["name"] =  self.name
 		self.params["type"] =  self.type
 		self.params["id"] = self._doc["_id"]
-		_class = (self.type).capitalize()
-		instance = globals()[_class]
 		
+		if self.action in ["report", "export"]:
+			_class = (self.action).capitalize()
+			self.action = "start"
+		else:			
+			_class = (self.type).capitalize()
+		instance = globals()[_class]
+			
 		job = instance(self.params, self.debug)
 		instanciate = getattr(job,self.action)
-		
+			
 		if self.debug is True:
 			print instance, self.action
 

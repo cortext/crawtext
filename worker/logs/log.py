@@ -2,14 +2,11 @@ from database import Database
 
 
 class Log(object):
-	def __init__(self, name):
+	def __init__(self, db):
 		self.name = name
 		self.db = Database(name)
-		self.coll = self.db.use_coll("logs")
-		self.status = True
-		self.code = 0
-		self.msg = ""
-		self.step = ""
+		self.coll = self.db.logs		
+	
 	def show(self):
 		log = {}
 		values = ["msg", "status", "code", "step"]

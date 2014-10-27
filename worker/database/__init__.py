@@ -104,22 +104,22 @@ class Database(object):
 		res2 = "\t-Nombre d'erreurs: %d" %(self.db.logs.count())
 		
 		h2 = "#Sources"
-		sources = "\t-Nombre de sources: %d" % self.db.sources.count()
-		inactive_sources = "\t-Nombre de sources inactives: %d" % self.db.sources.find({"status":False}).count()
-		active_sources = "\t-Nombre de sources actives: %d\n" % (self.db.sources.count() - self.db.sources.find({"status":False}).count())
-		from_bing="\t-Sources ajoutées depuis une recherche bing: %d" %self.db.sources.find({"origin":"bing"}).count()
+		sources = "\t-Sources nb: %d" % self.db.sources.count()
+		inactive_sources = "\t-Inactives sources nb: %d" % self.db.sources.find({"status":False}).count()
+		active_sources = "\t-Actives sources nb: %d\n" % (self.db.sources.count() - self.db.sources.find({"status":False}).count())
+		from_bing="\t-Added from bing search: %d" %self.db.sources.find({"origin":"bing"}).count()
 		#from_bing="* Sources ajoutées depuis une recherche bing: %d" %len([n for n in self.db.sources.find({"origin":"bing"})])
-		from_file="\t-Sources ajoutées depuis une fichier: %d" %len([n for n in self.db.sources.find({"origin":"file"})])
-		manual="\t-Sources ajoutées par l'utilisateur: %d" %len([n for n in self.db.sources.find({"origin":"defaut"})])
-		automatic ="\t-Sources ajoutées depuis les résultats: %d" %len([n for n in self.db.sources.find({"origin":"automatic"})])
+		from_file="\t-Added from file: %d" %len([n for n in self.db.sources.find({"origin":"file"})])
+		manual="\t-Added manually: %d" %len([n for n in self.db.sources.find({"origin":"defaut"})])
+		automatic ="\t-Added from results: %d" %len([n for n in self.db.sources.find({"origin":"automatic"})])
 		h3="#Working process"
-		url = "\t-urls en cours de traitement: %d" % (self.db.queue.count())
-		url2 = "\t-urls traitees: %d" % int(self.db.results.count()+ self.db.logs.count())
-		url3 = "\t-urls erronees: %d" % int(self.db.logs.count())
-		url4 = "\t-urls non pertinentes: %d" %int(self.db.logs.find({"code": 800, "msg": "Not Relevant"}).count())
+		url = "\t- processing url nb: %d" % (self.db.queue.count())
+		url2 = "\t-treated url nb: %d" % int(self.db.results.count()+ self.db.logs.count())
+		url3 = "\t-wrong url nb: %d" % int(self.db.logs.count())
+		url4 = "\t-non pertinent urls: %d" %int(self.db.logs.find({"code": 800, "msg": "Not Relevant"}).count())
 		size = "\t-Size of the database %s: %d MB" %(self.db_name, (self.db.command('dbStats', 1024)['storageSize'])/1024/1024.)
 		self.result = [title, date,  h1, name, res, res2, h2, sources, inactive_sources, active_sources, from_bing, from_file, automatic, manual, h3, url, url2, url3, url4, size]
-		return "\n".join(self.result) 
+		return "\n".join(self.result)
 	
 	def mail_report(self):
 
@@ -209,3 +209,5 @@ class TaskDB(Database):
 	def __init__(self):
 		Database.__init__(self, TASK_MANAGER_NAME)
 		self.coll = self.db[str(TASK_COLL)]
+	def get(self):
+		return self.coll
