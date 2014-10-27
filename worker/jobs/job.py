@@ -5,6 +5,9 @@ from ..database import Database
 from ..database import TaskDB
 from packages.ask_yes_no import ask_yes_no
 from ..logs import Log
+import os
+
+ABSPATH = os.path.dirname(os.path.abspath(sys.argv[0]))
 
 class Job(object):
 	'''defaut job class for worker'''
@@ -33,6 +36,7 @@ class Job(object):
 		self.log.type = doc["type"]
 		self.log.action = self.action
 		self.set_doc()
+		self.create_dir()
 		#self.log = Log()
 	
 	def schedule(self):
@@ -73,11 +77,20 @@ class Job(object):
 		self.log.date = dt.now()
 		self.log.msg = "Deleted project"
 		print self.params
+	
+	def create_dir(self):
+		self.directory = os.path.join(ABSPATH, self.project_name)
+		print self.directory
+		if not os.path.exists(self.directory):
+			os.makedirs(self.directory)
+		return self.directory
+
 	def set_doc(self):
 		self._doc = self.task.find_one({"_id":self.id})
 		if self._doc is None:
 			self.log.status= False
 			self.log.msg =  "No job found for %s. Exiting" %self.name
 			return self.log.push()
-		
+
+
 

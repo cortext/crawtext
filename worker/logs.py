@@ -1,5 +1,5 @@
 from database import Database
-
+import sys
 
 class Log(object):
 	def __init__(self, name):

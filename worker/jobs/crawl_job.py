@@ -12,12 +12,13 @@ from extractor.article import Article, ArticleException
 from packages.urls import Link, LinkException
 
 class Crawl(Job):
+	
 	def add(self):
 		self.log.step = "Adding sources"
 		self.log.date = dt.now()
 		try:
 			if self.params['url']:
-				self.insert_url(self.params['url'])
+				self.insert_url(self.params['url'], origin="manual")
 				self.log.msg = "Sucessfully added url %s" %(self.params['url'])
 				self.log.status = True
 			elif self.params['file']:
@@ -147,7 +148,7 @@ class Crawl(Job):
 			self.log.push()
 			return False
 		
-	def expand_sources(self):
+	def expand(self):
 		'''Expand sources url adding results urls collected from previous crawl'''
 		self.log.step = "expanding sources from results"
 		self.log.status = True
@@ -223,9 +224,8 @@ class Crawl(Job):
 		# self.log.msg = "Urls sucessfully inserted"
 		link = Link(url)
 		link.parse()
-		print link.is_valid()
-		print link.__dict__
-		return self.db.sources.insert(link.__dict__, upsert=False)
+		if link.is_valid():
+			return self.db.sources.insert(link.json(), upsert=False)
 		'''
 		link = Link(url)
 		if link.is_valid():

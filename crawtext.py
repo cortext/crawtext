@@ -10,8 +10,8 @@ A simple crawler in command line.
 Usage:
 	crawtext.py (<name>|<user>|<url>)
 	crawtext.py <url> 
-	crawtext.py <name> <action> [--repeat=<repeat>] [--format=<format>] [--data=<data>] [--file=<input>] [--url=<input>]
-	crawtext.py <name> [--user=<email>] [--query=<query>] [--key=<key>] [--repeat=<repeat>] [ --format=(default|wiki|forum) ]
+	crawtext.py <name> <action> [--repeat=<repeat>] [--format=<format>] [--data=<data>] [--file=<input>] [--url=<input>] [--out=<outputfile>]
+	crawtext.py <name> [--user=<email>] [--query=<query>] [--key=<key>] [--repeat=<repeat>] [ --format=<format> ]
 	crawtext.py (-h | --help)
 	crawtext.py --version
 
