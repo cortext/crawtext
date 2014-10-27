@@ -456,7 +456,7 @@ class Article(object):
         initialization to garbage collection.
         """
         res_dir_fn = 'article_resources'
-        resource_directory = os.path.join(self.config.PROJECT_DIR, res_dir_fn)
+        resource_directory = os.path.join(self.config.ABSPATH, res_dir_fn)
         if not os.path.exists(resource_directory):
             os.mkdir(resource_directory)
         dir_path = os.path.join(resource_directory, '%s_' % self.link_hash)

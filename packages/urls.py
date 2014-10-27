@@ -83,8 +83,10 @@ class LinkException(Exception):
         self.date = [date]
 
 class Link(object):
-    def __init__(self, url, source_url= None):
+    def __init__(self, url, source_url= None, depth = 0):
         self.url = url
+        self.source_url = source_url
+        self.depth = depth
         self.parse()
         self.set_source_url(source_url)
         self.abs_url()
@@ -143,6 +145,7 @@ class Link(object):
             else:
                 self.proper_url = remove_args(self.url)
         except ValueError, e:
+            print e
             log.critical('url %s failed on err %s' % (url, str(e)))
             # print 'url %s failed on err %s' % (url, str(e))
             self.proper_url = u''

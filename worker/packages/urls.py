@@ -88,19 +88,22 @@ class Link(object):
         self.parse()
         self.set_source_url(source_url)
         self.abs_url()
-        
+        print "Link"
         #self.prepare_url()                
     
     def set_source_url(self, source_url):
+        
         if source_url is not None:
             self.source_url = source_url
         else:
-            self.source_url  = self.scheme + "://" + self.netloc
+            self.source_url  = self.url
 
     
     def parse(self):
+        print "parse"
         #components of the url
         parsed_url = urlparse(self.url)
+        print "Url", parsed_url
         self.scheme = parsed_url.scheme
         self.netloc = parsed_url.netloc
         self.path = parsed_url.path
@@ -155,30 +158,30 @@ class Link(object):
         _log['error_code'] = "100"
         if self.url is None or len(self.url) < 11:
             _log['msg'] ='\t%s : len of url is less than 11' % self.url
-            LinkException(self.url, _log)
+            raise LinkException(self.url, _log)
             return False
         #invalid protocol
         if self.scheme not in ['http','https']:
             _log['msg'] = '\t%s : wrong protocol not http or https' % self.url
-            LinkException(self.url, _log)
+            raise LinkException(self.url, _log)
             return False
         if not self.path.startswith('/'):
             _log['msg'] = '\t%s : url is not valid' % self.url
-            LinkException(self.url, _log)
+            raise LinkException(self.url, _log)
             return False
         
         if self.file_type is not None and self.file_type not in ALLOWED_TYPES:
             _log['msg'] = '\t%s : invalid webpage type (pdf, zip, etc..)' % self.url
-            LinkException(self.url, _log)
+            raise LinkException(self.url, _log)
             return False
         if len(adblock.match(self.url)) != 0:
             _log['msg'] = '%s : adblock url' % self.url
-            LinkException(self.url, _log)
+            raise LinkException(self.url, _log)
             return False
 
         if self.tld in BAD_DOMAINS:
             _log['msg'] = '%s : bad domain' % self.url
-            LinkException(self.url, _log)
+            raise LinkException(self.url, _log)
             return False
         
         match_date = re.search(DATE_REGEX, self.url)
