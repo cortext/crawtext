@@ -6,10 +6,11 @@ from packages.ask_yes_no import ask_yes_no
 from jobs import *
 from logs import Log
 
-TASKDB = TaskDB()
+
 
 class Worker(object):
 	''' main access to Job Database'''
+	TASKDB = TaskDB()
 	__COLL__ = TASKDB.coll
 	
 	def __init__(self,user_input, debug=False):
@@ -18,29 +19,26 @@ class Worker(object):
 		self.debug = debug
 		self.log = Log(self.name)
 		self.set_type()
-		print "Worker init %s for %s" %(self.type,self.name)
 		self.set_params(user_input)
+		print "Running task %s %s for %s" %(self.action, self.type,self.name)
+		
 		self.map_ui()
 
-	def map_ui(self):
-		
+	def map_ui(self):		
 		if self.is_valid_name() is False:
-			self.log.push()
-			return
+			return self.log.push()
 		self.set_doc()
-		
 		if self.exists():
 			if self.has_params():
 				if self.has_action():
 					if self.debug:
 						print "Has action %s" %self.action
 						print "Running %s project: %s" %(self.type, self.name)
-						print self.params
-
+						self.params['type'] = self.type
+						print "Parameters =", self.params
 					return self.dispatch()
 					
 				else:
-					
 					if self.debug:
 						print "No action"
 						print "Updating %s project: %s" %(self.type, self.name)
@@ -66,7 +64,7 @@ class Worker(object):
 
 				return self.create()
 			else:
-				print "End"
+				self.action = "create"
 				if self.debug:
 					print "creating a defaut %s" %(self.type)
 				return self.create(mode="default")	
@@ -83,15 +81,14 @@ class Worker(object):
 			print "No project %s found" %(self.name)
 			return False
 		return True	
-	
-	
+		
 	def set_params(self, user_input):
 		del user_input['<name>']
 		self.params = dict()
 		for k,v in user_input.items():
 			if v is not None and v is not False:
 				self.params[re.sub("--|<|>", "", k)] = v
-		return self.params
+
 	
 	def has_params(self):
 		try:
@@ -124,7 +121,7 @@ class Worker(object):
 		if ask_yes_no(question):
 			from datetime import datetime
 			dt = datetime.now()
-			self.__COLL__.insert({"name":self.name, "type": self.type, "creation_date": dt.replace(second=0,microsecond=0)})
+			self.__COLL__.insert({"name":self.name, "type": self.type, "action":self.action, "creation_date": dt.replace(second=0,microsecond=0)})
 			if mode is None:
 				self.update()
 			print "Successfully created %s: %s" %(self.type, self.name)
@@ -187,20 +184,21 @@ class Worker(object):
 		self.params["name"] =  self.name
 		self.params["type"] =  self.type
 		self.params["id"] = self._doc["_id"]
-		
+		self.params["action"] =  self.action
+
 		if self.action in ["report", "export"]:
 			_class = (self.action).capitalize()
 			self.action = "start"
 		else:			
 			_class = (self.type).capitalize()
 		instance = globals()[_class]
-			
-		job = instance(self.params, self.debug)
-		instanciate = getattr(job,self.action)
-			
+		try:	
+			job = instance(self.params, self.debug)
+			instanciate = getattr(job,self.action)
+		except AttributeError:
+			instanciate = getattr(self,self.action)	
 		if self.debug is True:
 			print instance, self.action
-
 		return instanciate()
 		
 		

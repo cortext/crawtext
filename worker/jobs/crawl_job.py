@@ -18,28 +18,38 @@ class Crawl(Job):
 		self.log.date = dt.now()
 		try:
 			if self.params['url']:
-				self.insert_url(self.params['url'], origin="manual")
+				print "Url", self.params['url']
+				try:
+					self.insert_url(self.params['url'], origin="manual")
+				except Exception as e:
+					print e
 				self.log.msg = "Sucessfully added url %s" %(self.params['url'])
+				print self.log.msg
 				self.log.status = True
+				return self.log.push()
 			elif self.params['file']:
 				self.file = self.params['file']
 				self.log.msg = "Sucessfully added urls from file %s" %(self.params['file'])
 				self.log.status = True
 				self.get_local()
+				return self.log.push()
 			elif self.params['email']:
 				self.log.msg = "Sucessfully added owner %s" %(self.params['email'])
 				self.log.status = True
 				self.task.update({'_id': self.id}, {"$push":{"user": self.params["email"]}})
+				return self.log.push()
 			elif self.params['user']:
 				self.log.msg = "Sucessfully added owner %s" %(self.params['user'])
 				self.log.status = True
 				self.task.update({'_id': self.id}, {"$push":{"user": self.params["user"]}})
-			return self.log.push()
+				return self.log.push()
+			
 		except KeyError:
 			self.log.msg = "Error: Unable to add url file or user to project %s.\nYou can only add file , url or user to project\nPlease add one of the following parameters:\n\t--url='www.yoururl.com'\n\t--file='yourfile.txt'\n\t--user='you@cortext.net'" %self.name
 			self.log.status = False
 			return self.log.push()
-
+		except Exception as e:
+			print e
 	def update_sources(self):
 		self.log.step = "Update sources"
 		self.log.date = dt.now()
@@ -223,21 +233,18 @@ class Crawl(Job):
 		# self.log.status = True
 		# self.log.msg = "Urls sucessfully inserted"
 		link = Link(url)
-		link.parse()
 		if link.is_valid():
 			return self.db.sources.insert(link.json(), upsert=False)
+		else:
+			print "link is invalid"
 		'''
-		link = Link(url)
 		if link.is_valid():
+			is_source = self.db.sources.find_one({"url": link.url})
+		else:
 
-		is_source = self.db.sources.find_one({"url": url})
-		
-		#incorrect url
-		if status is False:
 			self.log.status = False
-			#existing
-			if url in self.db.logs.distinct("url"):
-				pass
+			if link.url in self.db.logs.distinct("url"):
+				
 				#self.log.msg = "Error inserting url: updated url %s in logs" %url
 				#self.db.logs.update({"url":url}, {"$push":{"date": self.date, "scope": self.log.step, "msg":self.log.msg, "code": status_code, "status": "False"}})
 			#new
@@ -259,7 +266,7 @@ class Crawl(Job):
 		self.log.push()
 		'''
 
-		return status 
+		
 		
 	def delete_url(self, url):
 		self.log.step = "Deleting url"
@@ -278,9 +285,9 @@ class Crawl(Job):
 	def send_seeds_to_queue(self):
 		self.log.step = "Sending seeds urls to start crawl"
 		self.log.status = True
+
 		for doc in self.db.sources.find():
-			if doc["status"] is True:
-				self.db.queue.insert({"url":doc["url"], "depth":doc["depth"]})
+			self.db.queue.insert({"url":doc["url"], "depth":doc["depth"]})
 		if self.db.queue.count() == 0:
 			self.log.msg = "Error while sending urls into queue: queue is empty. check sources status"
 			self.log.code = 600.1
@@ -290,7 +297,7 @@ class Crawl(Job):
 				
 	def config(self):
 		'''initializing  the crawl job with required params'''
-		self._doc = self.task.find_one({"name":self.name})
+		self._doc = self.task.find_one({"name":self.name, "type": "crawl"})
 		#, "type": self.type
 		self.log.step = "Crawl job configuration"
 		self.query = None
