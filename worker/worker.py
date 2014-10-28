@@ -161,10 +161,9 @@ class Worker(object):
 		
 	def show(self,):
 		print "=== PARAMS for %s===" %self.name
-		print "Project still active:", self._doc["active"]
 		print "- Last activity:"
-		print self._doc["date"]
-		print self._doc["msg"]
+		for k,v in self._doc.items():
+			print "-", k,"==",v  
 		print "Owner :", self._doc["user"]
 		#Tasks?
 		try:
