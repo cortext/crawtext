@@ -48,8 +48,10 @@ class Crawl(Job):
 			self._log.status = False
 			return self._log.push()
 		except Exception as e:
-			print e
-	
+			self._log.msg = e
+			self._log.status = False
+			return self._log.push()
+
 	def update_sources(self):
 		self._log.step = "Update sources"
 		self._log.date = dt.now()
@@ -70,46 +72,45 @@ class Crawl(Job):
 			self._log.msg = "No API key registered"
 			self._log.code = 600.3
 			self._log.status = False
-			self._log.push()
-			return False
+			
+			return self._log.push()
 		else:
 			print self._db.sources.count(), "sources in db"
 			#~ print "There is already %d sources in database" %nb
 			#~ print "and %d sources with a bad status" %self._db.sources.find({"status":"false"}).count()
 			
-			try:
+			#try:
 				#defaut is Web could be composite Web + News
 				#defaut nb for web is 50 could be more if manipulating offset
 				#defaut nb for news is 15 could be more if manipulating offset
 				#see doc https://onedrive.live.com/view.aspx?resid=9C9479871FBFA822!112&app=Word&authkey=!ANNnJQREB0kDC04
-				r = requests.get(
-						'https://api.datamarket.azure.com/Bing/Search/v1/Web', 
-						params={
-							'$format' : 'json',
-							'$top' : 50,
-							'Query' : '\'%s\'' %self.query,
-						},	
-						auth=(self.key, self.key)
-						)
-				
-				r.raise_for_status()
-				url_list =  [e["Url"] for e in r.json()['d']['results']]
-				for i, url in enumerate(url_list):
-					i = i+1
-					self.insert_url(url, origin="bing",depth=0)
-				
-				
-				self._log.msg =  "Inserted %s urls from Bing results" %str(i)
-				self._log.status = True
-				self._log.push()
-				return True
+			r = requests.get(
+					'https://api.datamarket.azure.com/Bing/Search/v1/Web', 
+					params={
+						'$format' : 'json',
+						'$top' : 50,
+						'Query' : '\'%s\'' %self.query,
+					},	
+					auth=(self.key, self.key)
+					)
+			
+			r.raise_for_status()
+			url_list =  [e["Url"] for e in r.json()['d']['results']]
+			for i, url in enumerate(url_list):
+				i = i+1
+				self.insert_url(url, origin="bing",depth=0)
+			
+			
+			self._log.msg =  "Inserted %s urls from Bing results" %str(i)
+			self._log.status = True
+			return self._log.push()
 
-			except Exception as e:
-				self._log.code = "601"+"."+str(e.args[0])
-				self._log.msg = "Error adding sources from BING: %s" %e.args
-				self._log.status = False
-				self._log.push()
-				return False
+			#except Exception as e:
+			#	print e
+			#	self._log.code = "601"+"."+str(e.args[0])
+			#	self._log.msg = "Error adding sources from BING: %s" %e.args
+			#	self._log.status = False
+			#	return self._log.push()
 		
 	def get_local(self, afile = None):
 		''' Method to extract url list from text file'''
@@ -122,8 +123,11 @@ class Crawl(Job):
 					continue
 				url = re.sub("\n", "", url)
 				status, status_code, error_type, url = check_url(url)
-				self.insert_url(url, origin="file", depth=0)
-				
+				try:
+					self.insert_url(url, origin="file", depth=0)
+				except Exception as e:
+					self._log.msg = e
+					print self._log.msg
 			self._log.status = True
 			self._log.msg = "Urls from file %s have been successfuly added to sources" %(self.file)
 			self._log.push()
@@ -287,7 +291,11 @@ class Crawl(Job):
 		self._log.status = True
 
 		for doc in self._db.sources.find():
-			self._db.queue.insert({"url":doc["url"], "depth":doc["depth"]})
+			try:
+				self._db.queue.insert({"url":doc["url"], "depth":doc["depth"]})
+			except Exception as e:
+				self._log.msg = e
+				print self._log.msg
 		if self._db.queue.count() == 0:
 			self._log.msg = "Error while sending urls into queue: queue is empty. check sources status"
 			self._log.code = 600.1
@@ -366,33 +374,61 @@ class Crawl(Job):
 			self._log.msg = "Running crawl job  on %s" %self.date
 			print self._log.msg 
 			start = dt.now()
-			for doc in self._db.queue.find():
-				try:
-					depth = doc["depth"]
-				except KeyError:
-					depth = 0
-				try:
-					source_url = doc["source_url"]
-				except KeyError:
-					source_url = None
-				print self._db.queue.find().count(), "in queue"
-				link = Link(doc["url"],source_url=source_url, depth=depth)
-				if link.is_valid():
-					if link.url not in self._db.results.distinct('url') or link.url not in self._db.logs.distinct('url'):
-						page = Article(link, depth)
-						try:
-							page.build()
+			while self._db.queue.count() > 0:
+				for doc in self._db.queue.find():
+					try:
+						depth = doc["depth"]
+					except KeyError:
+						depth = 0
+					try:
+						source_url = doc["source_url"]
+					except KeyError:
+						source_url = None
+					print self._db.queue.find().count(), "in queue"
+					link = Link(doc["url"],source_url=source_url, depth=depth)
+					if link.is_valid():
+						if link.url not in self._db.results.distinct('url') or link.url not in self._db.logs.distinct('url'):
+							page = Article(link, depth)
 							try:
-								page.is_relevant(self.woosh_query)
-								existing = self._db.results.find_one({"url": page.url})
-								if existing is not None:
-									existing = self._db.results.update({"_id": existing['_id']},{"$push":{"date": page.date}})
+								page.build()
+								try:
+									page.is_relevant(self.woosh_query)
+									existing = self._db.results.find_one({"url": page.url})
+									if existing is not None:
+										existing = self._db.results.update({"_id": existing['_id']},{"$push":{"date": page.date}})
+									else:
+										try:
+											self._db.results.insert(page.json())
+										except Exception as e:
+											self._log.step = "Inserting results"
+											self._log.msg = e
+											print self._log.show()
+									for link in page.outlinks:
+										if link not in self._db.results.distinct('url'):
+											try:	
+												self._db.queue.insert({"url":link, "depth": page.depth+1})
+											except Exception as e:
+												self._log.step = "Inserting outlinks "
+												self._log.msg = e
+												print self._log.show()
+									
+								except ArticleException:
+									res = self._db.logs.find_one({"url": page.url})
+									if res is not None:
+										print self._db.logs.update({"_id": res['_id']},{"$push":{"date": page.date}})
+										del page.date
+										print self._db.sources.update({"_id": res['_id']},{"$set":page.log})
+									else:
+										print self._db.logs.insert(page.log)
+
+							except LinkException:
+								source = self._db.sources.find_one({"url": page.url})
+								if source is not None:
+									print self._db.sources.update({"_id": source['_id']},{"$push":{"date": page.date}})
+									del page.date
+									print self._db.sources.update({"_id": source['_id']},{"$set":page.log})
 								else:
-									self._db.results.insert(page.json())
-								for link in page.outlinks:
-									if link not in self._db.results.distinct('url'):
-										self._db.queue.insert({"url":link, "depth": page.depth+1})
-								print page.title
+									print self._db.logs.insert(page.log)
 							except ArticleException:
 								res = self._db.logs.find_one({"url": page.url})
 								if res is not None:
@@ -401,23 +437,6 @@ class Crawl(Job):
 									print self._db.sources.update({"_id": res['_id']},{"$set":page.log})
 								else:
 									print self._db.logs.insert(page.log)
-
-						except LinkException:
-							source = self._db.sources.find_one({"url": page.url})
-							if source is not None:
-								print self._db.sources.update({"_id": source['_id']},{"$push":{"date": page.date}})
-								del page.date
-								print self._db.sources.update({"_id": source['_id']},{"$set":page.log})
-							else:
-								print self._db.logs.insert(page.log)
-						except ArticleException:
-							res = self._db.logs.find_one({"url": page.url})
-							if res is not None:
-								print self._db.logs.update({"_id": res['_id']},{"$push":{"date": page.date}})
-								del page.date
-								print self._db.sources.update({"_id": res['_id']},{"$set":page.log})
-							else:
-								print self._db.logs.insert(page.log)
 
 								#print self._db.logs.upsert({"url": page.url}, {page.log, {"date":[page.log.date]})
 						#print page.url
