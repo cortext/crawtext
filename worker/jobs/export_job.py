@@ -14,7 +14,7 @@ class Export(Job):
 		
 		
 	def set_params(self, doc):
-		self.date = datetime.strftime(self.date, "%d-%b-%Y@%H_%M_%S")
+		self.date = datetime.strftime(datetime.now(), "%d-%b-%Y@%H_%M_%S")
 		try:
 			self.data = doc['data']		
 			self.scope = "one"
@@ -22,7 +22,7 @@ class Export(Job):
 			self.data = ['results', 'logs','sources']
 			self.scope = "all"
 		try:
-			self.format = doc['format']
+			self.format = doc['f']
 		except KeyError:
 			self.format = "json"
 		self.set_fields()
@@ -30,11 +30,14 @@ class Export(Job):
 
 	
 	def set_outfile(self):
+		if self.format == []:
+			self.format = "json"
 		if self.scope == "one":
 			dir_f = "%s_%s.%s" %(self.data, self.date, self.format)
 			self.outfile = os.path.join(self.directory, dir_f)
 			return self.outfile
 		else:
+
 			self.outfile = []
 			for n in self.data:
 				dir_f = "%s_%s.%s" %(n, self.date, self.format)
@@ -55,16 +58,16 @@ class Export(Job):
 			return self.fields	
 
 	def create(self):
-		self.log.step = "creating export"
+		self._log.step = "creating export"
 		if self._doc is None:
-			self.log.msg =  "No active project found for %s" %self.name
-			self.log.status = False
-			self.log.push()
+			self._log.msg =  "No active project found for %s" %self.name
+			self._log.status = False
+			self._log.push()
 			return False
 		else:
-			self.log.msg =  "Exporting"
-			self.log.status = True
-			self.log.push()
+			self._log.msg =  "Exporting"
+			self._log.status = True
+			self._log.push()
 	
 	def csv(self,data, fields, outfile):
 		c = "mongoexport -d %s -c %s --csv -f %s -o %s"%(self.name,data,fields,outfile)
@@ -76,15 +79,18 @@ class Export(Job):
 	
 	def export_one(self):
 		
-		self.log.msg = "Exporting %s info of %s into %s" %(self.data, self.name, self.outfile)
-		print self.log.msg
+		self._log.msg = "Exporting %s info of %s into %s" %(self.data, self.name, self.outfile)
+		print self._log.msg
 		instance = getattr(self, self.format)
 		return instance(self.data, self.fields, self.outfile)
 
 	def export_all(self):
-		self.log.msg = "Exporting all collections of %s in %s format" %( self.name, self.format)
-		print self.log.msg
-		instance = getattr(self, self.format)
+		if len(self.format) == 0:
+			self.format = "json"
+		self._log.msg = "Exporting all collections of %s in %s format" %( self.name, self.format)
+		print self._log.msg
+
+		instance = getattr(self, str(self.format))
 		
 		for coll,f, o in zip(self.data, self.fields, self.outfile):
 			instance(coll, f, o)
@@ -94,10 +100,10 @@ class Export(Job):
 			print "No project %s found" %(self.name)
 			return False
 		else:
-			self.log.step = "Export"
+			self._log.step = "Export"
 			job = getattr(self, "export_"+self.scope)
 			job()
-			self.log.push()
+			self._log.push()
 			
 			
 					

@@ -1,5 +1,5 @@
 from job import Job
-from ..database import Database
+from database import Database
 
 class Stats(Job):
 	def start(self):
