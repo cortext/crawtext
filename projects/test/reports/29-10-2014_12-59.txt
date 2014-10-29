@@ -1,0 +1,23 @@
+
+======DATABASE INFO======
+===STATS===
+Report  Database test -29/59/2014 at 12:59 -
+#Overview
+Stored results in Mongo Database: test 
+	-Nombre de resultats dans la base: 0
+	-Nombre d'erreurs: 22
+#Sources
+	-Sources nb: 2
+	-Inactives sources nb: 0
+	-Actives sources nb: 2
+
+	-Added from bing search: 0
+	-Added from file: 0
+	-Added from results: 0
+	-Added manually: 0
+#Working process
+	- processing url nb: 0
+	-treated url nb: 22
+	-wrong url nb: 22
+	-non pertinent urls: 1
+	-Size of the database test: 0 MB
