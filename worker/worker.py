@@ -107,7 +107,7 @@ class Worker(object):
 	def map_ui(self):		
 		if self.is_valid_name() is False:
 			return self.log.push()
-		self.set_doc()
+		
 		if self.exists() :
 			if self.has_params():
 				if self.has_action():
