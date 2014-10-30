@@ -22,7 +22,7 @@ import cgi
 from w3lib.url import *
 from .encoding import unicode_to_str
 from .filter import Filter
-
+from logs import Log
 
 MAX_FILE_MEMO = 20000
 
@@ -83,23 +83,24 @@ class LinkException(Exception):
         self.date = [date]
 
 class Link(object):
-    def __init__(self, url, source_url= None, depth = 0):
+    def __init__(self, url, origin="", depth = 0, source_url= None):
         self.url = url
-        self.source_url = source_url
+        self.date = []
+        self.origin = origin
         self.depth = depth
+        self.source_url = source_url
         self.parse()
         self.set_source_url(source_url)
         self.abs_url()
+        self._log = {}
         
-        #self.prepare_url()                
-    
     def set_source_url(self, source_url):
-        if source_url is not None:
-            self.source_url = source_url
-        else:
-            self.source_url  = self.scheme + "://" + self.netloc
-
-    
+        if self.source_url is None:
+            if self.scheme !== "" and self.netloc != "":
+                self.source_url  = self.scheme + "://" + self.netloc
+            elif self.scheme == "" and self.netloc ! = "":
+                self.source_url  = "http://" + self.netloc
+            
     def parse(self):
         #components of the url
         parsed_url = urlparse(self.url)
@@ -145,52 +146,57 @@ class Link(object):
             else:
                 self.proper_url = remove_args(self.url)
         except ValueError, e:
-            print e
-            log.critical('url %s failed on err %s' % (url, str(e)))
+            self._log.msg = 'url %s failed on err %s' % (url, str(e))
             # print 'url %s failed on err %s' % (url, str(e))
             self.proper_url = u''
         return self.proper_url
     
     def is_valid(self):
         #Too short
-        _log = {}
-        _log['step'] = "Validating url"
-        _log['error_code'] = "100"
+        
+        self._log['step'] = "Validating url"
+        self._log['error_code'] = "100"
         if self.url is None or len(self.url) < 11:
-            _log['msg'] ='\t%s : len of url is less than 11' % self.url
-            LinkException(self.url, _log)
+            self._log['msg'] ='\t%s : len of url is less than 11' % self.url
+            LinkException(self.url, self._log)
             return False
         #invalid protocol
         if self.scheme not in ['http','https']:
-            _log['msg'] = '\t%s : wrong protocol not http or https' % self.url
-            LinkException(self.url, _log)
+            self._log['msg'] = '\t%s : wrong protocol not http or https' % self.url
+            LinkException(self.url, self._log)
             return False
         if not self.path.startswith('/'):
-            _log['msg'] = '\t%s : url is not valid' % self.url
-            LinkException(self.url, _log)
+            self._log['msg'] = '\t%s : url is not valid' % self.url
+            LinkException(self.url, self._log)
             return False
         
         if self.file_type is not None and self.file_type not in ALLOWED_TYPES:
-            _log['msg'] = '\t%s : invalid webpage type (pdf, zip, etc..)' % self.url
-            LinkException(self.url, _log)
+            self._log['msg'] = '\t%s : invalid webpage type (pdf, zip, etc..)' % self.url
+            LinkException(self.url, self._log)
             return False
         if len(adblock.match(self.url)) != 0:
-            _log['msg'] = '%s : adblock url' % self.url
-            LinkException(self.url, _log)
+            self._log['msg'] = '%s : adblock url' % self.url
+            LinkException(self.url, self._log)
             return False
 
         if self.tld in BAD_DOMAINS:
-            _log['msg'] = '%s : bad domain' % self.url
-            LinkException(self.url, _log)
+            self._log['msg'] = '%s : bad domain' % self.url
+            LinkException(self.url, self._log)
             return False
         
         match_date = re.search(DATE_REGEX, self.url)
         # if we caught the verified date above, it's an article
         if match_date is not None:
-            _log['msg'] = '%s verified for date' % self.url
+            self._log['msg'] = '%s verified for date' % self.url
             self.date = match_date
             return True
         return True
+    def json(self):
+        link = {}
+        keys = ["url", "scheme", "netloc", "path", "file_type", "tld", "extension", "depth", "source_url", "proper_url", "relative"]
+        for k in keys:
+            link[k] =  self.__dict__[k]
+        return link
 
 def remove_args(url, keep_params=(), frags=False):
     """
@@ -245,7 +251,7 @@ def prepare_url(url, source_url=None):
         else:
             proper_url = remove_args(url)
     except ValueError, e:
-        log.critical('url %s failed on err %s' % (url, str(e)))
+        self._log.msg = 'url %s failed on err %s' % (url, str(e))
         # print 'url %s failed on err %s' % (url, str(e))
         proper_url = u''
 
@@ -287,12 +293,12 @@ def valid_url(url, verbose=False, test=False):
     """
     # If we are testing this method in the testing suite, we actually
     # need to preprocess the url like we do in the article's constructor!
-    _log = {}
+    
     url = prepare_url(url)
 
     # 11 chars is shortest valid url length, eg: http://x.co
     if url is None or len(url) < 11:
-        _log['msg'] ='\t%s : len of url is less than 11' % url
+        self._log['msg'] ='\t%s : len of url is less than 11' % url
         #Link exception
         return False
     parsed_url = urlparse(url)
@@ -302,16 +308,15 @@ def valid_url(url, verbose=False, test=False):
     
 
     if scheme not in ['http','https']:
-        _log['msg'] = '\t%s : scheme is not http or https' % url
-        print _log['msg']
+        self._log['msg'] = '\t%s : scheme is not http or https' % url
+        
         return False
 
     
     
     # input url is not in valid form (scheme, netloc, tld)
     if not path.startswith('/'):
-        _log['msg'] = '\t%s : path is not valid' % url
-        print _log['msg']
+        self._log['msg'] = '\t%s : path is not valid' % url
         return False
 
     
@@ -324,8 +329,8 @@ def valid_url(url, verbose=False, test=False):
         file_type = url_to_filetype(url)
         # if the file type is a media type, reject instantly
         if file_type not in ALLOWED_TYPES:
-            _log['msg'] = '\t%s : filetype is not valid' % url
-            print _log['msg']
+            self._log['msg'] = '\t%s : filetype is not valid' % url
+            
             return False
     
     # extract the tld (top level domain)
@@ -335,13 +340,13 @@ def valid_url(url, verbose=False, test=False):
     
     url_slug = path_chunks[-1] if path_chunks else u''
     if len(adblock.match(url)) != 0:
-        _log['msg'] = '%s : adblock url' % url
-        print _log['msg']
+        self._log['msg'] = '%s : adblock url' % url
+        print self._log['msg']
         return False
 
     if tld in BAD_DOMAINS:
-        _log['msg'] = '%s : bad domain' % url
-        print _log['msg']
+        self._log['msg'] = '%s : bad domain' % url
+        print self._log['msg']
         return False
 
     if len(path_chunks) == 0:
@@ -355,12 +360,12 @@ def valid_url(url, verbose=False, test=False):
 
         if dash_count >= underscore_count:
             if tld not in [ x.lower() for x in url_slug.split('-') ]:
-                _log['msg'] = '%s verified for being a slug' % url
+                self._log['msg'] = '%s verified for being a slug' % url
                 return True
 
         if underscore_count > dash_count:
             if tld not in [ x.lower() for x in url_slug.split('_') ]:
-                _log['msg'] = '%s verified for being a slug' % url
+                self._log['msg'] = '%s verified for being a slug' % url
                 return True
 
     
@@ -368,19 +373,19 @@ def valid_url(url, verbose=False, test=False):
     # Eg: http://cnn.com/careers.html or careers.cnn.com --> BAD
     # for b in BAD_CHUNKS:
     #     if b in path_chunks or b == subd:
-    #         _log['msg'] = '%s : bad path chunk ' % url
+    #         self._log['msg'] = '%s : bad path chunk ' % url
     #         return False
 
     match_date = re.search(DATE_REGEX, url)
 
     # if we caught the verified date above, it's an article
     if match_date is not None:
-        _log['msg'] = '%s verified for date' % url
+        self._log['msg'] = '%s verified for date' % url
         return True
 
     for GOOD in GOOD_PATHS:
         if GOOD.lower() in [p.lower() for p in path_chunks]:
-            _log['msg'] = '%s verified for good path' % url
+            self._log['msg'] = '%s verified for good path' % url
             return True
 
     
@@ -567,5 +572,6 @@ def escape_ajax(url):
     if not frag.startswith('!'):
         return url
     return add_or_replace_parameter(defrag, '_escaped_fragment_', frag[1:])
+
 
 
