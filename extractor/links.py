@@ -1,17 +1,16 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from . import CRAWTEXT_DIR
+
 from datetime import datetime
 import logging
-import re
+import re, os, sys
 
 from urlparse import (
     urlparse, urljoin, urlsplit, urlunsplit, parse_qs)
 
-from tldextract import tldextract
+from packages.tldextract import tldextract
 
-log = logging.getLogger(__name__)
 import posixpath, sys, os
 import six
 from six.moves.urllib.parse import ParseResult, urlunparse, urldefrag, urlparse
@@ -20,10 +19,10 @@ import cgi
 
 # scrapy.utils.url was moved to w3lib.url and import * ensures this move doesn't break old code
 from w3lib.url import *
-from .encoding import unicode_to_str
-from .filter import Filter
-from logs import Log
+from packages.encoding import unicode_to_str
+from packages.filter import Filter
 
+ABSPATH = os.path.dirname(os.path.abspath(sys.argv[0]))
 MAX_FILE_MEMO = 20000
 
 DATE_REGEX = r'([\./\-_]{0,1}(19|20)\d{2})[\./\-_]{0,1}(([0-3]{0,1}[0-9][\./\-_])|(\w{3,5}[\./\-_]))([0-3]{0,1}[0-9][\./\-]{0,1})?'
@@ -69,7 +68,7 @@ BAD_CHUNKS = ['careers', 'contact', 'about', 'faq', 'terms', 'privacy',
 BAD_DOMAINS = ['amazon', 'doubleclick', 'twitter']
 
 
-adblock = Filter(file(CRAWTEXT_DIR+'/ressources/easylist.txt'), is_local=True)
+adblock = Filter(file(ABSPATH+'/ressources/easylist.txt'), is_local=True)
 #ADBLOCK_DOMAINS  = adblock.get_list()
 
 class LinkException(Exception):
@@ -96,9 +95,9 @@ class Link(object):
         
     def set_source_url(self):
         if self.source_url is None:
-            if self.scheme !== "" and self.netloc != "":
+            if self.scheme != "" and self.netloc != "":
                 self.source_url  = self.scheme + "://" + self.netloc
-            elif self.scheme == "" and self.netloc ! = "":
+            elif self.scheme == "" and self.netloc != "":
                 self.source_url  = "http://" + self.netloc
             #else:
             #    self.source_url = self.url
@@ -122,16 +121,15 @@ class Link(object):
         #info on page
         self.path_chunk = [x for x in self.path.split('/') if len(x) > 0]
         self.depth = len(self.path_chunk)
-        
+        return self
 
     def abs_url(self):
-        
         self.prepare_url()
         self.relative = False
         self.proper_url = self.url
         if self.netloc != "" and self.path != "":
             self.relative = True
-        
+        return self.relative
 
     def prepare_url(self):
         """
@@ -153,8 +151,6 @@ class Link(object):
         return self.proper_url
     
     def is_valid(self):
-        #Too short
-        
         self._log['step'] = "Validating url"
         self._log['error_code'] = "100"
         if self.url is None or len(self.url) < 11:
@@ -192,9 +188,10 @@ class Link(object):
             self.date = match_date
             return True
         return True
+    
     def json(self):
         link = {}
-        keys = ["url", "scheme", "netloc", "path", "file_type", "tld", "extension", "depth", "source_url", "proper_url", "relative"]
+        keys = ["url", "scheme", "netloc", "path", "file_type", "tld", "extension", "depth", "source_url", "proper_url", "relative", "depth", "origin", "status"]
         for k in keys:
             link[k] =  self.__dict__[k]
         return link
