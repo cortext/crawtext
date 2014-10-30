@@ -14,30 +14,28 @@ from packages.urls import Link, LinkException
 class Crawl(Job):
 	
 	def add(self):
-		self._log.step = "Adding sources"
+		self._log.step = "Adding data to crawl job config (source or user)"
 		self._log.date = dt.now()
 		try:
 			if self._doc['url']:
-				print "Url", self._doc['url']
-				try:
-					self.insert_url(self._doc['url'], origin="manual")
-				except Exception as e:
-					print e
+				self._log.step = "Adding url to crawl job"
+				self.insert_url(self._doc['url'], origin="manual", deppth="0")
 				self._log.msg = "Sucessfully added url %s" %(self._doc['url'])
 				self._log.status = True
 				return self._log.push()
 			elif self._doc['file']:
+				self._log.step = "Adding file to crawl job"
 				self.file = self._doc['file']
-				self._log.msg = "Sucessfully added urls from file %s" %(self._doc['file'])
-				self._log.status = True
 				self.get_local()
 				return self._log.push()
 			elif self._doc['email']:
+				self._log.step = "Adding user to crawl job"
 				self._log.msg = "Sucessfully added owner %s" %(self._doc['email'])
 				self._log.status = True
 				self.task.update({'_id': self.id}, {"$push":{"user": self._doc["email"]}})
 				return self._log.push()
 			elif self._doc['user']:
+				self._log.step = "Adding user to crawl job"
 				self._log.msg = "Sucessfully added owner %s" %(self._doc['user'])
 				self._log.status = True
 				self.task.update({'_id': self.id}, {"$push":{"user": self._doc["user"]}})
@@ -51,18 +49,7 @@ class Crawl(Job):
 			self._log.msg = e
 			self._log.status = False
 			return self._log.push()
-
-	def update_sources(self):
-		self._log.step = "Update sources"
-		self._log.date = dt.now()
-		if self._doc is None:
-			self._log.msg =  "No existing project %s with %s job" %(self.name, self.action)
-			self._log.status = False
-			self._log.push()
-			return self.create()
-		
-
-
+	
 	def get_bing(self, key=None):
 		''' Method to extract results from BING API (Limited to 5000 req/month) automatically sent to sources DB ''' 
 		self._log.step = "Searching sources from Bing"
@@ -119,27 +106,20 @@ class Crawl(Job):
 			self.file = a.file
 		try:
 			for url in open(self.file).readlines():
-				if url == "\n":
-					continue
-				url = re.sub("\n", "", url)
-				status, status_code, error_type, url = check_url(url)
-				try:
+				if url != "\n":
+					url = re.sub("\n", "", url)
+					#status, status_code, error_type, url = check_url(url)
 					self.insert_url(url, origin="file", depth=0)
-				except Exception as e:
-					self._log.msg = e
-					print self._log.msg
 			self._log.status = True
 			self._log.msg = "Urls from file %s have been successfuly added to sources" %(self.file)
-			self._log.push()
-			return True
+			return self._log.push()
 		
 		except Exception as e:
 			#~ print "Please verify that your file is in the current directory. To set up a correct filename and add directly to sources:\n\t crawtext.py %s -s append your_sources_file.txt" %(e.args[1],self.file, self.name)
 			self._log.code = float(str(602)+"."+str(e.args[0]))
 			self._log.status = False
 			self._log.msg= "Failed inserting url for file %s : %s %s" %(self.file, e.args[1],"./"+self.file)
-			self._log.push()	
-			return False
+			return self._log.push()	
 
 	def delete_local(self):
 		'''delete sources contained in self.file'''
@@ -150,17 +130,15 @@ class Crawl(Job):
 		try:
 			for url in open(self.file).readlines():
 				url = re.sub("\n", "", url)
-				self._db.sources.remove({"url":url})
-			self._log.push()
-			return True
+				self._db.sources.remove({"url":url})			
+			return self._log.push()
 
 		except Exception as e:
 			#~ print "Please verify that your file is in the current directory. To set up a correct filename and add directly to sources:\n\t crawtext.py %s -s append your_sources_file.txt" %(e.args[1],self.file, self.name)
 			self._log.code = float(str(602)+"."+str(e.args[0]))
 			self._log.status = False
-			self._log.msg= "Failed deleting url for file %s failed : %s '." %(self.file, e.args[1])
-			self._log.push()
-			return False
+			self._log.msg= "Failed deleting url for file %s failed. Verify that your file exists\n Error is : %s '." %(self.file, e.args[1])
+			return self._log.push()
 		
 	def expand(self):
 		'''Expand sources url adding results urls collected from previous crawl'''
@@ -168,7 +146,7 @@ class Crawl(Job):
 		self._log.status = True
 		self._log.msg = "Urls from results sucessfully inserted into sources"
 		for url in self._db.results.distinct("url"):
-			self.insert_url(url, "automatic", depth=0)
+			self.insert_url(url, source="automatic", depth=0)
 		
 		if len(self._db.results.distinct("url")) == 0 :
 			self._log.status = False
@@ -212,9 +190,6 @@ class Crawl(Job):
 				self._log.msg = "Not url but file: all urls in the file will be deleted"
 				self.file = self.url
 				self._log.status = self.delete_local()
-				
-				
-
 			else:
 				url = check_url(self.url)[-1]
 				if url in self._db.sources.distinct("url"):
@@ -233,14 +208,17 @@ class Crawl(Job):
 		
 	def insert_url(self, url, origin="default", depth=0):
 		'''Insert or updated url into sources if false inserted or updated into logs'''
-		# self._log.step = "inserting url"
-		# self._log.status = True
-		# self._log.msg = "Urls sucessfully inserted"
-		link = Link(url)
-		if link.is_valid():
-			return self._db.sources.insert(link.json(), upsert=False)
+		self._log.step = "inserting url"
+		self._log.msg = "Urls sucessfully inserted"
+		link = Link(url, origin= origin, depth= depth)
+		exists = self._db.sources.find_one({"url": link.url})
+		if exists is not None:
+			if link.is_valid():
+				link.status = True
 		else:
-			print "link is invalid"
+			link.status = False
+			
+		return self._db.sources.insert(link.json(), upsert=False)
 		'''
 		if link.is_valid():
 			is_source = self._db.sources.find_one({"url": link.url})
@@ -270,7 +248,6 @@ class Crawl(Job):
 		self._log.push()
 		'''
 
-		
 		
 	def delete_url(self, url):
 		self._log.step = "Deleting url"
@@ -362,9 +339,6 @@ class Crawl(Job):
 		
 		return self._log.push()
 
-		
-		
-		
 	def start(self):
 		if self.config() is False:
 			print self._log.msg
@@ -375,92 +349,8 @@ class Crawl(Job):
 			print self._log.msg 
 			start = dt.now()
 			while self._db.queue.count() > 0:
-				for doc in self._db.queue.find():
-					try:
-						depth = doc["depth"]
-					except KeyError:
-						depth = 0
-					try:
-						source_url = doc["source_url"]
-					except KeyError:
-						source_url = None
-					print self._db.queue.find().count(), "in queue"
-					link = Link(doc["url"],source_url=source_url, depth=depth)
-					if link.is_valid():
-						if link.url not in self._db.results.distinct('url') or link.url not in self._db.logs.distinct('url'):
-							page = Article(link, depth)
-							try:
-								page.build()
-								try:
-									page.is_relevant(self.woosh_query)
-									existing = self._db.results.find_one({"url": page.url})
-									if existing is not None:
-										existing = self._db.results.update({"_id": existing['_id']},{"$push":{"date": page.date}})
-									else:
-										try:
-											self._db.results.insert(page.json())
-										except Exception as e:
-											self._log.step = "Inserting results"
-											self._log.msg = e
-											print self._log.show()
-									for link in page.outlinks:
-										if link not in self._db.results.distinct('url'):
-											try:	
-												self._db.queue.insert({"url":link, "depth": page.depth+1})
-											except Exception as e:
-												self._log.step = "Inserting outlinks "
-												self._log.msg = e
-												print self._log.show()
-									
-								except ArticleException:
-									res = self._db.logs.find_one({"url": page.url})
-									if res is not None:
-										print self._db.logs.update({"_id": res['_id']},{"$push":{"date": page.date}})
-										del page.date
-										print self._db.sources.update({"_id": res['_id']},{"$set":page.log})
-									else:
-										print self._db.logs.insert(page.log)
+				self.__crawl__()	
 
-							except LinkException:
-								source = self._db.sources.find_one({"url": page.url})
-								if source is not None:
-									print self._db.sources.update({"_id": source['_id']},{"$push":{"date": page.date}})
-									del page.date
-									print self._db.sources.update({"_id": source['_id']},{"$set":page.log})
-								else:
-									print self._db.logs.insert(page.log)
-							except ArticleException:
-								res = self._db.logs.find_one({"url": page.url})
-								if res is not None:
-									print self._db.logs.update({"_id": res['_id']},{"$push":{"date": page.date}})
-									del page.date
-									print self._db.sources.update({"_id": res['_id']},{"$set":page.log})
-								else:
-									print self._db.logs.insert(page.log)
-
-								#print self._db.logs.upsert({"url": page.url}, {page.log, {"date":[page.log.date]})
-						#print page.url
-						#if page.build() is not False:
-						#	print page.title
-							#print page.links
-					# print url, page.depth
-					# try:
-					# 	if page.is_relevant(self.woosh_query):
-					# 		self._db.results.insert(page.pretty())
-					# 		next_links = [{"url":link, "depth": doc['depth']+1} for link in page.outlinks]
-					# 		if len(next_links) != 0:
-					# 			self._db.queue.insert(next_links)
-						
-					'''
-						# else:
-						# 	if page.url not in self._db.results.distinct("url"):
-						# 		self._db.results.insert(page)
-					# 	else:
-					# 		self._db.sources.insert(article._logs)
-					# else:
-					# 	self._db.sources.insert(page._logs)
-					'''
-					self._db.queue.remove({"url": doc["url"]})
 					
 			end = dt.now()
 			elapsed = end - start
@@ -469,8 +359,73 @@ class Crawl(Job):
 			self._log.msg = "%s. Crawl done sucessfully in %s s" %(self._log.msg,str(elapsed))
 			self._log.status = True
 			return self._log.push()
+	
+	def set_source(self, doc):
+		source = dict()
+		source["depth"] = 0
+
+		for k, v in doc.items():
+			source[k] = v	
+		return source
 		
-		
+	def __crawl__(self):
+		for doc in self._db.queue.find():
+			source = self.set_source(doc)
+			print source["depth"]
+			self._db.queue.remove({"url": doc["url"]})
+			# print self._db.queue.find().count(), "in queue"
+			# 		link = Link(doc["url"],source_url=source_url, depth=depth)
+			# 		if link.is_valid():
+			# 			if link.url not in self._db.results.distinct('url') or link.url not in self._db.logs.distinct('url'):
+			# 				page = Article(link, depth)t
+			# 				try:
+			# 					page.build()
+			# 					try:
+			# 						page.is_relevant(self.woosh_query)
+			# 						existing = self._db.results.find_one({"url": page.url})
+			# 						if existing is not None:
+			# 							existing = self._db.results.update({"_id": existing['_id']},{"$push":{"date": page.date}})
+			# 						else:
+			# 							try:
+			# 								self._db.results.insert(page.json())
+			# 							except Exception as e:
+			# 								self._log.step = "Inserting results"
+			# 								self._log.msg = e
+			# 								print self._log.show()
+			# 						for link in page.outlinks:
+			# 							if link not in self._db.results.distinct('url'):
+			# 								try:	
+			# 									self._db.queue.insert({"url":link, "depth": page.depth+1})
+			# 								except Exception as e:
+			# 									self._log.step = "Inserting outlinks "
+			# 									self._log.msg = e
+			# 									print self._log.show()
+									
+			# 					except ArticleException:
+			# 						res = self._db.logs.find_one({"url": page.url})
+			# 						if res is not None:
+			# 							print self._db.logs.update({"_id": res['_id']},{"$push":{"date": page.date}})
+			# 							del page.date
+			# 							print self._db.sources.update({"_id": res['_id']},{"$set":page.log})
+			# 						else:
+			# 							print self._db.logs.insert(page.log)
+
+			# 				except LinkException:
+			# 					source = self._db.sources.find_one({"url": page.url})
+			# 					if source is not None:
+			# 						print self._db.sources.update({"_id": source['_id']},{"$push":{"date": page.date}})
+			# 						del page.date
+			# 						print self._db.sources.update({"_id": source['_id']},{"$set":page.log})
+			# 					else:
+			# 						print self._db.logs.insert(page.log)
+			# 				except ArticleException:
+			# 					res = self._db.logs.find_one({"url": page.url})
+			# 					if res is not None:
+			# 						print self._db.logs.update({"_id": res['_id']},{"$push":{"date": page.date}})
+			# 						del page.date
+			# 						print self._db.sources.update({"_id": res['_id']},{"$set":page.log})
+			# 					else:
+			# 						print self._db.logs.insert(page.log)	
 	
 	def stop(self):
 		self._log.step = "Stopping exec of job of crawl project %s" %(self.name)
