@@ -96,10 +96,11 @@ class Worker(object):
 			print self.type
 		else:
 			_class = (self.type).capitalize()
-			
+			print self.action	
 		instance = globals()[_class]	
 		print instance
 		job = instance(self._doc, self.debug)
+
 		start = getattr(job, str(self.action))
 		return job.start()
 			
@@ -126,7 +127,8 @@ class Worker(object):
 			else:
 				if self.debug:
 					print "Showing %s project: %s" %(self.type, self.name)
-				return self.show()	
+				self.action = "show"
+				return self.start_action()	
 		else:
 			if self.has_params():
 				if self.debug:
@@ -164,7 +166,8 @@ class Worker(object):
 			if self.has_params():
 				self.update()
 			print "Successfully created %s: %s" %(self.type, self.name)
-			return self.show()
+			self.action = "show"
+			return self.start_action()
 		
 	def update(self):
 		if self.action not in ["add", "export", "report"]:
@@ -172,7 +175,7 @@ class Worker(object):
 			self.log.msg = "Sucessfully updated task with %s "%(",".join(self.params.keys()))
 			
 			if self._doc is None:
-				self.set_doc()
+				print "No info"
 			try:
 				self.__COLL__.update({"_id": self._doc['_id']}, {"$set":self.params})
 				self.log.status = True
