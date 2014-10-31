@@ -175,15 +175,19 @@ class Worker(object):
 			c.start()
 		else:
 			print "No crawl job %s found" %self.name
-	def stop(self):
+	def stop(self, params):
 		import subprocess, signal
-		p = subprocess.Popen(['ps', '-A'], stdout=subprocess.PIPE)
+		p = subprocess.Popen(['ps', 'ax'], stdout=subprocess.PIPE)
 		out, err = p.communicate()
+		cmd = "crawtext.py %s start" %self.name
 		for line in out.splitlines():
-			if 'crawtext' in line:
-				pid = int(line.split(None, 1)[0])
-			os.kill(pid, signal.SIGKILL)
-		return "kill current process"
+			if cmd in line:
+				pid = int(line.split(" ")[1])
+				os.kill(pid, signal.SIGKILL)
+				print "Current crawl project %s killed" %self.name
+				return
+		print "No running project %s found" %self.name
+		
 
 class Crawl(object):
 	def __init__(self, params):
@@ -192,7 +196,9 @@ class Crawl(object):
 		self.db = Database(self.project_name)
 	
 	def start(self):
-		for i in range(1000000000):
+		import time
+		for i in range(1000):
+			time.sleep(1)
 			print i
 
 	def config(self):
