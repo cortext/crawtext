@@ -18,14 +18,11 @@ Usage:
 	crawtext.py (<name>) stop
 	crawtext.py (-h | --help)	
 '''
-
+import os, sys, re
 from docopt import docopt
-#from worker.worker import Worker
-import os, sys
-import re
 from datetime import datetime as dt
-from database import TaskDB, Database
-from links import Link
+from database import *
+from url import Link
 
 ABSPATH = os.path.dirname(os.path.abspath(sys.argv[0]))
 RESULT_PATH = os.path.join(ABSPATH, "projects")
@@ -89,9 +86,13 @@ class Worker(object):
 	def show(self):
 		if self.exists():
 			print "\n===== Project : %s =====\n" %(self.name).capitalize()
+			print "* Parameters"
 			for k, v in self.task.items():
-				print k, ":", v 
-
+				if k not in ['status', 'msg', 'action', 'date']:
+					print k, ":", v 
+			print "* Status"
+			print zip(self.task["date"], self.task["action"], self.task["status"], self.task["msg"])[-1]
+				
 		else:
 			print "No crawl job %s found" %self.name
 				
@@ -195,7 +196,8 @@ class Worker(object):
 		db.drop_db()
 		print "Database %s: sucessfully deleted" %self.project_name
 		return
-	def sources_stats():
+	
+	def sources_stats(self):
 		active = self.db.sources.find({"status":True}, { "status": {"$slice": -1 } } ).count()
 		inactive = self.db.sources.find({"status":False}, { "status": {"$slice": -1 } } )
 		print "- %d invalid urls" %inactive.count()
@@ -203,17 +205,16 @@ class Worker(object):
 		if inactive.count() > 0:
 			print "Following urls are inactive:"
 			for u in inactive:
-				print '\t-'+u['url']+": "+u['msg']
+				print '\t-'+u['url']+": "+u['msg'][-1]
 
 	def start(self, params):
-		
 		if self.exists():
 			self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"start crawl", "status": True, "date": dt.now(), "msg": "Ok"}})
 			print "Starting project"
 			try:
 				if self.config():
 					self.sources_stats()			
-					
+					self.stop(params)
 				else:
 					sys.exit()
 			except KeyboardInterrupt:
@@ -245,8 +246,9 @@ class Worker(object):
 		try:
 			self.key = self.task['key']
 			print "Verifying source from search results for: %s" %self.query
-			if self.add_bing() is False:	
-		 		self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"config crawl: add sources from file", "status": False, "date": dt.now(), "msg": "API Key: Wrong credential for Search"}})
+			print self.add_bing()
+			#if self.add_bing() is False:	
+		 	#	self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"config crawl: add sources from file", "status": False, "date": dt.now(), "msg": "API Key: Wrong credential for Search"}})
 		except KeyError as e:
 			return False
 
@@ -264,6 +266,7 @@ class Worker(object):
 	def config(self):
 		print "Checking configuration:"
 		self.db = Database(self.project_name)
+		
 		self.db.create_colls(["results","sources", "logs", "queue", "treated"])
 		if self.check_query():
 			error = []
@@ -297,54 +300,62 @@ class Worker(object):
 		
 	
 	def add_url(self, url, origin="default", depth=0, source_url = None):
-		'''Insert url into sources with its status'''		
+		'''Insert url into sources with its status'''
+
 		link = Link(url, origin=origin, depth=depth, source_url="")
-		exists = self.db.sources.find_one({"url": link.url})
-		if exists is not None:
-			self.db.sources.update({"_id":exists['_id']}, {"$push": {"date":dt.now(),"status": link.status, "msg": link.msg}}, upsert=False)
-			return False
-		else:
-			self.db.sources.insert(link.json())
-			exists = self.db.sources.find_one({"url": link.url})
-			if exists is not None:
-				print self.db.sources.update({"_id":exists['_id']}, {"$push": {"date":dt.now(), "status": link.status}}, upsert=False)
-			return True
+		print link.msg
+		print link.is_valid()
+		# link.status = link.is_valid()
+		# print link.msg
+		# exists = self.db.sources.find_one({"url": link.url})
+		# if exists is not None:
+		# 	self.db.sources.update({"_id":exists['_id']}, {"$push": {"date":dt.now(),"status": link.status, "msg": link.msg}}, upsert=False)
+		# 	return False
+		# else:
+		# 	self.db.sources.insert(link.json())
+		# 	exists = self.db.sources.find_one({"url": link.url})
+		# 	if exists is not None:
+		# 		print self.db.sources.update({"_id":exists['_id']}, {"$push": {"date":dt.now(), "status": link.status}}, upsert=False)
+		# 	return True
 		
 
 	def add_bing(self, nb = 50):
 		''' Method to extract results from BING API (Limited to 5000 req/month) automatically sent to sources DB ''' 
-		import requests
 		# self._log.step = "Searching sources from Bing"
+		# if nb%50 !=0:
+		# 	#"__next"
+		# 	print "Not able yet to add more than 50 urls"
+		# 	return False
 		if nb > 50:
-			print "Not able yet to add more than 50 urls"
-			return False
-		try:
+			pass
+		else:		
+			print "Requesting"
 			r = requests.get(
 				'https://api.datamarket.azure.com/Bing/Search/v1/Web', 
 				params={
 					'$format' : 'json',
-					'$top' : nb,
+					'$top' : 50,
 					'Query' : '\'%s\'' %self.query,
 				},	
 				auth=(self.key, self.key)
 				)
-			r.raise_for_status()
 			try:
-				url_list =  [e["Url"] for e in r.json()['d']['results']]	
+			 	url_list =  [e["Url"] for e in r.json()['d']['results']]	
 				for url in url_list:
+					
+					link = Link(url, origin=origin, depth=depth, source_url="")
+					exists = self.db.sources.find_one({"url": link.url})
 					if self.add_url(url, origin="bing",depth=0):
-						i = i +1
-				if i > 0:
-					print "\t%d new urls has been inserted from search into database." %i
-				else:
-					print "\tExisting urls from search have been updated"
-				return True
+			 		 	i = i +1
+			 	if i > 0:
+			 		print "\t%d new urls has been inserted from search into database." %i
+			 	else:
+			 		print "\tExisting urls from search have been updated"
+			 	return True
 			except Exception as e:
 				print e
 				return False
-		except Exception as e:
-			print e
-			return False
+		
 
 	def add_file(self):
 		''' Method to extract url list from text file'''
@@ -361,7 +372,6 @@ class Worker(object):
 			return True
 
 		except Exception as e:
-			print e
 			print "Please verify that your file is in the current directory."
 			print "To set up a correct filename and add to sources database:"
 			print "\t crawtext.py %s add --file =\"./%s\"" %(self.name, self.file)

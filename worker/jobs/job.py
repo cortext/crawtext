@@ -24,10 +24,9 @@ class Job(object):
 		self._log = Log(self.name)
 		self._log.type = self.type
 		self._log.action = self.action
-		
+		self._db.create_colls(["results","sources", "logs", "queue", "treated"])
 		
 	def create(self):
-		self._db.create_colls(["results","sources", "logs", "queue", "treated"])
 		self.mk_dir()
 		return {"project_name": self.project_name, "name":self.name, "type": self.type, "action":self.action, "creation_date": self.log.date.replace(second=0,microsecond=0), "logs":[self._log], "date": [self._log.date]}
 
@@ -79,13 +78,17 @@ class Job(object):
 		print self.directory
 		if not os.path.exists(self.directory):
 			os.makedirs(self.directory)
+		print "%s created"	%self.directory
 		return self.directory
+	
 	def rm_dir(self):
+		import shutil
 		self.directory = os.path.join(RESULT_PATH, self.project_name)
-		print self.directory
-		if not os.path.exists(self.directory):
-			os.makedirs(self.directory)
-		return self.directory
+		
+		if os.path.exists(self.directory):
+			shutil.rmtree(self.directory)
+		print "%s deleted"	%self.directory
+		
 
 	def report(self):
 		return Report(self._doc, self.debug)	

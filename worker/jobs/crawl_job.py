@@ -15,34 +15,28 @@ from extractor.links import Link
 class Crawl(Job):
 	def __init__(self, doc, debug):
 		Job.__init__(self, doc, debug)
-		print "Init"
+		
 	
-	def add(self):
+	def add(self, params):
+		
 		self._log.step = "Adding data to crawl job config (source or user)"
 		self._log.date = dt.now()
 		try:
-			if self._doc['url']:
+			if params["url"]:
 				self._log.step = "Adding url to crawl job"
-				self.insert_url(self._doc['url'], origin="manual", deppth="0")
-				self._log.msg = "Sucessfully added url %s" %(self._doc['url'])
+				self.add_url(params['url'], origin="manual", depth="0")
+				self._log.msg = "Sucessfully added url %s" %(params['url'])
 				self._log.status = True
 				return self._log.push()
-			elif self._doc['file']:
+			elif self.params['file']:
 				self._log.step = "Adding file to crawl job"
-				self.file = self._doc['file']
-				self.get_local()
+				self.get_local(params['file'])
 				return self._log.push()
-			elif self._doc['email']:
+			elif params['user']:
 				self._log.step = "Adding user to crawl job"
-				self._log.msg = "Sucessfully added owner %s" %(self._doc['email'])
+				self._log.msg = "Sucessfully added owner %s" %(params['user'])
 				self._log.status = True
-				self.task.update({'_id': self.id}, {"$push":{"user": self._doc["email"]}})
-				return self._log.push()
-			elif self._doc['user']:
-				self._log.step = "Adding user to crawl job"
-				self._log.msg = "Sucessfully added owner %s" %(self._doc['user'])
-				self._log.status = True
-				self.task.update({'_id': self.id}, {"$push":{"user": self._doc["user"]}})
+				self.task.update({'_id': self.id}, {"$push":{"user": params["user"]}})
 				return self._log.push()
 			
 		except KeyError:
@@ -143,7 +137,6 @@ class Crawl(Job):
 			self._log.msg= "Failed inserting url for file %s : %s %s" %(self.file, e.args[1],"./"+self.file)
 			return self._log.push()	
 
-	
 	def delete_url(self, url):
 		self._log.step = "deleting url from sources"
 		link = Link(url)
@@ -264,8 +257,8 @@ class Crawl(Job):
 		#~ r = Report(self.name)
 		#~ r.run_job()
 	
-	def show(self):
-		print "show"
+	
+
 	'''
 	def report(self):
 		return Report(self.doc, self.debug)

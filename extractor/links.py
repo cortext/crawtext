@@ -68,39 +68,31 @@ BAD_CHUNKS = ['careers', 'contact', 'about', 'faq', 'terms', 'privacy',
 BAD_DOMAINS = ['amazon', 'doubleclick', 'twitter']
 
 
-adblock = Filter(file(ABSPATH+'/ressources/easylist.txt'), is_local=True)
-#ADBLOCK_DOMAINS  = adblock.get_list()
 
-class LinkException(Exception):
-    def __init__(self, url, logs):
-        Exception.__init__(self)
-        for k, v in logs.items():
-            setattr(self, k, v)
-        self.url = url
-        date = datetime.now()
-        date.replace(second=0, microsecond=0)
-        self.date = [date]
+#ADBLOCK_DOMAINS  = adblock.get_list()
 
 class Link(object):
     def __init__(self, url, origin="", depth = 0, source_url= None):
+        print "Init link"
         self.url = url
-        self.date = []
         self.origin = origin
         self.depth = depth
         self.source_url = source_url
         self.parse()
         self.set_source_url()
         self.abs_url()
-        self._log = {}
-        
+        self.msg = ""
+        self.status = self.is_valid()
+
     def set_source_url(self):
         if self.source_url is None:
             if self.scheme != "" and self.netloc != "":
                 self.source_url  = self.scheme + "://" + self.netloc
             elif self.scheme == "" and self.netloc != "":
                 self.source_url  = "http://" + self.netloc
-            #else:
-            #    self.source_url = self.url
+            else:
+                self.source_url = self.url
+
     def parse(self):
         #components of the url
         parsed_url = urlparse(self.url)
@@ -121,7 +113,7 @@ class Link(object):
         #info on page
         self.path_chunk = [x for x in self.path.split('/') if len(x) > 0]
         self.depth = len(self.path_chunk)
-        return self
+        
 
     def abs_url(self):
         self.prepare_url()
@@ -129,7 +121,7 @@ class Link(object):
         self.proper_url = self.url
         if self.netloc != "" and self.path != "":
             self.relative = True
-        return self.relative
+        
 
     def prepare_url(self):
         """
@@ -148,52 +140,55 @@ class Link(object):
             self._log.msg = 'url %s failed on err %s' % (url, str(e))
             # print 'url %s failed on err %s' % (url, str(e))
             self.proper_url = u''
-        return self.proper_url
+        
     
     def is_valid(self):
-        self._log['step'] = "Validating url"
-        self._log['error_code'] = "100"
+        self.step = "Validating url"
+        self.code = "100"
         if self.url is None or len(self.url) < 11:
-            self._log['msg'] ='\t%s : len of url is less than 11' % self.url
-            LinkException(self.url, self._log)
+            self.msg ='\t%s : len of url is less than 11' % self.url
+            
             return False
         #invalid protocol
         if self.scheme not in ['http','https']:
-            self._log['msg'] = '\t%s : wrong protocol not http or https' % self.url
-            LinkException(self.url, self._log)
+            self.msg = '\t%s : wrong protocol not http or https' % self.url
+            
             return False
         if not self.path.startswith('/'):
-            self._log['msg'] = '\t%s : url is not valid' % self.url
-            LinkException(self.url, self._log)
+            self.msg = '\t%s : url is not valid' % self.url
+            
             return False
         
         if self.file_type is not None and self.file_type not in ALLOWED_TYPES:
-            self._log['msg'] = '\t%s : invalid webpage type (pdf, zip, etc..)' % self.url
-            LinkException(self.url, self._log)
+            self.msg = '\t%s : invalid webpage type (pdf, zip, etc..)' % self.url
+            
             return False
         if len(adblock.match(self.url)) != 0:
-            self._log['msg'] = '%s : adblock url' % self.url
-            LinkException(self.url, self._log)
+            self.msg = '%s : adblock url' % self.url
+            
             return False
 
         if self.tld in BAD_DOMAINS:
-            self._log['msg'] = '%s : bad domain' % self.url
-            LinkException(self.url, self._log)
+            self.msg = '%s : bad domain' % self.url
+            
             return False
         
         match_date = re.search(DATE_REGEX, self.url)
         # if we caught the verified date above, it's an article
         if match_date is not None:
-            self._log['msg'] = '%s verified for date' % self.url
+            self.msg = '%s verified for date' % self.url
             self.date = match_date
             return True
         return True
     
     def json(self):
         link = {}
-        keys = ["url", "scheme", "netloc", "path", "file_type", "tld", "extension", "depth", "source_url", "proper_url", "relative", "depth", "origin", "status"]
+        keys = ["url", "scheme", "netloc", "path", "file_type", "tld", "extension", "depth", "source_url", "proper_url", "relative", "depth", "origin"]
         for k in keys:
             link[k] =  self.__dict__[k]
+        link['status'] = [self.__dict__['status']]
+        link['date'] = [datetime.now()]
+        link['msg'] = [self.msg]
         return link
 
 def remove_args(url, keep_params=(), frags=False):
@@ -296,7 +291,7 @@ def valid_url(url, verbose=False, test=False):
 
     # 11 chars is shortest valid url length, eg: http://x.co
     if url is None or len(url) < 11:
-        self._log['msg'] ='\t%s : len of url is less than 11' % url
+        self.msg ='\t%s : len of url is less than 11' % url
         #Link exception
         return False
     parsed_url = urlparse(url)
@@ -306,7 +301,7 @@ def valid_url(url, verbose=False, test=False):
     
 
     if scheme not in ['http','https']:
-        self._log['msg'] = '\t%s : scheme is not http or https' % url
+        self.msg = '\t%s : scheme is not http or https' % url
         
         return False
 
@@ -314,7 +309,7 @@ def valid_url(url, verbose=False, test=False):
     
     # input url is not in valid form (scheme, netloc, tld)
     if not path.startswith('/'):
-        self._log['msg'] = '\t%s : path is not valid' % url
+        self.msg = '\t%s : path is not valid' % url
         return False
 
     
@@ -327,7 +322,7 @@ def valid_url(url, verbose=False, test=False):
         file_type = url_to_filetype(url)
         # if the file type is a media type, reject instantly
         if file_type not in ALLOWED_TYPES:
-            self._log['msg'] = '\t%s : filetype is not valid' % url
+            self.msg = '\t%s : filetype is not valid' % url
             
             return False
     
@@ -337,14 +332,15 @@ def valid_url(url, verbose=False, test=False):
     tld = tld_dat.domain.lower()
     
     url_slug = path_chunks[-1] if path_chunks else u''
+    
+    adblock = Filter(file(ABSPATH+'/ressources/easylist.txt'), is_local=True)
+
     if len(adblock.match(url)) != 0:
-        self._log['msg'] = '%s : adblock url' % url
-        print self._log['msg']
+        self.msg = '%s : adblock url' % url
         return False
 
     if tld in BAD_DOMAINS:
-        self._log['msg'] = '%s : bad domain' % url
-        print self._log['msg']
+        self.msg = '%s : bad domain' % url
         return False
 
     if len(path_chunks) == 0:
@@ -358,12 +354,12 @@ def valid_url(url, verbose=False, test=False):
 
         if dash_count >= underscore_count:
             if tld not in [ x.lower() for x in url_slug.split('-') ]:
-                self._log['msg'] = '%s verified for being a slug' % url
+                self.msg = '%s verified for being a slug' % url
                 return True
 
         if underscore_count > dash_count:
             if tld not in [ x.lower() for x in url_slug.split('_') ]:
-                self._log['msg'] = '%s verified for being a slug' % url
+                self.msg = '%s verified for being a slug' % url
                 return True
 
     
@@ -371,19 +367,19 @@ def valid_url(url, verbose=False, test=False):
     # Eg: http://cnn.com/careers.html or careers.cnn.com --> BAD
     # for b in BAD_CHUNKS:
     #     if b in path_chunks or b == subd:
-    #         self._log['msg'] = '%s : bad path chunk ' % url
+    #         self.msg = '%s : bad path chunk ' % url
     #         return False
 
     match_date = re.search(DATE_REGEX, url)
 
     # if we caught the verified date above, it's an article
     if match_date is not None:
-        self._log['msg'] = '%s verified for date' % url
+        self.msg = '%s verified for date' % url
         return True
 
     for GOOD in GOOD_PATHS:
         if GOOD.lower() in [p.lower() for p in path_chunks]:
-            self._log['msg'] = '%s verified for good path' % url
+            self.msg = '%s verified for good path' % url
             return True
 
     
