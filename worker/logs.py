@@ -1,6 +1,6 @@
 from database import Database
 import sys
-
+from datetime import datetime as dt
 class Log(object):
 	def __init__(self, name):
 		self.name = name
@@ -10,6 +10,7 @@ class Log(object):
 		self.code = 0
 		self.msg = ""
 		self.step = ""
+		self.date = dt.now()
 	def show(self):
 		log = {}
 		values = ["msg", "status", "code", "step"]

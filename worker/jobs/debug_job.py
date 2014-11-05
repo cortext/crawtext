@@ -4,6 +4,9 @@
 from job import Job
 
 class Debug(Job):
+	def __init__(self, doc, debug):
+		Job.__init__(self, doc, debug)
+		self.start()
 	'''
 	def export(self):
 		msg_log = []

@@ -5,31 +5,7 @@
 Description:
 A simple crawler in command line.
 
-Usage:
-	crawtext.py archive [ -f (default|wiki|forum) ] <url>
-	crawtext.py <name>
-	crawtext.py <user>
-	crawtext.py report <name> 
-	crawtext.py export <name> 
-	crawtext.py delete <name>
-	crawtext.py <name> -u <email>
-	crawtext.py <name> -q <query>
-	crawtext.py <name> -k set <key>
-	crawtext.py <name> -k append [<key>]
-	crawtext.py <name> -s set <file>
-	crawtext.py <name> -s add <url>
-	crawtext.py <name> -s append <file>
-	crawtext.py <name> -s expand
-	crawtext.py <name> -s delete [<url>]
-	crawtext.py <name> -s delete					
-	crawtext.py <name> -r <month>
-	crawtext.py start <name>
-	crawtext.py list projects
-	crawtext.py list archives
-	crawtext.py (-h | --help)
-  	crawtext.py --version
-  	
-Options:
+Help:
 	Projets:
 	# Pour consulter un projet : 	crawtext.py pesticides
 	# Pour consulter vos projets :	crawtext.py vous@cortext.net
@@ -55,23 +31,23 @@ Options:
 	
 '''
 
-__all__ = ['crawtext', 'manager','database', "scrapper", "dispatcher"]
+# __all__ = ['crawtext', 'manager','database', "scrapper", "dispatcher"]
 import os, sys
 
 CRAWTEXT = "crawtext"
 CRAWTEXT_DIR = os.path.dirname(os.path.abspath(sys.argv[0]))
 
 
-import __future__
-from docopt import docopt
-from worker import Worker
+# import __future__
+# from docopt import docopt
+# from worker import Worker
 
  
 
-if __name__== "__main__":
+# if __name__== "__main__":
 	
-	try:		
-		w = Worker()
-		print w.run(docopt(__doc__))
-	except KeyboardInterrupt:
-		sys.exit()
+# 	try:		
+# 		w = Worker()
+# 		print w.run(docopt(__doc__))
+# 	except KeyboardInterrupt:
+# 		sys.exit()

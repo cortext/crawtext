@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-
+import pdb
 import re
 import sys
 
@@ -73,6 +73,7 @@ class Rule(object):
 
 class Filter(object):
     def __init__(self, f, **kwargs):
+        
         self.index = {}
         self.is_local = kwargs.get('is_local',False)
         for rul in f.xreadlines():
@@ -94,6 +95,7 @@ class Filter(object):
         return self.index.values()
 		
     def match(self, url, elementtype=None):
+        
         matchlist = []
         tokens = RE_TOK.split(url)
         for tok in tokens:
@@ -104,12 +106,13 @@ class Filter(object):
                             matchlist.append(rule)
                             
                             if self.is_local:
-                                print unicode(rule)
+                                matchlist.append(unicode(rule))
         return matchlist
 
 
-
-#~ if __name__ == '__main__':
-    #~ f = Filter(file('easylist.txt'), is_local=True)
-    #~ print 'start matching'
-    #~ f.match(sys.argv[1])
+'''
+if __name__ == '__main__':
+    f = Filter(file('easylist.txt'), is_local=True)
+    print 'start matching'
+    f.match(sys.argv[1])
+'''

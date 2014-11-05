@@ -2,6 +2,7 @@
 import types
 import datetime
 from decimal import Decimal
+
 def unique(list_, key=lambda x: x):
     """efficient function to uniquify a list preserving item order"""
     seen = set()

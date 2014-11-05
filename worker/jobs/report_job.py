@@ -1,12 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from job import Job
 import os
-from debug_job import Debug
 from packages.ask_yes_no import *
+import Job
 
 class Report(Job):
+	def __init__(self, doc, debug):
+		Job.__init__(self, doc, debug)
+		self.start()
 	
 	def start(self):
 		self._log.step = "Generate report"
