@@ -1,0 +1,35 @@
+
+======PROJECT PARAMS======
+project_name: RRI3
+name: RRI3
+depth: 10
+directory: /home/c24b/projets/crawtext_kiss/projects/RRI3
+key: J8zQNrEwAJ2u3VcMykpouyPf4nvA6Wre1019v/dIT0o
+query: responsible research and innovation
+type: crawl
+
+====== STATISTICS =====
+
+Report  Database of RRI3
+- 06/34/2014 at 12:34 -
+#Overview
+Stored results in Mongo Database: RRI3 
+	-Results nb: 69
+	-Errors nb: 0
+#Sources
+	-Sources nb: 49
+	-Inactives sources nb: 15
+	-Actives sources nb: 49
+
+Composition of sources:
+	-Added from bing search: 49
+	-Added from file: 0
+	-Added manually: 0
+	-Added from results: 0
+#Results overview
+Total resuls: 69
+	-treated url nb: 69
+	- wrong url nb: 0
+	- non pertinent urls: 0
+	-Size of the database RRI3: 86 MB
+======SOURCES INFO======

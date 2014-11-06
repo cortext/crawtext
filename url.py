@@ -15,7 +15,11 @@ import six
 from six.moves.urllib.parse import ParseResult, urlunparse, urldefrag, urlparse
 import urllib
 import cgi
+<<<<<<< HEAD
 
+=======
+from filter import Filter
+>>>>>>> logs_job
 # scrapy.utils.url was moved to w3lib.url and import * ensures this move doesn't break old code
 
 from w3lib.url import *
@@ -83,7 +87,11 @@ class Link(object):
         self.parse()
         self.set_source_url()
         self.abs_url()
+<<<<<<< HEAD
         self.is_valid()
+=======
+        self.status = self.is_valid()
+>>>>>>> logs_job
         
     def set_source_url(self):
         if self.source_url is None:
@@ -96,11 +104,18 @@ class Link(object):
 
     def parse(self):
         #components of the url
+<<<<<<< HEAD
         print "Parsing"
         self.url = self.prepare_url()
         parsed_url = urlparse(self.url)
         self.scheme = parsed_url.scheme
         print "self.scheme %s" self.sheme
+=======
+        self.url = self.prepare_url()
+        parsed_url = urlparse(self.url)
+
+        self.scheme = parsed_url.scheme
+>>>>>>> logs_job
         self.netloc = parsed_url.netloc
         self.path = parsed_url.path
         self.params = parsed_url.params
@@ -108,7 +123,11 @@ class Link(object):
         self.fragment= parsed_url.fragment
         
         #filetype
+<<<<<<< HEAD
         self.file_type = url_to_filetype(self.url)
+=======
+        self.file_type = self.url_to_filetype()
+>>>>>>> logs_job
         #subdomain and tld
         tld_dat = tldextract.extract(self.url)
         self.subdomain = tld_dat.subdomain
@@ -125,6 +144,7 @@ class Link(object):
             self.relative = True
         
 
+<<<<<<< HEAD
     def prepare_url(self):
         """
         Operations that purify a url, removes arguments,
@@ -142,11 +162,31 @@ class Link(object):
             self._log.msg = 'url %s failed on err %s' % (url, str(e))
             self.proper_url = u''
         return self.proper_url
+=======
+    # def prepare_url(self):
+    #     """
+    #     Operations that purify a url, removes arguments,
+    #     redirects, and merges relatives with absolutes.
+    #     """
+    #     try:
+    #         if self.source_url is not None:
+    #             self.source_domain = urlparse(self.source_url).netloc
+    #             proper_url = urljoin(self.source_url, self.url)
+    #             proper_url = redirect_back(proper_url, self.source_domain)
+    #             self.proper_url = remove_args(proper_url)
+    #         else:
+    #             self.proper_url = remove_args(self.url)
+    #     except ValueError, e:
+    #         self.msg = 'url %s failed on err %s' % (url, str(e))
+    #         self.proper_url = self.url
+    #     return self.proper_url
+>>>>>>> logs_job
     
     def is_valid(self):
         self.step = "Validating url"
         self.code = "100"
         if self.url is None or len(self.url) < 11:
+<<<<<<< HEAD
             self.msg ='\t%s : len of url is less than 11' % self.url
             return False
         #invalid protocol
@@ -176,11 +216,47 @@ class Link(object):
             self.msg = '%s verified for date' % self.url
             self.date = match_date
             return True
+=======
+            self.msg ='Url is too short (less than 11) %s' % self.url
+            return False
+        #invalid protocol
+        if self.check_scheme() is False:
+            self.msg = 'wrong protocol %s' % self.scheme
+            return False
+        if not self.path.startswith('/'):
+            self.msg = 'Invalid path for url %s' % self.path
+            return False
+        
+        if self.file_type is not None and self.file_type not in ALLOWED_TYPES:
+            self.msg = 'invalid webpage type %s' % self.file_type
+            return False
+        if self.tld in BAD_DOMAINS:
+            self.msg = 'bad domain %s' % self.tld
+            return False
+        
+        
+        adblock = Filter(file(ABSPATH+'/ressources/easylist.txt'), is_local=True)
+        if len(adblock.match(self.url)) != 0:
+            self.msg = 'Adblock url'
+            return False
+
+        match_date = re.search(DATE_REGEX, self.url)
+        # if we caught the verified date above, it's an article
+        if match_date is not None:
+            self.date = match_date.group()
+            self.msg = 'verified for date: %s' % self.date
+            return True
+        
+>>>>>>> logs_job
         return True
     
     def json(self):
         link = {}
+<<<<<<< HEAD
         keys = ["url", "scheme", "netloc", "path", "file_type", "tld", "extension", "depth", "source_url", "proper_url", "relative", "depth", "origin"]
+=======
+        keys = ["url", "scheme", "netloc", "path", "file_type", "tld", "extension", "depth", "source_url", "relative", "depth", "origin"]
+>>>>>>> logs_job
         for k in keys:
             link[k] =  self.__dict__[k]
         link['status'] = [self.__dict__['status']]
@@ -188,11 +264,20 @@ class Link(object):
         link['msg'] = [self.msg]
         return link
 
+<<<<<<< HEAD
     def remove_args(url, keep_params=(), frags=False):
         """
         Remove all param arguments from a url.
         """
         parsed = urlsplit(url)
+=======
+    def remove_args(self, url, keep_params=(), frags=False):
+        """
+        Remove all param arguments from a url.
+        """
+        
+        parsed = urlsplit(self.url)
+>>>>>>> logs_job
         filtered_query= '&'.join(
             qry_item for qry_item in parsed.query.split('&')
                 if qry_item.startswith(keep_params)
@@ -226,7 +311,11 @@ class Link(object):
 
         return url
 
+<<<<<<< HEAD
     def prepare_url(url, source_url=None):
+=======
+    def prepare_url(self, source_url=None):
+>>>>>>> logs_job
         """
 
         Operations that purify a url, removes arguments,
@@ -235,6 +324,7 @@ class Link(object):
         try:
             if source_url is not None:
                 source_domain = urlparse(source_url).netloc
+<<<<<<< HEAD
                 proper_url = urljoin(source_url, url)
                 proper_url = redirect_back(proper_url, source_domain)
                 proper_url = remove_args(proper_url)
@@ -243,6 +333,16 @@ class Link(object):
         except ValueError, e:
             self._log.msg = 'url %s failed on err %s' % (url, str(e))
             # print 'url %s failed on err %s' % (url, str(e))
+=======
+                proper_url = urljoin(source_url, self.url)
+                proper_url = redirect_back(proper_url, source_domain)
+                proper_url = self.remove_args(proper_url)
+            else:
+                proper_url = self.remove_args(self.url)
+        except ValueError, e:
+            self.msg = 'url %s failed on err %s' % (self.url, str(e))
+            print 'url %s failed on err %s' % (url, str(e))
+>>>>>>> logs_job
             proper_url = u''
 
         return proper_url
@@ -329,12 +429,21 @@ class Link(object):
         tld = tld_dat.domain.lower()
         
         url_slug = path_chunks[-1] if path_chunks else u''
+<<<<<<< HEAD
         pdb.set_trace()
         from packages.filter import Filter
         pdb.set_trace()
         adblock = Filter(file(ABSPATH+'/ressources/easylist.txt'), is_local=True)
         if len(adblock.match(url)) != 0:
             self.msg = '%s : adblock url' % url
+=======
+        
+        
+        adblock = Filter(file(ABSPATH+'/ressources/easylist.txt'), is_local=True)
+        
+        if len(adblock.match(url)) != 0:
+            self.msg = 'adblock url'
+>>>>>>> logs_job
             return False
 
         if tld in BAD_DOMAINS:
@@ -376,16 +485,27 @@ class Link(object):
         
         return True
 
+<<<<<<< HEAD
     def url_to_filetype(abs_url):
+=======
+    def url_to_filetype(self):
+>>>>>>> logs_job
         """
         Input a URL and output the filetype of the file
         specified by the url. Returns None for no filetype.
         'http://blahblah/images/car.jpg' -> 'jpg'
         'http://yahoo.com'               -> None
         """
+<<<<<<< HEAD
         path = urlparse(abs_url).path
         # Eliminate the trailing '/', we are extracting the file
         if path.endswith('/'):
+=======
+        path = ""
+        # path = urlparse(self.url).path
+        # Eliminate the trailing '/', we are extracting the file
+        if self.path.endswith('/'):
+>>>>>>> logs_job
             path = path[:-1]
         path_chunks = [x for x in path.split('/') if len(x) > 0]
         try:
@@ -477,10 +597,15 @@ class Link(object):
         else:
             return False
 
+<<<<<<< HEAD
     def check_scheme(url):
         scheme = urlparse(url).scheme
         print scheme
         if scheme in ["mailto", "ftp", "magnet", "javascript"]:
+=======
+    def check_scheme(self):
+        if self.scheme in ["mailto", "ftp", "magnet", "javascript"]:
+>>>>>>> logs_job
             return False
         
             

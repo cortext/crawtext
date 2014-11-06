@@ -1,0 +1,130 @@
+
+======PROJECT PARAMS======
+status: [u'True', False, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, False, True, False, True, False, True, False, True, False, True, False, True, False, True, True, True, False, True, True, True, True, True, True, True, True, True, True, True, True]project_name: RRI2key: J8zQNrEwAJ2u3VcMykpouyPf4nvA6Wre1019v/dIT0oname: RRI2creation_date: 2014-11-05 02:45:40.445000date: [datetime.datetime(2014, 11, 5, 2, 45, 40, 445000), datetime.datetime(2014, 11, 5, 2, 45, 41, 235000), datetime.datetime(2014, 11, 5, 2, 52, 22, 842000), datetime.datetime(2014, 11, 5, 2, 52, 47, 391000), datetime.datetime(2014, 11, 5, 2, 53, 12, 317000), datetime.datetime(2014, 11, 5, 2, 54, 45, 108000), datetime.datetime(2014, 11, 5, 2, 55, 25, 917000), datetime.datetime(2014, 11, 5, 2, 55, 39, 225000), datetime.datetime(2014, 11, 5, 2, 55, 55, 989000), datetime.datetime(2014, 11, 5, 2, 56, 10, 851000), datetime.datetime(2014, 11, 5, 3, 0, 42, 90000), datetime.datetime(2014, 11, 5, 3, 2, 43, 158000), datetime.datetime(2014, 11, 5, 3, 2, 43, 162000), datetime.datetime(2014, 11, 5, 3, 3, 1, 505000), datetime.datetime(2014, 11, 5, 3, 3, 1, 509000), datetime.datetime(2014, 11, 5, 3, 11, 34, 521000), datetime.datetime(2014, 11, 5, 3, 11, 34, 525000), datetime.datetime(2014, 11, 5, 3, 11, 39, 832000), datetime.datetime(2014, 11, 5, 3, 11, 46, 554000), datetime.datetime(2014, 11, 5, 3, 12, 40, 313000), datetime.datetime(2014, 11, 5, 3, 13, 28, 287000), datetime.datetime(2014, 11, 5, 3, 14, 50, 538000), datetime.datetime(2014, 11, 5, 3, 14, 50, 538000), datetime.datetime(2014, 11, 5, 3, 15, 11, 58000), datetime.datetime(2014, 11, 5, 3, 15, 11, 58000), datetime.datetime(2014, 11, 5, 3, 15, 21, 696000), datetime.datetime(2014, 11, 5, 3, 15, 21, 696000), datetime.datetime(2014, 11, 5, 3, 23, 0, 149000), datetime.datetime(2014, 11, 5, 3, 23, 0, 149000), datetime.datetime(2014, 11, 5, 3, 23, 35, 714000), datetime.datetime(2014, 11, 5, 3, 23, 35, 714000), datetime.datetime(2014, 11, 5, 3, 31, 14, 408000), datetime.datetime(2014, 11, 5, 3, 31, 14, 408000), datetime.datetime(2014, 11, 5, 3, 31, 31, 676000), datetime.datetime(2014, 11, 5, 3, 31, 31, 676000), datetime.datetime(2014, 11, 5, 3, 33, 53, 214000), datetime.datetime(2014, 11, 5, 3, 34, 25, 242000), datetime.datetime(2014, 11, 5, 3, 34, 59, 84000), datetime.datetime(2014, 11, 5, 3, 34, 59, 84000), datetime.datetime(2014, 11, 5, 3, 35, 20, 779000), datetime.datetime(2014, 11, 5, 3, 48, 19, 574000), datetime.datetime(2014, 11, 5, 3, 48, 46, 566000), datetime.datetime(2014, 11, 5, 3, 49, 51, 707000), datetime.datetime(2014, 11, 5, 3, 54, 15, 53000), datetime.datetime(2014, 11, 5, 4, 7, 58, 189000), datetime.datetime(2014, 11, 5, 4, 13, 24, 480000), datetime.datetime(2014, 11, 5, 4, 13, 53, 287000), datetime.datetime(2014, 11, 5, 4, 14, 2, 34000), datetime.datetime(2014, 11, 5, 4, 15, 18, 342000), datetime.datetime(2014, 11, 5, 4, 16, 11, 332000), datetime.datetime(2014, 11, 5, 4, 17, 37, 472000)]depth: 10directory: /home/c24b/projets/crawtext_kiss/projects/RRI2file: seeds.txtaction: [u'create', u'config crawl: add sources from file', u'add: key', u'add: key', u'add: key', u'add: key', u'add: key', u'add: key', u'add: file', u'start crawl', u'start crawl', u'start crawl', u'config crawl', u'start crawl', u'config crawl', u'start crawl', u'config crawl', u'add: key', u'add: key', u'add: key', u'add: key', u'add: key', u'add: key', u'add: key', u'add: key', u'add: key', u'add: key', u'add: key', u'add: key', u'add: key', u'add: key', u'add: key', u'add: key', u'add: key', u'add: key', u'add: key', u'add: key', u'add: key', u'add: key', u'add: key', u'report', u'report', u'report', u'report', u'report', u'report', u'report', u'report', u'report', u'report', u'report']query: Responsible Research AND Innovation_id: 54598144dabe6e1e846b125dtype: crawlmsg: [u'Ok', u'API Key: Wrong credential for Search', u'Ok', u'Ok', u'Ok', u'Ok', u'Ok', u'Ok', u'Ok', u'Ok', u'Ok', u'Ok', u'Ok', u'Ok', u'Ok', u'Ok', u'Ok', u'Ok', u'Ok', u'Ok', u'Ok', u'Ok', u"'Worker' object has no attribute 'query'", u'Ok', u"'Worker' object has no attribute 'query'", u'Ok', u"'TaskDB' object has no attribute 'sources'", u'Ok', u"'instancemethod' object has no attribute '__getitem__'", u'Ok', u"'TaskDB' object has no attribute 'sources'", u'Ok', u"global name 'udpate' is not defined", u'Ok', u"'instancemethod' object has no attribute '__getitem__'", u'Ok', u'Ok', u'Ok', u"'list' object has no attribute 'find_one'", u'Ok', u'Ok', u'Ok', u'Ok', u'Ok', u'Ok', u'Ok', u'Ok', u'Ok', u'Ok', u'Ok', u'Ok']
+======SOURCES INFO======
+	- 0 invalid urls
+	- 52 valid urls
+===STATS===
+Report  Database RRI2 -05/18/2014 at 04:18 -
+#Overview
+Stored results in Mongo Database: RRI2 
+	-Nombre de resultats dans la base: 0
+	-Nombre d'erreurs: 0
+#Sources
+	-Sources nb: 52
+	-Inactives sources nb: 0
+	-Actives sources nb: 52
+
+	-Added from bing search: 49
+	-Added from file: 3
+	-Added from results: 0
+	-Added manually: 0
+#Working process
+	- processing url nb: 0
+	-treated url nb: 0
+	-wrong url nb: 0
+	-non pertinent urls: 0
+	-Size of the database RRI2: 0 MB
+======HISTORY OF THE PROJECT======
+
+	-(u'create', u'True', u'Ok', '05-11-2014 02-45-40')
+
+	-(u'config crawl: add sources from file', False, u'API Key: Wrong credential for Search', '05-11-2014 02-45-41')
+
+	-(u'add: key', True, u'Ok', '05-11-2014 02-52-22')
+
+	-(u'add: key', True, u'Ok', '05-11-2014 02-52-47')
+
+	-(u'add: key', True, u'Ok', '05-11-2014 02-53-12')
+
+	-(u'add: key', True, u'Ok', '05-11-2014 02-54-45')
+
+	-(u'add: key', True, u'Ok', '05-11-2014 02-55-25')
+
+	-(u'add: key', True, u'Ok', '05-11-2014 02-55-39')
+
+	-(u'add: file', True, u'Ok', '05-11-2014 02-55-55')
+
+	-(u'start crawl', True, u'Ok', '05-11-2014 02-56-10')
+
+	-(u'start crawl', True, u'Ok', '05-11-2014 03-00-42')
+
+	-(u'start crawl', True, u'Ok', '05-11-2014 03-02-43')
+
+	-(u'config crawl', True, u'Ok', '05-11-2014 03-02-43')
+
+	-(u'start crawl', True, u'Ok', '05-11-2014 03-03-01')
+
+	-(u'config crawl', True, u'Ok', '05-11-2014 03-03-01')
+
+	-(u'start crawl', True, u'Ok', '05-11-2014 03-11-34')
+
+	-(u'config crawl', True, u'Ok', '05-11-2014 03-11-34')
+
+	-(u'add: key', True, u'Ok', '05-11-2014 03-11-39')
+
+	-(u'add: key', True, u'Ok', '05-11-2014 03-11-46')
+
+	-(u'add: key', True, u'Ok', '05-11-2014 03-12-40')
+
+	-(u'add: key', True, u'Ok', '05-11-2014 03-13-28')
+
+	-(u'add: key', True, u'Ok', '05-11-2014 03-14-50')
+
+	-(u'add: key', False, u"'Worker' object has no attribute 'query'", '05-11-2014 03-14-50')
+
+	-(u'add: key', True, u'Ok', '05-11-2014 03-15-11')
+
+	-(u'add: key', False, u"'Worker' object has no attribute 'query'", '05-11-2014 03-15-11')
+
+	-(u'add: key', True, u'Ok', '05-11-2014 03-15-21')
+
+	-(u'add: key', False, u"'TaskDB' object has no attribute 'sources'", '05-11-2014 03-15-21')
+
+	-(u'add: key', True, u'Ok', '05-11-2014 03-23-00')
+
+	-(u'add: key', False, u"'instancemethod' object has no attribute '__getitem__'", '05-11-2014 03-23-00')
+
+	-(u'add: key', True, u'Ok', '05-11-2014 03-23-35')
+
+	-(u'add: key', False, u"'TaskDB' object has no attribute 'sources'", '05-11-2014 03-23-35')
+
+	-(u'add: key', True, u'Ok', '05-11-2014 03-31-14')
+
+	-(u'add: key', False, u"global name 'udpate' is not defined", '05-11-2014 03-31-14')
+
+	-(u'add: key', True, u'Ok', '05-11-2014 03-31-31')
+
+	-(u'add: key', False, u"'instancemethod' object has no attribute '__getitem__'", '05-11-2014 03-31-31')
+
+	-(u'add: key', True, u'Ok', '05-11-2014 03-33-53')
+
+	-(u'add: key', True, u'Ok', '05-11-2014 03-34-25')
+
+	-(u'add: key', True, u'Ok', '05-11-2014 03-34-59')
+
+	-(u'add: key', False, u"'list' object has no attribute 'find_one'", '05-11-2014 03-34-59')
+
+	-(u'add: key', True, u'Ok', '05-11-2014 03-35-20')
+
+	-(u'report', True, u'Ok', '05-11-2014 03-48-19')
+
+	-(u'report', True, u'Ok', '05-11-2014 03-48-46')
+
+	-(u'report', True, u'Ok', '05-11-2014 03-49-51')
+
+	-(u'report', True, u'Ok', '05-11-2014 03-54-15')
+
+	-(u'report', True, u'Ok', '05-11-2014 04-07-58')
+
+	-(u'report', True, u'Ok', '05-11-2014 04-13-24')
+
+	-(u'report', True, u'Ok', '05-11-2014 04-13-53')
+
+	-(u'report', True, u'Ok', '05-11-2014 04-14-02')
+
+	-(u'report', True, u'Ok', '05-11-2014 04-15-18')
+
+	-(u'report', True, u'Ok', '05-11-2014 04-16-11')
+
+	-(u'report', True, u'Ok', '05-11-2014 04-17-37')
