@@ -272,7 +272,7 @@ class Worker(object):
 	def delete_db(self):
 		db = Database(self.project_name)
 		db.drop_db()
-		print "Database %s: sucessfully deleted" %self.project_name
+		print "Database %s: sucessfully deleted" %str(self.project_name)
 		return True
 	
 	
