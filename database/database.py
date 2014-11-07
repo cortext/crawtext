@@ -17,6 +17,14 @@ class Database(object):
 		self.db_name = database_name
 		self.db = getattr(self.client,database_name)
 		
+		
+	def set_colls(self):
+		self.sources = self.db["sources"]
+		self.logs = self.db["logs"]
+		self.results = self.db["results"]
+		self.queue = self.db["queue"]
+		return self
+
 	def use_db(self, database_name):
 		return self.client[str(database_name)]
 
@@ -82,22 +90,22 @@ class Database(object):
 		except KeyError:
 			pass
 		# print "insert into log %s" %url
-		if url not in self.db.sources.distinct("url"):
-			print "url is not a source"
-			if url not in self.db.logs.distinct("url"):
-				print "url is already in logs"
+		
+		if url not in self.db.sources.distinct("url"):	
+			exists = self.db.sources.find_one({"url":url})	
+			if exists is not None:
+				self.db.sources.update({"_id":exists["_id"]}, {"$push": log})
+		else:
+			if url not in self.db.logs.distinct("url"):	
 				self.db.logs.insert({"url":url,"msg":[log["msg"]], "status":[log["status"]], "code": [log["code"]]})
 			else:
 				exists = self.db.logs.find_one({"url":url})
 				if exists is not None:
-					print "updating log %s" %",".join(log.keys())
-					self.db.logs.update({"_id":exists["_id"]}, {"$push": log})
-		else:
-			print "url is a source"
-			exists = self.db.sources.find_one({"url":url})	
-			if exists is not None:
-				print "updating sources %s" %",".join(log.keys())
-				self.db.sources.update({"_id":exists["_id"]}, {"$push": log})
+					try:
+						self.db.logs.update({"_id":exists["_id"]}, {"$push": log})
+					except Exception as e:
+						self.db.logs.update({"_id":exists["_id"]}, {"msg":[log["msg"]], "status":[log["status"]], "code": [log["code"]]})
+			
 	
 	def insert_result(self, log):
 		return self.db.results.insert(log)
@@ -117,11 +125,12 @@ class Database(object):
 		date = datetime.now()
 		date = date.strftime("- %d/%M/%Y at %H:%M -")
 		title = "==== Project: %s ====\n%s" %(str(self.db_name).capitalize(), date)
-		results = "#Results:\n-Total:%d\n-Unique urls:%d"%(self.results_nb, self.uniq_results_nb)
-		errors = "#Errors:\n-Total:%d\n-Unique:%d"%(self.logs_nb, self.uniq_logs_nb)
-		sources = "#Sources:\n-Total:%d\n-Unique:%d\n-Valid:%d\n-Invalid:%d\nCollected methods:\n-From search:%d\n-From file:%d\n-Manual:%d\n-Automatic:%d"%(self.sources_nb, self.uniq_sources_nb,self.active_sources_nb, self.inactive_sources_nb, self.bing_sources, self.file_sources, self.manual_sources, self.expanded_sources)
-		other = "#Other:\nName of the database: %s\nSize of the database: %d MB" %(self.db_name, (self.db.command('dbStats', 1024)['storageSize'])/1024/1024.)
-		self.template = [title, results, errors, sources, other]
+		results = "#Results:\n\t-Total:%d\n\t-Unique urls:%d"%(self.results_nb, self.uniq_results_nb)
+		errors = "#Errors:\n\t-Total:%d\n\t-Unique:%d"%(self.logs_nb, self.uniq_logs_nb)
+		sources = "#Sources:\n\t-Total: %d\n-Unique: %d\n\t-Valid: %d\n\t-Invalid: %d\nCollected methods:\n\t-From search:%d\n\t-From file:%d\n\t-Manual:%d\n\t-Automatic:%d"%(self.sources_nb, self.uniq_sources_nb,self.active_sources_nb, self.inactive_sources_nb, self.bing_sources, self.file_sources, self.manual_sources, self.expanded_sources)
+		process = "#Process:\n\t-Total: %d\n\t-Unique: %d\n\t-Treated: %d" %(self.queue_nb, self.uniq_queue_nb, self.treated_nb)
+		other = "#Other:\n\tName of the database: %s\n\tSize of the database: %d MB" %(self.db_name, (self.db.command('dbStats', 1024)['storageSize'])/1024/1024.)
+		self.template = [title, results, errors, sources, process, other]
 		return "\n".join(self.template)
 	
 	def stats(self):
@@ -146,6 +155,8 @@ class Database(object):
 		self.non_pertinent_nb = self.db.logs.find({"code":800}, { "code": {"$slice": -1 } } ).count()
 		#treated
 		self.treated_nb = int(int(self.db.results.count()) + int(self.db.logs.count()))
+		self.queue_nb = self.db.queue.count()
+		self.uniq_queue_nb = len(self.db.queue.distinct("url"))
 		return self
 
 	def mail_report(self):
@@ -169,53 +180,6 @@ class Database(object):
 		
 		template.append("</ul>")
 		return "".join(template)
-		#return "\n".join(self.result) 
-	
-	# Define export gephi inside report option
-	# def create_node(self):
-	# 	label = ["url", "outlink", "backlink"]
-	# 	urllist = [n for n in self.db.results.distinct("url")]
-	# 	# outlist = [u for u in n['outlinks'] for n in self.db.results.find() if u not in outlist]
-	# 	# backlist = [u["url"] for u in n['backlinks'] for n in self.db.results.find() if u["url"] not in backlist]
-	# 	outlist = []
-	# 	backlist = []
-	# 	print len(urllist)
-	# 	for n in self.db.results.find():
-	# 		if n["outlinks"] is None:
-	# 	 		pass
-	# 		for o in n["outlinks"]:
-	# 			if o is not None:
-	# 				outlist.append([o["url"], "backlink"])
-	# 	for n in self.db.results.find():
-	# 	 	if n != []:
-	# 			for o in n["backlinks"]:
-	# 	 			if o is not None:
-	# 					backlist.append([o["url"], "backlink"])
-
-	# 	return 
-	# def export_outlinks(self):
-	# 	'''Output url : outlink'''
-	# 	print ("source; target")
-	# 	for n in self.db.results.find():
-	# 		for o in n["outlinks"]:
-	# 			if o is not None:
-	# 				print n['url']+";"+o
-	# 			else:
-	# 				print n["url"]+";None"
-	# 	return
-	# def export_backlinks(self):
-	# 	print ("source;target")
-	# 	for n in self.db.results.find():
-	# 		if n != []:
-	# 			for u in n["backlinks"]:
-	# 				print n["url"]+";"+u["url"]
-	# 		# for o in n["backlinks"]:
-	# 		# 		if o is not None:
-	# 		# 			print n['url']+";"+o
-	# 		# 		else:
-	# 		# 			print n["url"]+";None"
-	# 	return
-
 class TaskDB(Database):
 	def __init__(self):
 		Database.__init__(self, TASK_MANAGER_NAME)

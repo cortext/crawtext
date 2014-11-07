@@ -1,4 +1,6 @@
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
+
 __title__ = 'newspaper'
 __author__ = 'Lucas Ou-Yang'
 __license__ = 'MIT'
@@ -229,6 +231,10 @@ class Article(object):
         self.is_parsed = True
         self.release_resources()
         return self.is_parsed
+    
+    def fetch_outlinks(self):
+        self.outlinks = self.extractor.get_urls(self.doc)
+        return self
 
     def fetch_images(self):
         if self.clean_doc is not None:

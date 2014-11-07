@@ -18,15 +18,16 @@ Usage:
 	crawtext.py (<name>) stop
 	crawtext.py (-h | --help)	
 '''
+
 import os, sys, re
 from docopt import docopt
 from datetime import datetime as dt
 from database import *
-from url import Link
-import requests
 from random import choice
 import datetime
+from url import Link
 from report import send_mail, generate_report
+from network import process_data
 
 ABSPATH = os.path.dirname(os.path.abspath(sys.argv[0]))
 RESULT_PATH = os.path.join(ABSPATH, "projects")
@@ -41,7 +42,7 @@ class Worker(object):
 		self.name = self.user_input['<name>']
 		self.project_name = re.sub('[^0-9a-zA-Z]+', '_', self.name)
 		del self.user_input['<name>']
-		self.project_db = Database(self.project_name)
+		
 		
 	def dispatch(self):
 		params = dict()
@@ -56,12 +57,12 @@ class Worker(object):
 
 		if action is None:
 			if len(params) == 0:
-				self.show()
+				return self.show()
 			else:
-				self.create(params)
+				return self.create(params)
 		else:
 			job = getattr(self, str(action))
-			job(params)
+			return job(params)
 				
 	def exists(self):
 		self.task = self.coll.find_one({"name":self.name})
@@ -99,10 +100,10 @@ class Worker(object):
 			print "\n* Last Status"
 			print "------------"
 			print self.task["action"][-1], self.task["status"][-1],self.task["msg"][-1], dt.strftime(self.task["date"][-1], "%d/%m/%y %H:%M:%S")
-				
+			return True	
 		else:
 			print "No crawl job %s found" %self.name
-				
+			return False	
 	def report(self, params):
 		if self.exists():
 			db = Database(self.task['project_name'])
@@ -132,20 +133,22 @@ class Worker(object):
 					self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"report: document", "status": True, "date": dt.now(), "msg": "Ok"}})
 				else:
 					self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"report: document", "status": False, "date": dt.now(), "msg": "Unable to create report document"}})
-				return
+				return True
 			
 		else:
 			print "No crawl job %s found" %self.name
-		return 
+		return False
 
 	def export(self,params):
 		if exists():
 			if len(params) != 0:
-				params = self.clean_params(params)
-			print "Export"
+				pass
+				#params = self.clean_params(params)
+				#Export(self.name).start()
+			return True
 		else:
 			print "No crawl job %s found" %self.name
-		return 
+			return False
 
 	def create_dir(self):
 		directory = os.path.join(RESULT_PATH, self.project_name)
@@ -215,7 +218,7 @@ class Worker(object):
 			return self.show()
 		else:
 			print "No crawl job %s found" %self.name
-	
+			return False
 	def update_sources(self, params):
 		update = [n for n in params.keys() if n in ["file", "url", "key"]]
 		if len(update) != 0:
@@ -230,7 +233,8 @@ class Worker(object):
 					self.query = self.task["query"]
 					if self.check_bing() is False:
 						print "Error no url from search result has been added"
-		
+		return
+
 	def delete(self, params):
 		if self.exists():	
 			if len(params) != 0:
@@ -248,9 +252,11 @@ class Worker(object):
 				self.delete_dir()
 				self.coll.remove({"_id": self.task['_id']})
 				print "Project %s: sucessfully deleted"%(self.name)
+				return True
 		else:
 			print "No crawl job %s found" %self.name
-			
+			return False	
+	
 	def delete_dir(self):
 		import shutil
 		directory = os.path.join(RESULT_PATH, self.project_name)
@@ -261,13 +267,13 @@ class Worker(object):
 			# print "Directory %s: %s sucessfully deleted"	%(self.name,directory)
 		else:
 			print "No directory found for crawl project %s"(self.name)
-		return
+		return False
 
 	def delete_db(self):
 		db = Database(self.project_name)
 		db.drop_db()
 		print "Database %s: sucessfully deleted" %self.project_name
-		return
+		return True
 	
 	
 		
@@ -275,17 +281,17 @@ class Worker(object):
 		if self.exists():
 			self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"start crawl", "status": True, "date": dt.now(), "msg": "Ok"}})
 			print "Starting project"
-			try:
-				if self.config():
-					print "Crawling >>>>"		
-					self.crawl()
-				else:
-					sys.exit()
-			except KeyboardInterrupt:
-				sys.exit()
+			if self.config():
+				if self.crawl():
+					self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"finished crawl", "status": True, "date": dt.now(), "msg": "Ok"}})
+				return True
+			else:
+				return
+		
 		else:
 			print "No crawl job %s found" %self.name
-			
+			return False
+				
 	def check_query(self):
 		print "- Verifying query:"
 		try:
@@ -355,21 +361,22 @@ class Worker(object):
 			return False
 		else:
 			print "- Verifying sources:"
+			
 			db = Database(self.project_name)
-			db.create_colls(["sources"])
-			sources_nb = db.sources.count()
+			sources = db.use_coll("sources")
+			sources_nb = sources.count()
+			
+			if sources_nb == 0:
+				pass
 			if sources_nb == 0:			
-				self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"config crawl", "status": False, "date": dt.now(), "msg": "No sources from db"}})	
-				print "No sources found\nHelp: You need at least one url into sources database to start crawl:"
-				if self.reload_sources() is False:
-					return False
-				
-						
-				
-			print db.sources_stats()	
-			self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"config crawl", "status": True, "date": dt.now(), "msg": "Ok"}})
-			return True
-		
+				self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"config crawl", "status": "False", "date": dt.now(), "msg": "No sources from db"}})	
+				print "No sources found\nHelp: You need at least one url into sources database to start crawl."
+				return False
+			else:
+				print db.show_stats()
+				self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"config crawl", "status": "True", "date": dt.now(), "msg": "Ok"}})
+				return True
+			
 		
 	def add_url(self, url, origin="default", depth=0, source_url = None):
 		'''Insert url into sources with its status inserted or updated'''
@@ -389,22 +396,13 @@ class Worker(object):
 		
 	def add_bing(self, nb = 50):
 		''' Method to extract results from BING API (Limited to 5000 req/month) automatically sent to sources DB ''' 
+		import requests
 		try:
-		# self._log.step = "Searching sources from Bing"
-		# if nb%50 !=0:
-		#  	#"__next"
-		#  	print "Not able yet to add more than 50 urls"
-		#  	return False
-		# if nb > 50:
-		# 	print "Not able yet to add more than 50 urls"
-		# 	return False
-		# else:
-			#self.key = '\'%s\'' %self.key
 			r = requests.get(
 				'https://api.datamarket.azure.com/Bing/Search/v1/Web', 
 				params={
 					'$format' : 'json',
-					'$top' : 50,
+					'$top' : 51,
 					'Query' : '\'%s\'' %self.query,
 				},	
 				auth=(self.key, self.key)
@@ -445,36 +443,27 @@ class Worker(object):
 			print "Debug: %s" %str(e)
 			return False
 
-	
-
-	
 	def crawl(self):
-		from network import Queue, RequestWorker
-		queue = Queue.Queue()
-		queueB = Queue.Queue()
+		print "Crawl"
 		db = Database(self.project_name)
-		db.create_colls(["sources", "results", "logs"])
-		#initialize
-		print db.sources.count(), "sources"
-		for row in db.sources.find():
-			if row['status'][-1] is True:
-				if row["depth"] > 10:
-					continue
-        		queue.put((row['url'],row["depth"]))
+		db.set_colls()
+		queue = [{"url":n["url"], "depth":0} for n in db.sources.find() if n["status"][-1] is True]
+		print "Crawling"
+		print "%d sources as seeds" %len(queue)
+		db.queue.insert(queue)
+		while db.queue.distinct("url") != 0:
+			for item in db.queue.find():
+				for data in process_data(item, self.query, db):
+					print len(data["outlinks"])
+					db.insert_results(data)
+					db.queue.insert(data["outlinks"])
+				db.queue.remove({"url":n})
+		db.queue.drop()
+		print "Fini!"
+		return True
 		
-		for i in range(4):
-		    RequestWorker(queue, queueB, self.query, db).start() # start a worker
-		for i in range(4):
-		    queue.put(None) # add end-of-queue markers
-		
-	def simple_crawl(self, queue):
-		db = Database(self.project_name)
-		db.create_colls(["sources"])
-		for n in db.sources.find():
-			if n["status"][-1] is True:
-				queue.put((n['url'], n['depth']))
+			
 
-	
 	def stop(self, params):
 		import subprocess, signal
 		p = subprocess.Popen(['ps', 'ax'], stdout=subprocess.PIPE)
@@ -511,5 +500,7 @@ if __name__== "crawtext":
 		sys.exit()	
 	except KeyboardInterrupt:
 		sys.exit()
-
+	except Exception, e:
+		print e
+		sys.exit()
 
