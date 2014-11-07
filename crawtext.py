@@ -258,21 +258,26 @@ class Worker(object):
 			return False	
 	
 	def delete_dir(self):
+		print "delete"
 		import shutil
+		
 		directory = os.path.join(RESULT_PATH, self.project_name)
+		
 		if os.path.exists(directory):
-			print "NO we won't delete this directory now!"
-			pass
-			# shutil.rmtree(directory)
-			# print "Directory %s: %s sucessfully deleted"	%(self.name,directory)
+
+			print "We will delete this directory now!"
+			
+			shutil.rmtree(directory)
+			print "Directory %s: %s sucessfully deleted"	%(self.name,directory)
+			return True
 		else:
-			print "No directory found for crawl project %s"(self.name)
-		return False
+		 	print "No directory found for crawl project %s"(str(self.name))
+			return False
 
 	def delete_db(self):
 		db = Database(self.project_name)
 		db.drop_db()
-		print "Database %s: sucessfully deleted" %str(self.project_name)
+		print "Database %s: sucessfully deleted" %self.project_name
 		return True
 	
 	
