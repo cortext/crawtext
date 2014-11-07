@@ -27,7 +27,7 @@ from random import choice
 import datetime
 from url import Link
 from report import send_mail, generate_report
-from network import process_data
+from crawler import process_data
 
 ABSPATH = os.path.dirname(os.path.abspath(sys.argv[0]))
 RESULT_PATH = os.path.join(ABSPATH, "projects")
