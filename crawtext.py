@@ -27,7 +27,7 @@ from random import choice
 import datetime
 from url import Link
 from report import send_mail, generate_report
-from crawler import process_data
+
 
 ABSPATH = os.path.dirname(os.path.abspath(sys.argv[0]))
 RESULT_PATH = os.path.join(ABSPATH, "projects")
@@ -284,9 +284,11 @@ class Worker(object):
 		
 	def start(self, params):
 		if self.exists():
-			self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"start crawl", "status": True, "date": dt.now(), "msg": "Ok"}})
 			print "Starting project"
+			self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"start crawl", "status": True, "date": dt.now(), "msg": "Ok"}})
+			print "Config"
 			if self.config():
+				print "Crawl"
 				if self.crawl():
 					self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"finished crawl", "status": True, "date": dt.now(), "msg": "Ok"}})
 				return True
@@ -344,6 +346,17 @@ class Worker(object):
 		 		print "\t- updated"
 		except KeyError:
 			return False
+	
+	def check_depth(self):
+		try:
+			self.depth = self.task['depth']
+			print "Adding depth %d for user params" %(self.depth)
+			return False
+		except KeyError:
+			self.depth = 10
+			self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"config crawl", "status": "True", "date": dt.now(), "msg": "Setting up defaut depth to 10"}})
+			return True 
+
 	def reload_sources(self):
 		if self.check_file() is False:
 			error.append('file')
@@ -365,23 +378,26 @@ class Worker(object):
 		if self.check_query() is False:
 			return False
 		else:
+			self.check_depth()
 			print "- Verifying sources:"
 			
 			db = Database(self.project_name)
 			sources = db.use_coll("sources")
 			sources_nb = sources.count()
 			
-			if sources_nb == 0:
-				pass
 			if sources_nb == 0:			
 				self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"config crawl", "status": "False", "date": dt.now(), "msg": "No sources from db"}})	
 				print "No sources found\nHelp: You need at least one url into sources database to start crawl."
 				return False
 			else:
-				print db.show_stats()
+				try:
+					print "Maximum depth for crawl is set to %d" %(self.depth)
+				except KeyError:
+					self.depth = 10
+					
 				self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"config crawl", "status": "True", "date": dt.now(), "msg": "Ok"}})
+				print db.show_stats()
 				return True
-			
 		
 	def add_url(self, url, origin="default", depth=0, source_url = None):
 		'''Insert url into sources with its status inserted or updated'''
@@ -402,6 +418,7 @@ class Worker(object):
 	def add_bing(self, nb = 50):
 		''' Method to extract results from BING API (Limited to 5000 req/month) automatically sent to sources DB ''' 
 		import requests
+		
 		try:
 			r = requests.get(
 				'https://api.datamarket.azure.com/Bing/Search/v1/Web', 
@@ -421,6 +438,7 @@ class Worker(object):
 			print "\t- %d urls inserted" %len(new)
 			print "\t- %d urls updated" %(len(results)-len(new))
 			return True
+		
 		except requests.exceptions.HTTPError as e:
 			return False
 
@@ -449,23 +467,48 @@ class Worker(object):
 			return False
 
 	def crawl(self):
-		print "Crawl"
-		db = Database(self.project_name)
-		db.set_colls()
-		queue = [{"url":n["url"], "depth":0} for n in db.sources.find() if n["status"][-1] is True]
-		print "Crawling"
-		print "%d sources as seeds" %len(queue)
-		db.queue.insert(queue)
-		while db.queue.distinct("url") != 0:
-			for item in db.queue.find():
-				for data in process_data(item, self.query, db):
-					print len(data["outlinks"])
-					db.insert_results(data)
-					db.queue.insert(data["outlinks"])
-				db.queue.remove({"url":n})
-		db.queue.drop()
-		print "Fini!"
-		return True
+		from crawler import process_data
+		from query import Query
+		import Queue
+		from threading import Thread
+		self.query = Query(self.query)
+		self.projectdb = Database(self.project_name)
+		self.projectdb.set_colls()
+		self.queue = Queue.Queue()
+		for i in range(4):
+			t = Thread(target=crawl_worker)
+			t.daemon = True
+			t.start()
+		
+		print len(self.projectdb.sources.distinct("url"))
+		for n in self.projectdb.sources.find():
+			if n["status"][-1] is not False:
+				if n["url"] not in queue: 
+					self.queue.put((n["url"],0))
+
+	def crawl_worker(self):
+		print "Taking %s seeds froml sources db to run crawl" %str(len(self.queue))
+		while self.queue.full():
+			item = self.queue.get()
+			if item is None:
+				break
+			if item[0] > self.depth:
+				break
+
+			if item[1] in self.projectdb.results.distinct("url") and item["url"] in self.projectdb.logs.distinct("url"):
+				break
+			else:
+				ok, info = process_data(item, self.query, self.depth)
+				if ok:
+					self.projectdb.results.insert(info)
+				else:
+					self.projectdb.insert_log(item['url'], info)
+		self.queue.join()
+		self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"running crawl", "status": True, "date": date, "msg": str(e)}})
+		return
+
+
+		
 		
 			
 

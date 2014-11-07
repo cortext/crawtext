@@ -4,13 +4,13 @@
 
 #from .newspaper import Article, build
 import sys
-from query import Query
 from url import Link
+import requests
 # try:
 # from newspaper import build
 # from newspaper import Article
 #from newspaper.api import build
-#from newspaper.article import Article
+from newspaper.article import Article
         
 def fetch(url):
     log = dict()
@@ -52,43 +52,51 @@ def fetch(url):
         return (False,log)
 
     
-def parse(url, html):
-    article = Article(url)
-    if article.build(html):
-        if article.text == "":
-            log['code'] = 700
-            log['msg'] = "Text is empty"
-            return (False, log)
-        if article.is_relevant(query) is False:
-            log['code'] = 800
-            log['msg'] = "Article is not relevant"
-            return (False, log)
+def parse(url, html, query):
+    try:
+        article = Article(url)
+        if article.build(html):
+            if article.text == "":
+                log['code'] = 700
+                log['msg'] = "Text is empty"
+                return (False, log)
+            if article.is_relevant(query) is False:
+                log['code'] = 800
+                log['msg'] = "Article is not relevant"
+                return (False, log)
+            else:
+                article.fetch_outlinks()
+                links = set(article.outlinks)
+                return (True,article, links)
         else:
-            
-            links = set(article.fetch_outlinks())
-            return (True,article, links)
-    else:
-        log["msg"] = "Article Build:Error" %e
+            log["msg"] = "Article Build:Error"
+            log["code"] = 700
+            log["status"] = False
+            return (False,log)
+    except Exception as e:
+        log["msg"] = "Article Parse:Error %s" %str(e)
         log["code"] = 700
         log["status"] = False
-        return (False,log)
+        return (False, log)
 
 
 
-def export(article, links, depth):
+def export(article,depth):
     return {"url":article.url,
             "url_info":Link(article.url).json(), 
             "title": article.title, 
             "text":article.text, 
             "html":article.html, 
-            "links":[clean_outlinks(links, depth)], 
-            "outlinks": [n for n in create_outlinks(links)]
+            "links":[clean_outlinks(article.outlinks, depth)], 
+            #"outlinks": [n for n in create_outlinks(links)],
+            "tags": article.tags,
+            "keywords": article.keywords,
             }
 
 def clean_outlinks(urllist, depth):
     for n in urllist:
         l = Link(n)
-        if l.status:
+        if l.status is True:
             yield {"url":l.url, "depth":depth+1}
 
 def create_outlinks(url):
@@ -97,19 +105,14 @@ def create_outlinks(url):
         if link.status:
             yield link.json()
 
-def process_data(n, query, db):
-   
-    query = Query(query)
-    url, depth = n["url"], n["depth"]
-    if depth <= 10:
+def process_data(n, query, depth=10):
+    url, d = n["url"], n["depth"]
+    if d <= depth:
         ok, data = fetch(url)
         if ok:
-            print "fetched"
-            ok, data, links = parse(data[0], data[1])
+            ok, data = parse(data[0], data[1], query)
             if ok:
                 data = export(data, links, depth)
-                yield(data)
-            print "False"
-    
-        db.insert_log(url, data)
-    
+                yield (ok, data)
+        yield (ok,data)
+        
