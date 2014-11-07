@@ -92,6 +92,7 @@ class Link(object):
         self.set_source_url()
         self.abs_url()
         self._log = {}
+        self.status = self.is_valid()
         
     def set_source_url(self):
         if self.source_url is None:
@@ -188,8 +189,11 @@ class Link(object):
         keys = ["url", "scheme", "netloc", "path", "file_type", "tld", "extension", "depth", "source_url", "proper_url", "relative", "depth", "origin"]
         for k in keys:
             link[k] =  self.__dict__[k]
-        for k in ["status", "msg", "step", "error_code"]:
-            link[k] = [self.__dict__[k]]
+        for k in ["msg", "code"]:
+            try:
+                link[k] = [self.__dict__[k]]
+            except KeyError, AttributeError:
+                pass
         return link
 
 def remove_args(url, keep_params=(), frags=False):
@@ -481,8 +485,8 @@ def is_relative_url(url):
     netloc = urlparse(url).netloc
     if netloc is None or netloc == "":
         return True
-    #~ if urlparse(url).path == "/" or urlparse(url).path == "../":
-        #~ return True
+    if urlparse(url).path == "/" or urlparse(url).path == "../":
+        return True
     else:
         return False
 

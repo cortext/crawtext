@@ -107,12 +107,6 @@ class Article(object):
         self.links = []
         self.outlinks = []
         self.inlinks = []
-
-    
-
-        
-    
-            
     
     def build(self):
         """
@@ -124,12 +118,16 @@ class Article(object):
         #     self.download()
         # except LinkException:
         #     raise LinkException(self.url, log)
-            
-        if self.parse():
-            print self.title
-            return True
-        else:
-            return False
+        try:    
+            if self.parse():
+                print "parsed"
+                return True
+            else:
+                print "error"
+                return False
+        except Exception, e:
+            print str(e)
+
 
     
     def parse(self):
@@ -526,7 +524,7 @@ class Article(object):
             #if outlink["status"] is True:    
             #    outlinks.append(outlink["url"])
         self.outlinks = list(set(outlinks))
-
+        return self.outlinks
     def set_inlinks(self, links):
         inlinks = []
         for url in links:

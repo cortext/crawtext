@@ -11,21 +11,19 @@ import copy
 import os
 import glob
 
-from . import images
-from . import network
-from . import nlp
+#from . import network
+#from . import nlp
 from . import settings
 from . import urls
-
 from .cleaners import DocumentCleaner
 from .configuration import Configuration
 from .extractors import ContentExtractor
 from .outputformatters import OutputFormatter
 from .utils import (URLHelper, encodeValue, RawHelper, extend_config,
                     get_available_languages)
-from .videos.extractors import VideoExtractor
+#from .videos.extractors import VideoExtractor
 
-log = logging.getLogger(__name__)
+#log = logging.getLogger(__name__)
 
 
 class ArticleException(Exception):
@@ -47,8 +45,8 @@ class Article(object):
         if source_url == u'':
             source_url = urls.get_scheme(url) + '://' + urls.get_domain(url)
 
-        if source_url is None or source_url == '':
-            raise ArticleException('input url bad format')
+        # if source_url is None or source_url == '':
+        #     raise ArticleException('input url bad format')
 
         # URL to the main page of the news source which owns this article
         self.source_url = encodeValue(source_url)
@@ -144,7 +142,14 @@ class Article(object):
         #self.download()
         self.html = html
         self.is_downloaded = True
-        return self.parse()
+        try:
+            if self.parse():
+                return True
+            else:
+                return False
+        except Exception as e:
+            print "Warning! %s" %str(e)
+            return False
         # try:
         #     self.nlp()
         # except Exception:
@@ -212,26 +217,31 @@ class Article(object):
         self.doc = document_cleaner.clean(self.doc)
 
         text = u''
-        self.top_node = self.extractor.calculate_best_node(self.doc)
-        if self.top_node is not None:
-            video_extractor = VideoExtractor(self.config, self.top_node)
-            self.set_movies(video_extractor.get_videos())
+        try:
+            self.top_node = self.extractor.calculate_best_node(self.doc)
+            
+            if self.top_node is not None:
+                # video_extractor = VideoExtractor(self.config, self.top_node)
+                # self.set_movies(video_extractor.get_videos())
 
-            self.top_node = self.extractor.post_cleanup(self.top_node)
-            self.clean_top_node = copy.deepcopy(self.top_node)
+                self.top_node = self.extractor.post_cleanup(self.top_node)
+                self.clean_top_node = copy.deepcopy(self.top_node)
 
-            text, article_html = output_formatter.get_formatted(
-                self.top_node)
-            self.set_article_html(article_html)
-            self.set_text(text)
+                text, article_html = output_formatter.get_formatted(
+                    self.top_node)
+                self.set_article_html(article_html)
+                self.set_text(text)
+                self.fetch_outlinks()
+            # if self.config.fetch_images:
+            #     self.fetch_images()
 
-        if self.config.fetch_images:
-            self.fetch_images()
+                self.is_parsed = True
+                self.release_resources()
+                return self.is_parsed
+        except Exception as e:
+            print "Warning! Parse: %e" %str(e)
+            return False
 
-        self.is_parsed = True
-        self.release_resources()
-        return self.is_parsed
-    
     def fetch_outlinks(self):
         self.outlinks = self.extractor.get_urls(self.doc)
         return self
