@@ -68,7 +68,8 @@ def parse(url, html, query):
                 log['msg'] = "Article is not relevant"
                 return (False, log)
             else:
-                setattr(article, "outlinks", article.fetch_outlinks())
+                #here outlinks should be builtin
+                # setattr(article, "outlinks", article.fetch_outlinks())
                 setattr(article, "links", list(set([n for n in clean_links(article.outlinks)])))
                 return (True,article)
         else:
