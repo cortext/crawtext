@@ -171,18 +171,17 @@ def run(project_db, queue, query, max_depth):
         ok, data = process_data(queue, url,depth, query, max_depth)
         if ok:
             if data["url"] not in project_db.results.distinct("url"):
-                print "inserting", data["url"]
                 project_db.results.insert(data)
                 for n in data["next_links"]:
                     #print "Next round", n
                     queue.put(n)
         else:
             try:
+                project_db.insert_log(url,data)
                 print "log error", data["url"], data["msg"]
             except KeyError:
-                print data
                 pass
-            project_db.insert_log(url,data)
+            
         
         
     queue.join()
