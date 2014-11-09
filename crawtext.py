@@ -289,12 +289,8 @@ class Worker(object):
 			print "Config"
 			if self.config():
 				print "Crawl"
-				if self.crawl():
-					self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"finished crawl", "status": True, "date": dt.now(), "msg": "Ok"}})
-				return True
-			else:
-				return
-		
+				return self.crawl()
+
 		else:
 			print "No crawl job %s found" %self.name
 			return False
@@ -349,12 +345,12 @@ class Worker(object):
 	
 	def check_depth(self):
 		try:
-			self.depth = self.task['depth']
-			print "Adding depth %d for user params" %(self.depth)
+			self.max_depth = self.task['max_depth']
+			print "Adding depth %d for user params" %(self.max_depth)
 			return False
 		except KeyError:
-			self.depth = 10
-			self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"config crawl", "status": "True", "date": dt.now(), "msg": "Setting up defaut depth to 10"}})
+			self.max_depth = 10
+			self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"config crawl", "status": "True", "date": dt.now(), "msg": "Setting up defaut max_depth to 10"}})
 			return True 
 
 	def reload_sources(self):
@@ -380,7 +376,6 @@ class Worker(object):
 		else:
 			self.check_depth()
 			print "- Verifying sources:"
-			
 			db = Database(self.project_name)
 			sources = db.use_coll("sources")
 			sources_nb = sources.count()
@@ -390,11 +385,6 @@ class Worker(object):
 				print "No sources found\nHelp: You need at least one url into sources database to start crawl."
 				return False
 			else:
-				try:
-					print "Maximum depth for crawl is set to %d" %(self.depth)
-				except KeyError:
-					self.depth = 10
-					
 				self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"config crawl", "status": "True", "date": dt.now(), "msg": "Ok"}})
 				print db.show_stats()
 				return True
@@ -465,27 +455,24 @@ class Worker(object):
 		 	print "\t crawtext.py %s add --file =\"%s\"" %(self.name, self.file)
 			print "Debug: %s" %str(e)
 			return False
-
-	def crawl(self):
-		from crawler import process_data
-		from query import Query
-		import Queue
-		from threading import Thread
-		self.query = Query(self.query)
-		self.projectdb = Database(self.project_name)
-		self.projectdb.set_colls()
-		self.queue = Queue.Queue()
-		for i in range(4):
-			t = Thread(target=crawl_worker)
-			t.daemon = True
-			t.start()
-		
-		print len(self.projectdb.sources.distinct("url"))
-		for n in self.projectdb.sources.find():
+	'''
+	def put_to_seeds(self, project_db, queue):
+		print "Putting", len(self.projectdb.sources.distinct("url")), "urls"
+		for n in project_db.sources.find():
 			if n["status"][-1] is not False:
 				if n["url"] not in queue: 
-					self.queue.put((n["url"],0))
-
+					queue.put((n["url"],0))
+	'''
+	def crawl(self):
+		from crawler import crawl
+		from query import Query
+		query = Query(self.query)
+		project_db = Database(self.project_name)
+		project_db.set_colls()
+		if crawl(project_db, query, self.max_depth):
+			self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"running crawl", "status": True, "date": date, "msg": "Ok"}})
+		return
+	'''
 	def crawl_worker(self):
 		print "Taking %s seeds froml sources db to run crawl" %str(len(self.queue))
 		while self.queue.full():
@@ -506,11 +493,7 @@ class Worker(object):
 		self.queue.join()
 		self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"running crawl", "status": True, "date": date, "msg": str(e)}})
 		return
-
-
-		
-		
-			
+	'''
 
 	def stop(self, params):
 		import subprocess, signal
