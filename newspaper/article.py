@@ -23,7 +23,11 @@ from .utils import (URLHelper, encodeValue, RawHelper, extend_config,
                     get_available_languages)
 #from .videos.extractors import VideoExtractor
 
+<<<<<<< HEAD
 #log = logging.getLogger(__name__)
+=======
+# log = logging.getLogger(__name__)
+>>>>>>> thread
 
 
 class ArticleException(Exception):
@@ -180,8 +184,8 @@ class Article(object):
         title = self.extractor.get_title(self.clean_doc)
         self.set_title(title)
 
-        authors = self.extractor.get_authors(self.clean_doc)
-        self.set_authors(authors)
+        # authors = self.extractor.get_authors(self.clean_doc)
+        # self.set_authors(authors)
 
         meta_lang = self.extractor.get_meta_lang(self.clean_doc)
         self.set_meta_language(meta_lang)
@@ -190,12 +194,12 @@ class Article(object):
             self.extractor.update_language(self.meta_lang)
             output_formatter.update_language(self.meta_lang)
 
-        meta_favicon = self.extractor.get_favicon(self.clean_doc)
-        self.set_meta_favicon(meta_favicon)
+        # meta_favicon = self.extractor.get_favicon(self.clean_doc)
+        # self.set_meta_favicon(meta_favicon)
 
-        meta_description = \
-            self.extractor.get_meta_description(self.clean_doc)
-        self.set_meta_description(meta_description)
+        # meta_description = \
+        #     self.extractor.get_meta_description(self.clean_doc)
+        # self.set_meta_description(meta_description)
 
         canonical_link = self.extractor.get_canonical_link(
             self.url, self.clean_doc)
@@ -204,9 +208,9 @@ class Article(object):
         tags = self.extractor.extract_tags(self.clean_doc)
         self.set_tags(tags)
 
-        meta_keywords = self.extractor.get_meta_keywords(
-            self.clean_doc)
-        self.set_meta_keywords(meta_keywords)
+        # meta_keywords = self.extractor.get_meta_keywords(
+        #     self.clean_doc)
+        # self.set_meta_keywords(meta_keywords)
 
         meta_data = self.extractor.get_meta_data(self.clean_doc)
         self.set_meta_data(meta_data)
@@ -217,6 +221,7 @@ class Article(object):
         self.doc = document_cleaner.clean(self.doc)
 
         text = u''
+<<<<<<< HEAD
         try:
             self.top_node = self.extractor.calculate_best_node(self.doc)
             
@@ -242,9 +247,31 @@ class Article(object):
             print "Warning! Parse: %e" %str(e)
             return False
 
+=======
+        self.top_node = self.extractor.calculate_best_node(self.doc)
+        if self.top_node is not None:
+            # video_extractor = VideoExtractor(self.config, self.top_node)
+            # self.set_movies(video_extractor.get_videos())
+
+            self.top_node = self.extractor.post_cleanup(self.top_node)
+            self.clean_top_node = copy.deepcopy(self.top_node)
+
+            text, article_html = output_formatter.get_formatted(
+                self.top_node)
+            self.set_article_html(article_html)
+            self.set_text(text)
+
+        # if self.config.fetch_images:
+        #     self.fetch_images()
+        self.outlinks = self.extractor.get_urls(self.doc)
+        self.is_parsed = True
+        self.release_resources()
+        return self.is_parsed
+    
+>>>>>>> thread
     def fetch_outlinks(self):
         self.outlinks = self.extractor.get_urls(self.doc)
-        return self
+        return self.outlinks
 
     def fetch_images(self):
         if self.clean_doc is not None:
@@ -286,30 +313,30 @@ class Article(object):
         sentcount = self.text.split('.')
 
         if meta_type == 'article' and wordcount > (self.config.MIN_WORD_COUNT):
-            log.debug('%s verified for article and wc' % self.url)
+            # #log.debug('%s verified for article and wc' % self.url)
             return True
 
         if not self.is_media_news() and not self.text:
-            log.debug('%s caught for no media no text' % self.url)
+            #log.debug('%s caught for no media no text' % self.url)
             return False
 
         if self.title is None or len(self.title.split(' ')) < 2:
-            log.debug('%s caught for bad title' % self.url)
+            #log.debug('%s caught for bad title' % self.url)
             return False
 
         if len(wordcount) < self.config.MIN_WORD_COUNT:
-            log.debug('%s caught for word cnt' % self.url)
+            #log.debug('%s caught for word cnt' % self.url)
             return False
 
         if len(sentcount) < self.config.MIN_SENT_COUNT:
-            log.debug('%s caught for sent cnt' % self.url)
+            #log.debug('%s caught for sent cnt' % self.url)
             return False
 
         if self.html is None or self.html == u'':
-            log.debug('%s caught for no html' % self.url)
+            #log.debug('%s caught for no html' % self.url)
             return False
 
-        log.debug('%s verified for default true' % self.url)
+        
         return True
 
     def is_media_news(self):
@@ -383,7 +410,8 @@ class Article(object):
             s = images.Scraper(self)
             self.set_top_img_no_ckeck(s.largest_image_url())
         except Exception, e:
-            log.critical('jpeg error with PIL, %s' % e)
+            pass
+            #log.critical('jpeg error with PIL, %s' % e)
 
     def set_title(self, title):
         if self.title and not title:
@@ -501,4 +529,13 @@ class Article(object):
     def is_relevant(self, query):
         indexed = {"title":unicode(self.title), "content": unicode(self.text)}
         return query.match(indexed)
-            
+    
+    def json(self):
+        result = {}
+        values = ['title', 'date', 'depth','outlinks', 'inlinks', 'source_url']
+        for k,v in self.__dict__.items():
+            if k in values and v is not None:
+                if type(v) == set:
+                    v = list(v)
+                result[k] = v
+        return result
