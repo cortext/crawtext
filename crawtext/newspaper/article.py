@@ -311,7 +311,8 @@ class Article(object):
             self.release_resources()
             return True
 
-    def parse(self, query):    
+    def parse(self, query):
+
         if self.is_relevant(query):
             self.outlinks = self.clean_outlinks()
             self.links = [n["url"] for n in self.outlinks ]
@@ -483,7 +484,12 @@ class Article(object):
             self.article_html = encodeValue(article_html)
 
     def is_relevant(self,query):
-        self.relevant = query.match({"title":unicode(self.title), "content": unicode(self.text)})
+        if query.exact_matching:
+            print query.query
+            print query.rematch({"content": self.text})
+            return
+            
+        self.relevant = query.match({"title":self.title, "content": self.text})
         return self.relevant
         #return query.match(indexed)
     

@@ -468,6 +468,9 @@ class Worker(object):
 			return False
 		from query import Query
 		self.create_dir()
+		
+		
+		
 		q = Query(self.query, self.directory)
 		
 		while self.project_db.queue.count() > 0:
@@ -476,9 +479,12 @@ class Worker(object):
 					if item['url'] not in self.project_db.logs.distinct('url'):
 						a = Article(item["url"], item["depth"], item["source_url"])
 						if a.fetch():
+							if DEBUG: print "fetch"
 							try:
 								if a.extract():
+									if DEBUG: print "extract", a.text
 									try:
+										print self.query
 										if a.parse(q):
 											if DEBUG: print a.url, "relevant"
 											
@@ -491,13 +497,14 @@ class Worker(object):
 											continue
 										else:
 											if DEBUG: print a.url, "not relevant", a.log()
-											self.project_db.insert_log(a.log())
+											self.project_db.logs.insert(a.log())
 											self.project_db.queue.remove(item)
 											continue
 									except Exception as e:
-										if DEBUG: print a.log()
+										if DEBUG: print "try parsing", a.log()
+
 										a.msg = "Error parsing: %s" %str(e)
-										self.project_db.insert(a.log())
+										self.project_db.logs.insert(a.log())
 										self.project_db.queue.remove(item)
 										continue
 								else:
@@ -513,30 +520,21 @@ class Worker(object):
 							self.project_db.insert_log(a.log())
 							self.project_db.queue.remove(item)
 							continue
-				
-				
+
 					if self.project_db.queue.count() == 0:
 			 			break
-			
-			# print "end of queue"
-
-			# if self.project_db.queue.count() == 0:
-			# 	print "break"
-			# 	break
-
-		return self.stop({})
+			if self.project_db.queue.count() == 0:
+			 			break
+		return True
 
 	def put_to_seeds(self):
 
 		for n in self.project_db.sources.find():
 			# if n["status"][-1] is True:
-			print "putting", n["url"]
-			if n["url"] not in self.project_db.queue.distinct("url"):
-				print "not in queue"
-				if n["url"] not in self.logs:
-					print "not in log"
-					self.project_db.queue.insert({"url":n['url'], "depth": 0, "source_url":None, "origin":n["origin"]})
-
+			if n["url"] not in self.project_db.queue.distinct("url") and n["url"] not in self.logs and n["url"] not in self.results:
+				print "putting", n["url"]		
+				self.project_db.queue.insert({"url":n['url'], "depth": 0, "source_url":None, "origin":n["origin"]})
+				
 			#n["hash"] = hashlib.md5(n["url"]).hexdigest(), time.time()
 			# if n["url"] not in self.project_db.queue.distinct("url") and n["url"] not in self.logs and n["url"] not in self.results:
 				# 	self.project_db.queue.insert({"url":n['url'], "depth": 0, "source_url":None, "origin":n["origin"]})
