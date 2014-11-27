@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 __name__ = "crawtext"
-__version__ = "3.1.0b1"
+__version__ = "4.2.0b1"
 __doc__ = '''Crawtext.
 Description:
 A simple crawler in command line.
