@@ -1,78 +1,306 @@
-![eminux](icon_small.png)
-![http://www.cortext.net](http://www.cortext.net/IMG/siteon0.png?1300195437)
+
+![http://www.cortext.net](http://www.cortext.net/IMG/siteon0.png)
 
 
-Eminux
+Crawtext
 ===============================================
-Eminux is an independant prooject developpedalong to the **Cortext manager** plateform.
+Crawtext is a project of the Cortext Lab. It is independant from the **Cortext manager** plateform but deisgned to interact with it.
 Get a free account and discover the tools you can use for your own research by registering at
 ![Cortext](http://manager.cortext.net/)
 
-**Eminux** is a tiny crawler in commandline that let you investigate and collect the ressources of the web that match the special keywords 
+**Crawtext** is a tiny crawler in command line that let you investigate and collect the ressources of the web that match the special keywords. Usefull for archiving the web around a special theme, results could also be used with the cortext manager to explore the relationships between websites on a special topic.
 
-How does a crawler work?
+
+Basic Principle
 ---------
+Crawtext  is a tiny crawler that goes from page to page colecting relevant article given a few keywords
 
 The crawler needs:
 * a **query** to select pertinent pages 
 and 
-* **seeds** i.e urls to start collecting data. 
+* **starting urls** to collect data 
 
 Given a list of url
-1. the robot will collect the article  for each url
+1. the robot will collect the article for each url
 2. It will search for the keywords inside the text extracted from the article. 
-=> If the keywords are present in the page 
+=> If the keywords are present in the page it stores the content of the page and
 3. The links inside the page will be added to the next lists to be treated
-
-
 
 
 Installation
 ------------
+- First, you *must* have MongoDB installed:
 
-
-To install crawtext, it is recommended to create a virtual env:
-	
+* For Debian distribution
 ```
-$ mkvirtualenv crawtext
-$ workon crawtext
+	$ sudo apt-get install mongodb
 ```
-
-Then clone the repository:
-
-```
-$ git clone git@github.com:cortext/crawtextV2.git
-$ cd crawtextV2
-```
-
-
-Then you can automatically install all the dependencies using pip 
-(all dependencies are available throught pip)
-	
-```
-$ pip install -r dependencies.txt
-```
-
-
-
-You *must* have MongoDB installed:
-
-To install it
-* For Debian distribution install it from distribution adding to /etc/sources.list
-
-```
-$ deb http://downloads-distro.mongodb.org/repo/debian-sysvinit dist 10gen
-$ sudo apt-get install mongodb-10gen
-```
-
 
 * For OSX distribution install it with brew:
 
 ```
 $ brew install mongodb
 ```
+- Then create a virtualenvironnement (recommended)
+```
+	$mkvirtualenv crawtext_env
+	(crawtext_env)$
+```	
 
+- Clone the sources files with git and enter in it
+```
+	(crawtext_env)$ git clone https://github.com/cortext/crawtext
+	(crawtext_env)$ cd crawtext
+```
+
+- Install requirements throught pip
+```
+	(crawtext_env)$pip install -r requirements.pip
+```
+That's all folk you know have a complete crawler working!
+
+Getting started
+====
+
+1. Enter in the project directory
+```
+	$cd crawtext
+```
+2. Create a new project
+
+A project need to be configure with 3 basic requirements:
+* a name: 
+the name of your project
+```
+e.g: pesticides
+```
+* a query: search query or expression that have to be found in web pages.
+The query expression supports simple logical operator : (AND, OR, NOT) and semantic operator: ("", *)
+```
+e.g: pesticides AND DDT
+```
+* one or multiple url to start crawl:
+You have three options to add starting urls to your project:
+	** specifiying one url
+	** giving a text file where urls are stored line by line
+```
+e.g: examples/seeds.txt
+```
+** 50 urls given by the search result in BING search engine
+providing the acess key to Bing Search API:
+
+See how to get your ![BING API key](https://datamarket.azure.com/dataset/bing/search)
+```
+e.g: XVDVYU53456FDZ
+```
+
+Here as an example: it create a new project called pesticides with the 50 urls given by BING results search
+
+```
+	$ python crawtext.py pesticides --query="pesticides AND ddt" --key=XVDVYU53456
+```
+Once the script has check the starting urls a few informations on the project will be displayed.
+
+If everything is ok, lauch the crawl:
+```
+	$ python crawtext.py pesticides start
+```
+
+Monitoring the project
+====
+See how is your crawl going using the report option:
+
+```
+$python crawtext.py pesticides report
+
+```
+Report will be stored in the dedicated file of your project
+```
+$cd projects/pesticides/report
+```
+
+If you prefere to receive and email add your email to project configuration:
+
+```
+$python crawtext.py pesticides add --user=me@mailbox.net
+$python crawtext.py pesticides report
+```
+
+Exporting results
+====
+Export the results of crawl
+
+```
+$python crawtext.py pesticides export
+
+```
+Results, logs and sources will be stored in the dedicated file of your project
+
+```
+$cd projects/pesticides
+
+```
+Defaut export format is json. 
+If you want an export in csv :
+
+```
+$python crawtext.py pesticides export --format=csv
+
+```
+Managing the project (advanced)
+====
+Crawtext gives you some facilities to modify delete add more parameters
+
+- **Add** or **modify** parameters:
+You can add or change the following parameters:
+	- user (--user=)
+	- file (--file=)
+	- url (--url=)
+	- query (--query=)
+	- key (--key=)
+	- depth (--depth=)
+	- format (--format=)
+
+using the following syntax:
+```
+$python crawtext.py add --user="new_mail@mailbox.com"
+$python crawtext.py add --depth=10
+
+```
+
+- **Remove** parameters: 
+You can remove the following parameters:
+	- user (-u)
+	- file (-f)
+	- url (--url=http://example.com)
+	- query (-q)
+	- key (-k)
+	- depth (-d)
 	
+using the following syntax:
+```
+$python crawtext.py delete -u
+$python crawtext.py delete -d
+
+```
+- **Stop** the crawl:
+
+You can stop the current process of crawl
+```
+$python crawtext.py pesticides stop
+```
+Next run will start from where it stops
+
+- **Delete**:
+You can delete the entire project. Every single datasets will be destroyed so be carefull!
+```
+$python crawtext.py pesticides delete
+
+```
+Outputs
+===
+Datasets are stored in json and zip in 3 collections in the dedicated directory of your project:
+* results
+* sources
+* logs
+
+```
+Anatomy of a source entry
+-----
+Sources of your project correspond a datatable that can export in json or csv
+informations that are stored are the following:
+Date msg and status are updated for each run of the crawl with the corresponding status msg
+
+
+{	
+	"_id" : ObjectId("546dc48edabe6e52c2e54908"),
+	"date" : [
+		ISODate("2014-11-20T11:38:06.397Z"),
+		ISODate("2014-11-20T11:38:06.424Z")
+	],
+	"depth" : 2,
+	"extension" : "org",
+	"file_type" : null,
+	"msg" : [
+		"Ok",
+		"Ok"
+	],
+	"netloc" : "fr.wikipedia.org",
+	"origin" : "bing",
+	"path" : "/wiki/Algue_verte",
+	"relative" : true,
+	"scheme" : "http",
+	"source_url" : "http://fr.wikipedia.org",
+	"status" : [
+		true,
+		true
+	],
+	"tld" : "wikipedia",
+	"url" : "http://fr.wikipedia.org/wiki/Algue_verte"
+	}
+
+
+Anatomy of a result entry
+-----
+			{
+			 "url":http://fr.wikipedia.org/wiki/Algue_verte,
+             "url_info":{ 	"origin" : "", 
+                 				"status" : [ true ], 
+                 				"extension" : "org", 
+                 				"url" : "http://en.wikipedia.org/wiki/Algue_verte", 
+                 				"netloc" : "en.wikipedia.org", 
+                 				"source_url" : "http://en.wikipedia.org", 
+                 				"relative" : false, 
+                 				"file_type" : null, 
+                 				"depth" : 2, 
+                 				"tld" : "wikipedia", 
+                 				"date" : [ { "$date" : 1416293382397 } ], 
+                 				"path" : "/wiki/Responsible_Research_and_Innovation", 
+                 				"scheme" : "http", 
+                 				"msg" : [ "Ok" ] }, 
+                 "title": "Algues vertes", 
+                 "text":"",
+                 "html":"",
+                 "links":[http://www.dmu.ac.uk/study/study.aspx", "http://www.dmu.ac.uk/research", "http://www.dmu.ac.uk/international/en/international.aspx", "http://www.dmu.ac.uk/business-services/business-services.aspx", "http://www.dmu.ac.uk/about-dmu/about-dmu.aspx", "#", "/study/undergraduate-study/undergraduate-study.aspx", "/study/postgraduate-study/postgraduate-study.aspx", "/information-for-parents/information-for-parents.aspx", "/information-for-teachers/information-for-teachers.aspx", "/dmu-students/dmu-students.aspx", "/alumni", "/dmu-staff/dmu-staff.aspx", "/international/en/before-you-apply-to-study-at-dmu/your-country/country-information.aspx", "/business-services/access-our-students-and-graduates/access-our-students-and-graduates.aspx", "/about-dmu/news/contact-details.aspx", "/study/undergraduate-study/student-support/advice-and-guidance-for-mature-students/advice-and-guidance-for-mature-students.aspx", "http://www.dmuglobal.com/", "/about-dmu/events/events.aspx"],
+                 }
+
+Anatomy of a logs entry
+-----
+{
+	"_id" : ObjectId("546dc72cdabe6e53c004a603"),
+	"url" : "http://france3-regions.francetvinfo.fr/bretagne/algues-vertes",
+	"status" : false,
+	"code" : 500,
+	"msg" : "Requests Error: HTTPConnectionPool(host='france3-regions.francetvinfo.fr', port=80): Read timed out. (read timeout=5)"
+}
+```
+Integration to the Cortext manager
+====
+1. Zip the json file you want to analyse
+2. Upload it into Cortext Manager
+3. Parse it throught using JSON scrip
+4. Then Parse the result using cortext script
+==> You have now a useful dataset for running script on cortext
+Ex: Build a map of crossn references:
+1. Select the final dataset
+2. Select map
+3. Choose url and links
+You will have a pdf that maps the relationship
+
+Next features:
+===
+- Automatic zip at export
+- Export of raw html and text
+- Put max_depth has a user option (default: 10)
+- Enable more than 50 results search from BING API
+- Enable Google Search option
+- Simple web interface
+
+
+Sources
+====
+
+You can see the code ![here] (https://github.com/cortext/crawtext)
 
 
 Getting help
@@ -87,329 +315,8 @@ python crawtext.py --help
 ```
 
 
-You can also ask for pull request here http://github.com/cortext/crawtextV2/, 
+You can also ask for pull request here http://github.com/cortext/crawtext/, 
 we will be happy to answer to any configuration problem or desired features.
-
-
-Getting started
-======
-
-Crawl job 
------
-* Create a new project:	
-	
-```
-python crawtext.py pesticides
-```
-
-
-* Add a query:
-```
-python crawtext.py pesticides -q "pesticides AND DDT"
-```
-(Query support AND OR NOT * ? " operators)
-	
-* Add new seeds by using the search engine option:
-
-
-```
-python crawtext.py pesticides -k set "YOUR API KEY"
-```
-
-See how to get your ![BING API key](https://datamarket.azure.com/dataset/bing/search)
-More option are available to add urls see Advanced  parameters for crawl
-
-
-* Launch the crawl:
-	
-``` 
-python crawtext.py pesticides start
-```
-
-The crawl is limited to 20.000 results	
-* See how it's running:
-
-``` 
-python crawtetx.py pesticides report
-```
-
-
-* Export results:
-	
-in json file
-``` 
-python crawtext.py pesticides export
-```
- 
-If you want a csv:
-
-```
-python crawtext.py pesticides export -f csv
-```
-
-Results and report are stored in /pesticides/	
-
-
-Advanced usage 
-====
-A project is define by its name, the results are stored in a mongo database with this given name.
-
-A project is a set of jobs:
-for example:
-
-* Project "pesticides" is composed of a crawl, a report, and an export
-
-* Project "www.lemonde.fr" is composed of an archive and a report
-
-**You have 2 main jobs type:**
-
-- **Crawl**:
-
-Crawl the web with a given query and a set of seeds
-
-- **Archive**:
-
-Crawl the entire website given an url
-
-**And 3 optionnal jobs, as facilities to manage the main jobs:**
-
-- **Export**:
-
-Export in json/csv format results, sources and logs of the project. Datasets are stored in result/name_of_your_project
-
-- **Report**:
-
-Give stats on the current process and results stored in the database. Reports are stored in report/name_of_your_project
-
-- **Delete**:
-
-Delete the entire project. An export is automatically done when the project is deleted.
- 
- 
-Manage a projet
-====
-
-*  Consult un project : 			
-
-``` 
-crawtext.py pesticides
-```
-
-
-*  Consult an archive :			
-
-```
-crawtext.py http://www.lemonde.fr
-```
-
-
-*  Consult your projects :		
-	
-```
-crawtext.py vous@cortext.net
-```
-
-	
-*  Get  a report : 				
-
-``` 
-crawtext.py report pesticides
-```
-
-
-*  Get an export : 				
-
-``` 
-crawtext.py export pesticides
-```
-
-
-*  Delete a projet : 				
-
-``` 
-crawtext.py delete pesticides
-```
-
-	
-*  Run a project :
-
-``` 
-crawtext.py start pesticides
-```
-
-
-*  Stop the current execution of a project :				
-
-``` 
-crawtext.py stop pesticides
-```
-
-
-*  Repeat the project :
-
-``` 
-crawtext.py pesticides -r (year|month|week|day)
-```
-
-
-*  Define user of the project :	
-
-```
-crawtext pesticides -u vous@cortext.net
-```
-
-
-
-Advanced  parameters for crawl
-====
-
-A crawl needs 2 parameters to be active:
-- a **query**
-- one or several **seeds** (urls to start the crawl)
-
-There are several ways to add seeds: 
-- manually (add), 
-- by configuring file or key for next run (set), 
-- by collecting it and add it immediately (file or key) to sources (append)
-
-
-* Query
-----
-
-To define a query: (Query supports AND OR NOT * ? operators)
-
-```
-crawtext pesticides pesticides -q "pesticide? AND DDT"```
-
-
-
-* Sources
-----
-* define sources from file :					
-
-```
-crawtext.py pesticides -s set sources.txt```
-	
-
-
-* add sources from file :						
-	
-```
-crawtext.py pesticides -s append sources.txt```
-
-
-
-* add sources from url : 						
-	
-```
-crawtext.py pesticides -s add http://www.latribune.fr```
-
-
-* define sources from Bing search results :		
-	
-```
-crawtext.py pesticides -k set 12237675647```
-
-
-
-* add sources from Bing search results :		
-	
-```
-crawtext.py pesticides -k append 12237675647```
-
-
-
-* expand sources set with previous results :	
-	
-```
-crawtext.py pesticides -s expand```
-
-
-
-* delete a seed :								
-	
-```
-crawtext.py pesticides -s delete http://www.latribune.fr```
-
-
-
-* delete every seeds of the job:
-
-```
-crawtext.py pesticides -s delete```
-
-
-
-Archive parameters (Not implemented yet):
-----
-
-An archive job need an url, you can also specify the format extraction (optionnal)
-
-* consult or create a new archive project : 	
-
-```
-crawtext.py www.lemonde.fr```
-
-
-* create an archive for wiki : 
-
-```
-crawtext.py archive fr.wikipedia.org -f wiki```
-
-
-Results
-====
-
-The results are stored in a mongo database called by the name of your project
-You can export results using export option:
-
-```
-python crawtext.py pesticides export```
-
-
-Datasets are stored in json and zip in 3 collections in special directory ''results'':
-* results
-* sources
-* logs
-
-Crawtext provide a simple method to export it:
-
-```
-python crawtext.py pesticides export```
-
-	
-And also options for format and collections
-
-The complete structure of the datasets can be found in 
-- sources_example.json
-- results_example.json
-- logs_example.json
-
-
-Bug report
------
-* 1 outlinks empty [DONE]
-* 2 expand mode error [DONE]
-
-Features
------
-* Define recursion depth
-
-Next steps
-------
-* Run job in backround
-* Send a mail after execution
-* Build a web interface
-* Activate Archive mode to crawl a entire website
-* YAML integration
-
-Sources
-------
-
-You can see the code ![here] (https://github.com/c24b/crawtextV2)
-
-- Special thanks to Xavier Grangier and his module ![python-goose](https://github.com/grangier/python-goose) forked for automatical article detection.
-
 
 
 
@@ -441,3 +348,6 @@ If it doesn't work it means the index is corrupted so you have to repair it:
 ```
 sudo mongod --repair```
 
+* Article detection: 
+we use the implementation of newspaper based on Goose
+special thanks to them
