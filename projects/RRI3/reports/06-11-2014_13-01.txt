@@ -1,9 +1,0 @@
-
-======PROJECT PARAMS======
-project_name: RRI3
-name: RRI3
-depth: 10
-directory: /home/c24b/projets/crawtext_kiss/projects/RRI3
-key: J8zQNrEwAJ2u3VcMykpouyPf4nvA6Wre1019v/dIT0o
-query: responsible research and innovation
-type: crawl

@@ -9,7 +9,7 @@ A simple crawler in command line.
 
 Usage:
 	crawtext.py (<name>)
-	crawtext.py (<name>) (--query=<query>) (--key=<key> |--file=<file> [--nb=<nb>] |--url=<url>) [--user=<email>] [--r=<repeat>] [--depth=<depth>]
+	crawtext.py (<name>) (--query=<query>) (--key=<key> |--file=<file> [--nb=<nb>] |--url=<url>) [--mode=(hard|soft)] [--user=<email>] [--r=<repeat>] [--depth=<depth>]
 	crawtext.py <name> add [--url=<url>] [--file=<file>] [--key=<key>] [--user=<email>] [--r=<repeat>] [--option=<expand>] [--depth=<depth>] [--nb=<nb>]
 	crawtext.py <name> delete [-q] [-k] [-f] [--url=<url>] [-u] [-r] [-d]
 	crawtext.py (<name>) report [-email] [--user=<email>] [--r=<repeat>]
@@ -67,6 +67,8 @@ class Worker(object):
 			else:
 				return self.create(params)
 		else:
+			if DEBUG is True:
+				print "dispatch", action, params
 			job = getattr(self, str(action))
 			return job(params)
 				
@@ -85,7 +87,7 @@ class Worker(object):
 		return p
 
 	def clean_options(self, options):
-		opt = {"-q":"query","-k":"key","-f":"file","-u":"user","-r":"repeat", "--url":"url", "-d":"depth"}
+		opt = {"-q":"query","-k":"key","-f":"file","-u":"user","-r":"repeat", "--url":"url", "-d":"depth", "--mode": "mode"}
 		for k,v in options.items():
 			if k in opt.keys():
 				del options[k]
@@ -137,7 +139,6 @@ class Worker(object):
 						self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"report: mail", "status":False, "date": dt.now(), "msg": "User email unset, unable to send mail"}})
 						
 				if generate_report(self.task, db):
-					print "Generated new report into ./projects/%s/report" %(self.name)
 					self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"report: document", "status": True, "date": dt.now(), "msg": "Ok"}})
 					return True
 				else:
@@ -168,6 +169,7 @@ class Worker(object):
 		return self.directory
 
 	def create(self, params):
+
 		if self.exists():
 			print "Crawl project %s already exists:" %self.name
 		else:
@@ -285,14 +287,17 @@ class Worker(object):
 		return True
 			
 	def start(self, params):
+
 		if self.exists():
 			print "Starting project"
 			self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"start crawl", "status": True, "date": dt.now(), "msg": "Ok"}})
 			print "Config"
 			if self.config() is False:
 				self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"config crawl", "status": False, "date": dt.now(), "msg": "Ok"}})
+				return
 			else:
-				if self.crawl():
+				self.check_mode()
+				if self.crawl(self.mode):
 					self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"run crawl", "status": True, "date": dt.now(), "msg": "Ok"}})
 				else:
 					self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"run crawl", "status": False, "date": dt.now(), "msg": "Ok"}})
@@ -367,7 +372,13 @@ class Worker(object):
 			print "\tpython crawtext.py %s add --file=\"seed_examples.txt\""
 			print "python crawtext.py %s add --key=\"3X4MPL3\""			
 			return False
-		
+	def check_mode(self):
+		try:
+			self.mode = self.task["mode"]	
+		except KeyError:
+			self.mode = "soft"	
+		return self.mode	
+	
 	def config(self):
 		print "Checking configuration:"
 		if self.check_query() is False:
@@ -457,7 +468,7 @@ class Worker(object):
 			print "Debug: %s" %str(e)
 			return False
 
-	def crawl(self):
+	def crawl(self, mode):
 		from newspaper.article import Article
 		self.project_db = Database(self.project_name)
 		self.project_db.set_colls()
@@ -465,64 +476,74 @@ class Worker(object):
 		self.queue = self.project_db.queue.find()
 		self.logs = self.project_db.logs.distinct("url")
 		if self.put_to_seeds() is False:
+			if DEBUG is True:
+				print "Unable to add more sources: already treated"
 			return False
+		
 		from query import Query
 		self.create_dir()
-		
-		
-		
+
 		q = Query(self.query, self.directory)
-		
+		if DEBUG is True:
+			print "Creating woosh QUERY"
 		while self.project_db.queue.count() > 0:
+			if DEBUG is True: print self.project_db.queue.count()
 			for item in self.project_db.queue.find():
-				if item['url'] not in self.results:
-					if item['url'] not in self.project_db.logs.distinct('url'):
-						a = Article(item["url"], item["depth"], item["source_url"])
-						if a.fetch():
-							if DEBUG: print "fetch"
-							try:
-								if a.extract():
-									if DEBUG: print "extract", a.text
+				if DEBUG is True: print item
+				if item['url'] not in self.results and item['url'] not in self.logs:
+					if DEBUG is True: print "not in logs and not in results"
+					a = Article(item["url"], item["depth"], item["source_url"])
+					if DEBUG is True: print "Article loaded"
+					if a.fetch():
+						if DEBUG is True: print "fetch"
+						try:
+							if a.extract():
+								if DEBUG is True: print "extract", a.text
+								if mode == "soft":
 									try:
-										print self.query
+										if DEBUG is True: print self.query, q
 										if a.parse(q):
-											if DEBUG: print a.url, "relevant"
-											
+											if DEBUG is True: print a.url, "relevant"
 											if a.depth < self.max_depth:
 												if len(a.outlinks) > 0:
-													if DEBUG: print "Next", len(a.outlinks)
+													if DEBUG is True: print "Next", len(a.outlinks)
 													self.project_db.insert_queue(a.outlinks)
+											if DEBUG is True: print "Article", a.export()
 											self.project_db.insert_result(a.export())
 											self.project_db.queue.remove(item)
 											continue
 										else:
-											if DEBUG: print a.url, "not relevant", a.log()
+											if DEBUG is True: print a.url, "not relevant", a.log()
 											self.project_db.logs.insert(a.log())
 											self.project_db.queue.remove(item)
 											continue
 									except Exception as e:
-										if DEBUG: print "try parsing", a.log()
-
+										if DEBUG is True: 
+											print "try parsing", a.log()
 										a.msg = "Error parsing: %s" %str(e)
 										self.project_db.logs.insert(a.log())
 										self.project_db.queue.remove(item)
 										continue
 								else:
-									self.project_db.insert_log(a.log())
-									self.project_db.queue.remove(item)
-									continue
-							except Exception as e:
-								a.msg = "Error extracting: %s" %str(e)
-								self.project_db.insert(a.log())
+									
+							else:
+								self.project_db.insert_log(a.log())
 								self.project_db.queue.remove(item)
 								continue
-						else:
-							self.project_db.insert_log(a.log())
+						except Exception as e:
+							a.msg = "Error extracting: %s" %str(e)
+							self.project_db.insert(a.log())
 							self.project_db.queue.remove(item)
 							continue
+					else:
+						if DEBUG: 
+							print a.log()
+						self.project_db.insert_log(a.log())
+						self.project_db.queue.remove(item)
+						continue
 
-					if self.project_db.queue.count() == 0:
-			 			break
+				if self.project_db.queue.count() == 0:
+			 		break
 			if self.project_db.queue.count() == 0:
 			 			break
 		return True
