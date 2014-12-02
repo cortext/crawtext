@@ -525,7 +525,9 @@ class Worker(object):
 										self.project_db.queue.remove(item)
 										continue
 								else:
-									
+									self.project_db.insert_log(a.log())
+								self.project_db.queue.remove(item)
+								continue	
 							else:
 								self.project_db.insert_log(a.log())
 								self.project_db.queue.remove(item)
@@ -545,7 +547,7 @@ class Worker(object):
 				if self.project_db.queue.count() == 0:
 			 		break
 			if self.project_db.queue.count() == 0:
-			 			break
+				break
 		return True
 
 	def put_to_seeds(self):
