@@ -1,0 +1,41 @@
+
+======PROJECT PARAMS======
+project_name: RRI1
+name: RRI1
+url: http://ec.europa.eu/programmes/horizon2020/en/h2020-section/responsible-research-innovation
+depth: 10
+directory: /home/c24b/projets/crawtext/crawtext/projects/RRI1
+query: "Responsible Research and Innovation"
+type: crawl
+==== Project: Rri1 ====
+- 26/18/2014 at 16:18 -
+#Results:
+	-Total:185
+	-Unique urls:185
+#Errors:
+	-Total:0
+	-Unique:0
+#Sources:
+	-Total: 1
+-Unique: 1
+	-Valid: 1
+	-Invalid: 0
+Collected methods:
+	-From search:0
+	-From file:0
+	-Manual:1
+	-Automatic:0
+#Process:
+	-Total: 2702
+	-Unique: 2702
+	-Treated: 185
+#Other:
+	Name of the database: RRI1
+	Size of the database: 1 MB
+
+======HISTORY OF THE PROJECT======
+
+-(u'create', u'True', u'Ok', '26-11-2014 16-15-37')
+-(u'start crawl', True, u'Ok', '26-11-2014 16-15-47')
+-(u'config crawl', u'True', u'Setting up defaut max_depth to 10', '26-11-2014 16-15-47')
+-(u'config crawl', u'True', u'Ok', '26-11-2014 16-15-47')
