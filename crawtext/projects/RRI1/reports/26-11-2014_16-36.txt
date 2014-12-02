@@ -1,0 +1,62 @@
+
+======PROJECT PARAMS======
+project_name: RRI1
+name: RRI1
+url: http://ec.europa.eu/programmes/horizon2020/en/h2020-section/responsible-research-innovation
+depth: 10
+directory: /home/c24b/projets/crawtext/crawtext/projects/RRI1
+query: "Responsible Research and Innovation"
+type: crawl
+==== Project: Rri1 ====
+- 26/36/2014 at 16:36 -
+#Results:
+	-Total:334
+	-Unique urls:334
+#Errors:
+	-Total:123
+	-Unique:123
+#Sources:
+	-Total: 1
+-Unique: 1
+	-Valid: 1
+	-Invalid: 0
+Collected methods:
+	-From search:0
+	-From file:0
+	-Manual:1
+	-Automatic:0
+#Process:
+	-Total: 5019
+	-Unique: 5019
+	-Treated: 457
+#Other:
+	Name of the database: RRI1
+	Size of the database: 3 MB
+
+======HISTORY OF THE PROJECT======
+
+-(u'create', u'True', u'Ok', '26-11-2014 16-15-37')
+-(u'start crawl', True, u'Ok', '26-11-2014 16-15-47')
+-(u'config crawl', u'True', u'Setting up defaut max_depth to 10', '26-11-2014 16-15-47')
+-(u'config crawl', u'True', u'Ok', '26-11-2014 16-15-47')
+-(u'report: mail', False, u'User email unset, unable to send mail', '26-11-2014 16-18-53')
+-(u'report: document', True, u'Ok', '26-11-2014 16-18-53')
+-(u'start crawl', True, u'Ok', '26-11-2014 16-20-26')
+-(u'config crawl', u'True', u'Setting up defaut max_depth to 10', '26-11-2014 16-20-26')
+-(u'config crawl', u'True', u'Ok', '26-11-2014 16-20-26')
+-(u'start crawl', True, u'Ok', '26-11-2014 16-23-54')
+-(u'config crawl', u'True', u'Setting up defaut max_depth to 10', '26-11-2014 16-23-54')
+-(u'config crawl', u'True', u'Ok', '26-11-2014 16-23-54')
+-(u'start crawl', True, u'Ok', '26-11-2014 16-24-46')
+-(u'config crawl', u'True', u'Setting up defaut max_depth to 10', '26-11-2014 16-24-46')
+-(u'config crawl', u'True', u'Ok', '26-11-2014 16-24-46')
+-(u'report: mail', False, u'User email unset, unable to send mail', '26-11-2014 16-25-10')
+-(u'report: document', True, u'Ok', '26-11-2014 16-25-10')
+-(u'start crawl', True, u'Ok', '26-11-2014 16-26-45')
+-(u'config crawl', u'True', u'Setting up defaut max_depth to 10', '26-11-2014 16-26-45')
+-(u'config crawl', u'True', u'Ok', '26-11-2014 16-26-45')
+-(u'start crawl', True, u'Ok', '26-11-2014 16-28-44')
+-(u'config crawl', u'True', u'Setting up defaut max_depth to 10', '26-11-2014 16-28-44')
+-(u'config crawl', u'True', u'Ok', '26-11-2014 16-28-44')
+-(u'report: mail', False, u'User email unset, unable to send mail', '26-11-2014 16-29-36')
+-(u'report: document', True, u'Ok', '26-11-2014 16-29-36')
