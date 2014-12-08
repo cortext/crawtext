@@ -29,7 +29,7 @@ import datetime
 from url import Link
 from report import send_mail, generate_report
 import hashlib
-DEBUG = True
+DEBUG = False
 
 
 ABSPATH = os.path.dirname(os.path.abspath(sys.argv[0]))
