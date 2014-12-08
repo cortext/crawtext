@@ -26,7 +26,7 @@ from datetime import datetime as dt
 from database import *
 from random import choice
 import datetime
-from urls import Link
+from url import Link
 from report import send_mail, generate_report
 import hashlib
 DEBUG = True
@@ -36,11 +36,13 @@ ABSPATH = os.path.dirname(os.path.abspath(sys.argv[0]))
 RESULT_PATH = os.path.join(ABSPATH, "projects")
 
 class Worker(object):
-	def __init__(self,user_input, debug=False):
+	def __init__(self,user_input,debug=False):
 		'''Job main config'''
+		self.debug = debug
+		if self.debug:
+			print "self.debug init"
 		self.db = TaskDB()
 		self.coll = self.db.coll
-		self.debug = debug
 		self.user_input = user_input
 		self.name = self.user_input['<name>']
 		self.project_name = re.sub('[^0-9a-zA-Z]+', '_', self.name)
@@ -67,7 +69,7 @@ class Worker(object):
 			else:
 				return self.create(params)
 		else:
-			if DEBUG is True:
+			if self.debug is True:
 				print "dispatch", action, params
 			job = getattr(self, str(action))
 			return job(params)
@@ -287,7 +289,6 @@ class Worker(object):
 		return True
 			
 	def start(self, params):
-
 		if self.exists():
 			print "Starting project"
 			self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"start crawl", "status": True, "date": dt.now(), "msg": "Ok"}})
@@ -465,60 +466,63 @@ class Worker(object):
 		  	print "Please verify that your file is in the current directory."
 		 	print "To set up a correct filename and add contained urls to sources database:"
 		 	print "\t crawtext.py %s add --file =\"%s\"" %(self.name, self.file)
-			print "Debug: %s" %str(e)
+			print "self.debug: %s" %str(e)
 			return False
 
 	def crawl(self, mode):
 		from newspaper.article import Article
+
 		self.project_db = Database(self.project_name)
 		self.project_db.set_colls()
 		self.results = self.project_db.results.distinct("url")
 		self.queue = self.project_db.queue.find()
 		self.logs = self.project_db.logs.distinct("url")
 		if self.put_to_seeds() is False:
-			if DEBUG is True:
+			if self.debug:
 				print "Unable to add more sources: already treated"
 			return False
 		
 		from query import Query
 		self.create_dir()
-
 		q = Query(self.query, self.directory)
-		if DEBUG is True:
+		if self.debug:
 			print "Creating woosh QUERY"
+		if self.debug:
+			print self.project_db.queue.count()
 		while self.project_db.queue.count() > 0:
-			if DEBUG is True: print self.project_db.queue.count()
+			if self.debug: 
+				print self.project_db.queue.count()
 			for item in self.project_db.queue.find():
-				if DEBUG is True: print item
+				if self.debug is True: print item
 				if item['url'] not in self.results and item['url'] not in self.logs:
-					if DEBUG is True: print "not in logs and not in results"
+					if self.debug is True: print "not in logs and not in results"
 					a = Article(item["url"], item["depth"], item["source_url"])
-					if DEBUG is True: print "Article loaded"
+					if self.debug is True: print "Article loaded"
 					if a.fetch():
-						if DEBUG is True: print "fetch"
+						if self.debug is True: print "fetch"
 						try:
 							if a.extract():
-								if DEBUG is True: print "extract", a.text
+								if self.debug is True: print "extract", a.text
 								if mode == "soft":
 									try:
-										if DEBUG is True: print self.query, q
+										if self.debug is True: print self.query, q
 										if a.parse(q):
-											if DEBUG is True: print a.url, "relevant"
+											if self.debug is True: print a.url, "relevant"
 											if a.depth < self.max_depth:
 												if len(a.outlinks) > 0:
-													if DEBUG is True: print "Next", len(a.outlinks)
+													if self.debug is True: print "Next", len(a.outlinks)
 													self.project_db.insert_queue(a.outlinks)
-											if DEBUG is True: print "Article", a.export()
+											if self.debug is True: print "Article", a.export()
 											self.project_db.insert_result(a.export())
 											self.project_db.queue.remove(item)
 											continue
 										else:
-											if DEBUG is True: print a.url, "not relevant", a.log()
+											if self.debug is True: print a.url, "not relevant", a.log()
 											self.project_db.logs.insert(a.log())
 											self.project_db.queue.remove(item)
 											continue
 									except Exception as e:
-										if DEBUG is True: 
+										if self.debug is True: 
 											print "try parsing", a.log()
 										a.msg = "Error parsing: %s" %str(e)
 										self.project_db.logs.insert(a.log())
@@ -538,7 +542,7 @@ class Worker(object):
 							self.project_db.queue.remove(item)
 							continue
 					else:
-						if DEBUG: 
+						if self.debug: 
 							print a.log()
 						self.project_db.insert_log(a.log())
 						self.project_db.queue.remove(item)
@@ -557,7 +561,9 @@ class Worker(object):
 			if n["url"] not in self.project_db.queue.distinct("url") and n["url"] not in self.logs and n["url"] not in self.results:
 				print "putting", n["url"]		
 				self.project_db.queue.insert({"url":n['url'], "depth": 0, "source_url":None, "origin":n["origin"]})
-				
+		
+		if self.project_db.queue.count() == 0:
+			return False
 			#n["hash"] = hashlib.md5(n["url"]).hexdigest(), time.time()
 			# if n["url"] not in self.project_db.queue.distinct("url") and n["url"] not in self.logs and n["url"] not in self.results:
 				# 	self.project_db.queue.insert({"url":n['url'], "depth": 0, "source_url":None, "origin":n["origin"]})
@@ -601,7 +607,7 @@ class Worker(object):
 if __name__== "crawtext":
 	try:
 		#print docopt(__doc__)	
-		w = Worker(docopt(__doc__), debug=False)
+		w = Worker(docopt(__doc__), debug=True)
 		w.dispatch()
 		sys.exit()	
 	except KeyboardInterrupt:
