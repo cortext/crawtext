@@ -5,7 +5,7 @@ __name__ = "crawtext"
 __version__ = "4.2.0b2"
 __doc__ = '''Crawtext.
 Description:
-A simple crawler in command line.
+A simple crawler in command line for targeted websearch.
 
 Usage:
 	crawtext.py (<name>)
