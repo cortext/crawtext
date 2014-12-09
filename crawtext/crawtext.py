@@ -470,7 +470,7 @@ class Worker(object):
 			return False
 
 	def crawl(self, mode):
-		from newspaper.article import Article
+		from article import Article
 
 		self.project_db = Database(self.project_name)
 		self.project_db.set_colls()
