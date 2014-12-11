@@ -29,6 +29,7 @@ import datetime
 from url import Link
 from report import send_mail, generate_report
 import hashlib
+from article import Article
 DEBUG = False
 
 
@@ -360,15 +361,21 @@ class Worker(object):
 			return True 
 
 	def check_lang(self):
+		print "- Verifying language filter:"
 		if self.debug:
-			print "check language filter"
+			print "- Checking language filter:"
 		try:
 			self.lang = self.task['lang']
+			print "Langage filter is set to:", self.lang
+			if self.debug:
+				print "defaut filter language is  %s" %self.lang
+			return True
 		except KeyError:
-			self.lang = 'en'
-		if self.debug:
-			print "defaut filter language is  %s" %self.lang
-		return True
+			self.lang = 'default'
+			print "Langage filter is inactive"
+
+			return False
+
 	def reload_sources(self):
 		if self.check_file() is False:
 			error.append('file')
@@ -390,6 +397,8 @@ class Worker(object):
 			return False
 		else:
 			self.check_depth()
+
+			self.filter_lang = self.check_lang()
 			print "- Verifying sources:"
 			db = Database(self.project_name)
 			sources = db.use_coll("sources")
@@ -472,9 +481,37 @@ class Worker(object):
 		 	print "\t crawtext.py %s add --file =\"%s\"" %(self.name, self.file)
 			print "self.debug: %s" %str(e)
 			return False
+	def process(self, item, q):
+		if item['url'] not in self.results and item['url'] not in self.logs:
+			a = Article(item["url"], item["depth"], item["source_url"], self.debug)
+			if self.debug is True: 
+				print "-> Article loaded"
+			if a.fetch():
+				if self.debug: print "-> Article fetched"
+				if a.correct_lang(self.lang) and self.debug:
+					print "-> Article has correct language"
 
+				if a.extract():
+					# if self.debug is True: print "extract", a.text
+					
+					if self.debug is True: print self.query
+
+					if a.parse(q):
+						if self.debug is True: "-> Article relevant"
+						if a.depth < self.max_depth:
+							if len(a.outlinks) > 0:
+								if self.debug is True: print "-> Next links nb:", len(a.outlinks)
+								self.project_db.insert_queue(a.outlinks)
+						
+						self.project_db.insert_result(a.export())
+						if self.debug is True: print "-> Article extracted"
+						return True
+			self.log = a.log()
+			return False
+		else:
+			if self.debug is True: print "-> Url already treated"
+			return None
 	def crawl(self):
-		from article import Article
 		self.project_db = Database(self.project_name)
 		self.project_db.set_colls()
 		self.results = self.project_db.results.distinct("url")
@@ -491,63 +528,14 @@ class Worker(object):
 		if self.debug:
 			print "Creating woosh QUERY"
 		if self.debug:
-			print self.project_db.queue.count()
+			print "Treating", self.project_db.queue.count()
 		while self.project_db.queue.count() > 0:
 			if self.debug: 
 				print self.project_db.queue.count()
 			for item in self.project_db.queue.find():
-				if self.debug is True: print item
-				if item['url'] not in self.results and item['url'] not in self.logs:
-					if self.debug is True: print "not in logs and not in results"
-					a = Article(item["url"], item["depth"], item["source_url"], self.debug)
-					if self.debug is True: print "Article loaded"
-					if a.fetch():
-						if self.debug is True: print "fetch"
-						try:
-							if a.extract():
-								# if self.debug is True: print "extract", a.text
-								try:
-									if self.debug is True: print self.query
-									if a.parse(q):
-										if self.debug is True: print a.url, "relevant"
-										if a.depth < self.max_depth:
-											if len(a.outlinks) > 0:
-												if self.debug is True: print "Next", len(a.outlinks)
-												self.project_db.insert_queue(a.outlinks)
-										
-										self.project_db.insert_result(a.export())
-										if self.debug is True: print "Article exported"
-
-										self.project_db.queue.remove(item)
-										continue
-									else:
-										if self.debug is True: print a.url, "not relevant", a.log()
-										self.project_db.logs.insert(a.log())
-										self.project_db.queue.remove(item)
-										continue
-								except Exception as e:
-									if self.debug is True: 
-										print "try parsing", a.log()
-									a.msg = "Error parsing: %s" %str(e)
-									self.project_db.logs.insert(a.log())
-									self.project_db.queue.remove(item)
-									continue
-							else:
-								self.project_db.insert_log(a.log())
-							self.project_db.queue.remove(item)
-							continue	
-						except Exception as e:
-							a.msg = "Error extracting: %s" %str(e)
-							self.project_db.insert_log(a.log())
-							self.project_db.queue.remove(item)
-							continue
-					else:
-						if self.debug: 
-							print a.log()
-						self.project_db.insert_log(a.log())
-						self.project_db.queue.remove(item)
-						continue
-
+				if self.process(item, q) is False:
+					self.project_db.logs.insert(self.log)	
+				self.project_db.queue.remove(item)
 				if self.project_db.queue.count() == 0:
 			 		break
 			if self.project_db.queue.count() == 0:
