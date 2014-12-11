@@ -479,7 +479,11 @@ class Worker(object):
 			return False
 
 	def crawl(self, mode):
-		from article import Article
+		if mode == "hard":
+			from article import Article as Page
+		else:
+			from newspaper.article import Article as Page
+
 
 		self.project_db = Database(self.project_name)
 		self.project_db.set_colls()
@@ -505,49 +509,46 @@ class Worker(object):
 				if self.debug is True: print item
 				if item['url'] not in self.results and item['url'] not in self.logs:
 					if self.debug is True: print "not in logs and not in results"
-					a = Article(item["url"], item["depth"], item["source_url"])
+					a = Page(item["url"], item["depth"], item["source_url"], self.debug)
 					if self.debug is True: print "Article loaded"
 					if a.fetch():
 						if self.debug is True: print "fetch"
 						try:
 							if a.extract():
-								if self.debug is True: print "extract", a.text
-								if mode == "soft":
-									try:
-										if self.debug is True: print self.query, q
-										if a.parse(q):
-											if self.debug is True: print a.url, "relevant"
-											if a.depth < self.max_depth:
-												if len(a.outlinks) > 0:
-													if self.debug is True: print "Next", len(a.outlinks)
-													self.project_db.insert_queue(a.outlinks)
-											if self.debug is True: print "Article", a.export()
-											self.project_db.insert_result(a.export())
-											self.project_db.queue.remove(item)
-											continue
-										else:
-											if self.debug is True: print a.url, "not relevant", a.log()
-											self.project_db.logs.insert(a.log())
-											self.project_db.queue.remove(item)
-											continue
-									except Exception as e:
-										if self.debug is True: 
-											print "try parsing", a.log()
-										a.msg = "Error parsing: %s" %str(e)
+								# if self.debug is True: print "extract", a.text
+								try:
+									if self.debug is True: print self.query
+									if a.parse(q):
+										if self.debug is True: print a.url, "relevant"
+										if a.depth < self.max_depth:
+											if len(a.outlinks) > 0:
+												if self.debug is True: print "Next", len(a.outlinks)
+												self.project_db.insert_queue(a.outlinks)
+										
+										self.project_db.insert_result(a.export())
+										if self.debug is True: print "Article exported"
+
+										self.project_db.queue.remove(item)
+										continue
+									else:
+										if self.debug is True: print a.url, "not relevant", a.log()
 										self.project_db.logs.insert(a.log())
 										self.project_db.queue.remove(item)
 										continue
-								else:
-									self.project_db.insert_log(a.log())
-								self.project_db.queue.remove(item)
-								continue	
+								except Exception as e:
+									if self.debug is True: 
+										print "try parsing", a.log()
+									a.msg = "Error parsing: %s" %str(e)
+									self.project_db.logs.insert(a.log())
+									self.project_db.queue.remove(item)
+									continue
 							else:
 								self.project_db.insert_log(a.log())
-								self.project_db.queue.remove(item)
-								continue
+							self.project_db.queue.remove(item)
+							continue	
 						except Exception as e:
 							a.msg = "Error extracting: %s" %str(e)
-							self.project_db.insert(a.log())
+							self.project_db.insert_log(a.log())
 							self.project_db.queue.remove(item)
 							continue
 					else:
