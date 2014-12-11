@@ -10,7 +10,7 @@ A simple crawler in command line for targeted websearch.
 Usage:
 	crawtext.py (<name>)
 	crawtext.py (<name>) (--query=<query>) (--key=<key> |--file=<file> [--nb=<nb>] |--url=<url>) [--lang=<lang>] [--user=<email>] [--r=<repeat>] [--depth=<depth>]
-	crawtext.py <name> add [--url=<url>] [--file=<file>] [--key=<key>] [--user=<email>] [--r=<repeat>] [--option=<expand>] [--depth=<depth>] [--nb=<nb>]
+	crawtext.py <name> add [--url=<url>] [--file=<file>] [--key=<key>] [--user=<email>] [--r=<repeat>] [--option=<expand>] [--depth=<depth>] [--nb=<nb>] [--lang=<lang>]
 	crawtext.py <name> delete [-q] [-k] [-f] [--url=<url>] [-u] [-r] [-d]
 	crawtext.py (<name>) report [-email] [--user=<email>] [--r=<repeat>]
 	crawtext.py (<name>) export [--format=(csv|json)] [--r=<repeat>]
