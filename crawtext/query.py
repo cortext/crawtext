@@ -6,13 +6,13 @@ from whoosh.fields import *
 from whoosh.qparser import QueryParser
 from whoosh.qparser import MultifieldParser
 import os
-
+from newspaper.utils import encodeValue
 class Query(object):
 	def __init__(self, query, directory=""):
 		if directory != "":
 			dir_index = os.path.join(directory, "index")
 			if not os.path.exists(dir_index):
-				os.makedirs("index")	
+				os.makedirs(dir_index)	
 		else:
 			if not os.path.exists("index"):
 				os.makedirs("index")
@@ -24,7 +24,10 @@ class Query(object):
 		
 	def index_doc(self, doc):
 		with self.ix.writer() as writer:
-			writer.add_document(title=doc['title'], content=doc['content'])
+			try:
+				writer.add_document(title=encodeValue(doc['title']), content=encodeValue(doc['content']))
+			except KeyError:
+				writer.add_document(content=encodeValue(doc['content']))
 		return writer
 	
 	def match(self,doc):
