@@ -30,7 +30,7 @@ from url import Link
 from report import send_mail, generate_report
 import hashlib
 from article import Article
-DEBUG = False
+
 
 
 ABSPATH = os.path.dirname(os.path.abspath(sys.argv[0]))
@@ -492,68 +492,26 @@ class Worker(object):
 			print "self.debug: %s" %str(e)
 			return False
 	
-	def process(self, item, q):
-		if item['url'] not in self.results and item['url'] not in self.logs:
-			try:
+	def process(self, item_list, q):
+		for item in item_list:
+			if item['url'] not in self.results and item['url'] not in self.logs:
 				a = Article(item["url"], item["depth"], item["source_url"],self.debug)
-				if self.debug is True: 
-					print "-> Article loaded"
+				if self.debug: print "-> Article loaded"
 				if a.status:
-					try:
-						if a.fetch() and a.correct_lang(self.lang) and a.extract() and a.parse(q):
-							if self.debug: print "-> Article fetched"
-							if a.correct_lang(self.lang) and self.debug:
-								print "-> Article has correct language"
-							try:
-								if a.extract():
-									if self.debug: print "-> Article extracted"
-									try:
-										if a.parse(q):
-											if self.debug is True: "-> Article is relevant"
-											if a.depth < self.max_depth:
-												if self.debug is True: "-> Article is less profound than the max depth"
-												outlinks = [item for item in a.outlinks if item["url"] not in self.project_db.queue.distinct("url") and item["url"] not in self.results and item["url"] not in self.logs]
-												if len(outlinks) > 0:
-
-													if self.debug is True: print "-> Next links nb:", len(outlinks)
-													self.project_db.insert_queue(outlinks)
-											
-											self.project_db.insert_result(a.export())
-											if self.debug is True: print "-> Article inserted"
-											return True
-										else:
-											self.log = a.log()
-											return False
-									except Exception as e:
-										print "Extract Article error:", e
-										self.log = a.log()
-										return False		
-							except Exception as e:
-								print "Extract Article error:", e
-								self.log = a.log()			
-								return False
-						else:
-							self.log =a.log()
-							if self.debug:
-
-								print "_>", 
-							return False
-					except Exception as e:
-						print e
-						self.log = a.log()
-						return False
+					if self.debug: print "-> Url is correct"
+					if a.fetch() and a.correct_lang(self.lang) and a.extract() and a.parse(q):
+						if self.debug is True: "-> Article is relevant"
+						if a.depth < self.max_depth:
+							if self.debug is True: "-> Article is less profound than the max depth"
+							outlinks = [link for link in a.outlinks if link["url"] not in self.project_db.queue.distinct("url") and link["url"] not in self.results and link["url"] not in self.logs]
+							if len(outlinks) > 0:
+								if self.debug is True: print "-> Next links nb:", len(outlinks)
+								self.project_db.insert_queue(outlinks)							
+						yield (True, a.export(), a.url)
+					else:
+						yield (False, a.log(), a.url)
 				else:
-					if self.debug: print "-> Url is incorrect"
-					self.log = a.log()
-					print self.log
-					return False
-			except Exception as e:
-				print "Article Process Error", e
-				self.log = {"code": 300, "msg": "error loading article", "status":False}
-				return False
-		else:
-			if self.debug is True: print "-> Url already treated"
-			return None
+					yield (False, a.log(), a.url)
 	
 	def crawl(self):
 		self.project_db = Database(self.project_name)
@@ -573,17 +531,47 @@ class Worker(object):
 			print "Creating woosh QUERY"
 		if self.debug:
 			print "Treating", self.project_db.queue.count()
+		
 		while self.project_db.queue.count() > 0:
+			print "Start"
 			if self.debug: 
 				print self.project_db.queue.count()
-			for item in self.project_db.queue.find():
-				if self.process(item, q) is False:
-					self.project_db.logs.insert(self.log)	
-				self.project_db.queue.remove(item)
-				if self.project_db.queue.count() == 0:
-			 		break
+			main_process = self.process(self.project_db.queue.find(), q)
+			#print "Nb", len([n for n in main_process])
+			for n in main_process:
+				if n[0] is False:
+					self.project_db.insert_log(n[1])
+				else:
+					self.project_db.insert_result(n[1])
+				
+				self.project_db.queue.remove({"url":n[2]})
+			# self.project_db.insert_logs([n[1] for n in  main_process if n[0] is False])
+			# self.project_db.insert_results([n[1] for n in main_process if n[0] is True])
+			# print "remove url", [n for n in main_process]
+			# self.project_db.remove_queues([n[2] for n in main_process])
+			# print "queue", self.project_db.queue.count()
+			
+			# errors = [n[1] for n in processed if n is False]
+			# results = [n[1] for n in processed if n is True]
+			# for n in processed:
+				
+			# 	if n[0] is False:
+			# 		self.project_db.insert_log(n[1])
+			# 	else:
+			# 		self.project_db.insert_result(n[1])
+			# 	self.project_db.queue.remove({"url":n[2]})
 			if self.project_db.queue.count() == 0:
 				break
+				# for n in results: print n
+				# if len(errors) > 0:
+				# 	self.project_db.logs.insert(errors)
+				# if len(results) > 0:
+				# 	self.project_db.logs.insert(results)
+				# self.project_db.queue.remove(n[1].log() for n in results)
+			# 	if self.project_db.queue.count() == 0:
+			#  		break
+			# if self.project_db.queue.count() == 0:
+			# 	break
 		return True
 
 	def put_to_seeds(self):
@@ -592,7 +580,7 @@ class Worker(object):
 			# if n["status"][-1] is True:
 			if n["url"] not in self.project_db.queue.distinct("url") and n["url"] not in self.logs and n["url"] not in self.results:
 				print "putting", n["url"]		
-				self.project_db.queue.insert({"url":n['url'], "depth": 0, "source_url":None, "origin":n["origin"]})
+				self.project_db.queue.insert({"url":n['url'], "depth": 0, "source_url":None, "origin":n["origin"], "msg":[], "status":[], "code":[]})
 		
 		if self.project_db.queue.count() == 0:
 			return False
@@ -639,7 +627,7 @@ class Worker(object):
 if __name__== "crawtext":
 	try:
 		#print docopt(__doc__)	
-		w = Worker(docopt(__doc__), debug=True)
+		w = Worker(docopt(__doc__), debug=False)
 		w.dispatch()
 		sys.exit()	
 	except KeyboardInterrupt:
