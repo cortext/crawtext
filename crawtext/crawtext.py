@@ -9,7 +9,7 @@ A simple crawler in command line for targeted websearch.
 
 Usage:
 	crawtext.py (<name>)
-	crawtext.py (<name>) (--query=<query>) (--key=<key> |--file=<file> [--nb=<nb>] |--url=<url>) [--mode=(hard|soft)] [--user=<email>] [--r=<repeat>] [--depth=<depth>]
+	crawtext.py (<name>) (--query=<query>) (--key=<key> |--file=<file> [--nb=<nb>] |--url=<url>) [--mode=(hard|soft)] [--lang=<lang>] [--user=<email>] [--r=<repeat>] [--depth=<depth>]
 	crawtext.py <name> add [--url=<url>] [--file=<file>] [--key=<key>] [--user=<email>] [--r=<repeat>] [--option=<expand>] [--depth=<depth>] [--nb=<nb>]
 	crawtext.py <name> delete [-q] [-k] [-f] [--url=<url>] [-u] [-r] [-d]
 	crawtext.py (<name>) report [-email] [--user=<email>] [--r=<repeat>]
@@ -364,10 +364,20 @@ class Worker(object):
 			print "Adding depth %d for user params" %(self.max_depth)
 			return False
 		except KeyError:
-			self.max_depth = 10
-			self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"config crawl", "status": "True", "date": dt.now(), "msg": "Setting up defaut max_depth to 10"}})
+			self.max_depth = 100
+			self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"config crawl", "status": "True", "date": dt.now(), "msg": "Setting up defaut max_depth to 100"}})
 			return True 
-
+			
+	def check_lang(self):
+		if self.debug:
+			print "check language filter"
+		try:
+			self.lang = self.task['lang']
+		except KeyError:
+			self.lang = 'en'
+		if self.debug:
+			print "defaut filter language is  %s" self.lang
+		return True
 	def reload_sources(self):
 		if self.check_file() is False:
 			error.append('file')
