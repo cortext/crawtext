@@ -287,6 +287,14 @@ Ex: Build a map of crossn references:
 3. Choose url and links
 You will have a pdf that maps the relationship
 
+Update
+===
+- Raw extraction mode (--mode=hard) defaut use Goose article detection (doesn't work for blogs)
+- Extract meta keywords and metadescription in results
+- Extract meta lang
+- Optionnal filter language (defaut: en) activated by (--lang="fr")
+
+
 Next features:
 ===
 - Automatic zip at export
