@@ -500,7 +500,7 @@ class Worker(object):
 					print "-> Article loaded"
 				if a.status:
 					try:
-						if a.fetch():
+						if a.fetch() and a.correct_lang(self.lang) and a.extract() and a.parse(q):
 							if self.debug: print "-> Article fetched"
 							if a.correct_lang(self.lang) and self.debug:
 								print "-> Article has correct language"
@@ -512,9 +512,11 @@ class Worker(object):
 											if self.debug is True: "-> Article is relevant"
 											if a.depth < self.max_depth:
 												if self.debug is True: "-> Article is less profound than the max depth"
-												if len(a.outlinks) > 0:
-													if self.debug is True: print "-> Next links nb:", len(a.outlinks)
-													self.project_db.insert_queue(a.outlinks)
+												outlinks = [item for item in a.outlinks if item["url"] not in self.project_db.queue.distinct("url") and item["url"] not in self.results and item["url"] not in self.logs]
+												if len(outlinks) > 0:
+
+													if self.debug is True: print "-> Next links nb:", len(outlinks)
+													self.project_db.insert_queue(outlinks)
 											
 											self.project_db.insert_result(a.export())
 											if self.debug is True: print "-> Article inserted"
@@ -530,14 +532,21 @@ class Worker(object):
 								print "Extract Article error:", e
 								self.log = a.log()			
 								return False
+						else:
+							self.log =a.log()
+							if self.debug:
 
+								print "_>", 
+							return False
 					except Exception as e:
+						print e
 						self.log = a.log()
 						return False
 				else:
-					if self.debug: "-> Url is incorrect"
+					if self.debug: print "-> Url is incorrect"
+					self.log = a.log()
 					print self.log
-					return None
+					return False
 			except Exception as e:
 				print "Article Process Error", e
 				self.log = {"code": 300, "msg": "error loading article", "status":False}
