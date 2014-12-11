@@ -40,8 +40,9 @@ class Worker(object):
 	def __init__(self,user_input,debug=False):
 		'''Job main config'''
 		self.debug = debug
+		print debug
 		if self.debug:
-			print "self.debug init"
+			print "debug mode activated"
 		self.db = TaskDB()
 		self.coll = self.db.coll
 		self.user_input = user_input
@@ -481,36 +482,61 @@ class Worker(object):
 		 	print "\t crawtext.py %s add --file =\"%s\"" %(self.name, self.file)
 			print "self.debug: %s" %str(e)
 			return False
+	
 	def process(self, item, q):
 		if item['url'] not in self.results and item['url'] not in self.logs:
-			a = Article(item["url"], item["depth"], item["source_url"], self.debug)
-			if self.debug is True: 
-				print "-> Article loaded"
-			if a.fetch():
-				if self.debug: print "-> Article fetched"
-				if a.correct_lang(self.lang) and self.debug:
-					print "-> Article has correct language"
+			try:
+				a = Article(item["url"], item["depth"], item["source_url"],self.debug)
+				if self.debug is True: 
+					print "-> Article loaded"
+				if a.status:
+					try:
+						if a.fetch():
+							if self.debug: print "-> Article fetched"
+							if a.correct_lang(self.lang) and self.debug:
+								print "-> Article has correct language"
+							try:
+								if a.extract():
+									if self.debug: print "-> Article extracted"
+									try:
+										if a.parse(q):
+											if self.debug is True: "-> Article is relevant"
+											if a.depth < self.max_depth:
+												if self.debug is True: "-> Article is less profound than the max depth"
+												if len(a.outlinks) > 0:
+													if self.debug is True: print "-> Next links nb:", len(a.outlinks)
+													self.project_db.insert_queue(a.outlinks)
+											
+											self.project_db.insert_result(a.export())
+											if self.debug is True: print "-> Article inserted"
+											return True
+										else:
+											self.log = a.log()
+											return False
+									except Exception as e:
+										print "Extract Article error:", e
+										self.log = a.log()
+										return False		
+							except Exception as e:
+								print "Extract Article error:", e
+								self.log = a.log()			
+								return False
 
-				if a.extract():
-					# if self.debug is True: print "extract", a.text
-					
-					if self.debug is True: print self.query
-
-					if a.parse(q):
-						if self.debug is True: "-> Article relevant"
-						if a.depth < self.max_depth:
-							if len(a.outlinks) > 0:
-								if self.debug is True: print "-> Next links nb:", len(a.outlinks)
-								self.project_db.insert_queue(a.outlinks)
-						
-						self.project_db.insert_result(a.export())
-						if self.debug is True: print "-> Article extracted"
-						return True
-			self.log = a.log()
-			return False
+					except Exception as e:
+						self.log = a.log()
+						return False
+				else:
+					if self.debug: "-> Url is incorrect"
+					print self.log
+					return None
+			except Exception as e:
+				print "Article Process Error", e
+				self.log = {"code": 300, "msg": "error loading article", "status":False}
+				return False
 		else:
 			if self.debug is True: print "-> Url already treated"
 			return None
+	
 	def crawl(self):
 		self.project_db = Database(self.project_name)
 		self.project_db.set_colls()
