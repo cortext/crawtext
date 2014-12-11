@@ -14,7 +14,7 @@ import re
 from bs4 import BeautifulSoup
 import requests
 from url import Link
-from newspaper.utils import encodeValue
+from utils import encodeValue
 
 class ArticleException(Exception):
     pass
