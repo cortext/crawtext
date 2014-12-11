@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-__title__ = 'newspaper'
-__author__ = 'Lucas Ou-Yang'
+__title__ = 'crawtext'
+__author__ = 'c24b'
 __license__ = 'MIT'
-__copyright__ = 'Copyright 2014, Lucas Ou-Yang'
+__copyright__ = 'Copyright 2014-2015, c24b'
 
 import logging
 import copy
@@ -126,8 +126,15 @@ class Article(object):
         self.code = 200
         return True
 
+    def correct_lang(self,filter_lang):
+        if filter_lang is True and self.metalang is not None:
+            if self.metalang == filter_lang:
+                return True
+            else:
+                return False
+        else:
+            return True
     def parse(self, query):
-
         if self.is_relevant(query):
             self.outlinks = self.clean_outlinks()
             self.links = [n["url"] for n in self.outlinks ]
