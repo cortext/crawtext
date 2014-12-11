@@ -93,22 +93,13 @@ class Database(object):
 		# print "insert into log %s" %url
 		
 		if url in self.db.sources.distinct("url"):
-			print "is a sources"
 			exists = self.db.sources.find_one({"url":url})	
 			if exists is not None:
 				self.db.sources.update({"_id":exists["_id"]}, {"$push": log})
 		else:
 			if url not in self.db.logs.distinct("url"):	
-				print "not in log"
 				self.db.logs.insert({"url":url,"msg":[log["msg"]], "status":[log["status"]], "code": [log["code"]]})
-			else:
-				print "already in log"
-				exists = self.db.logs.find_one({"url":url})
-				if exists is not None:
-					try:
-						self.db.logs.update({"_id":exists["_id"]}, {"$push": log})
-					except Exception as e:
-						self.db.logs.insert({"url":url,"msg":[log["msg"]], "status":[log["status"]], "code": [log["code"]]})		
+			
 	
 	def insert_result(self, log):
 		if log["url"] not in self.db.results.distinct("url"):

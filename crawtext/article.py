@@ -28,6 +28,8 @@ class Article(object):
         is added into the config object
         """
         self.debug = debug
+        # if self.debug: print "Article Debug is activated"
+
         self.depth = depth
         if source_url == u'':
             source_url = urls.get_scheme(url) + '://' + urls.get_domain(url)
@@ -39,6 +41,7 @@ class Article(object):
         self.url = Link(url)
         if self.url.is_valid():
             self.url = self.url.prepare_url(self.source_url)
+            if self.debug: print ">>Treating", self.url
         else:
             self.status = False
             self.msg = self.url.msg
@@ -135,18 +138,20 @@ class Article(object):
         else:
             return True
     def parse(self, query):
-        if self.is_relevant(query):
-            self.outlinks = self.clean_outlinks()
-            self.links = [n["url"] for n in self.outlinks ]
-            
-            #self.links = self.clean_outlinks()
-            return True
-        else:
-            self.code = 800
-            self.msg = "Article Query: not relevant"
-            self.status = False
-            return False
-                
+        try:
+            print "Parsing ..."
+            if self.is_relevant(query):
+                print "Relevant"
+                self.outlinks = self.clean_outlinks()
+                return True
+            else:
+                self.code = 800
+                self.msg = "Article Query: not relevant"
+                self.status = False
+                return False
+        except Exception as e:
+            print e
+            return False        
     def export(self):
         return {
                 "url": self.url,
@@ -156,13 +161,13 @@ class Article(object):
                 "text": self.text,
                 "keywords": self.keywords,
                 "description": self.description,
-                "lang": self.lang,
+                "lang": self.metalang,
                 }
     
     
     def log(self):
         if self.debug is True:
-            print self.status, self.msg, self.code 
+            print "Log", self.status, self.msg, self.code 
         return {"url":self.url, "status": self.status, "msg": self.msg, "code": self.code}    
     
     def fetch_links(self):
@@ -171,22 +176,12 @@ class Article(object):
         return set(self.links)
 
     def clean_outlinks(self):
+        if self.debug: print "Calculate next links"
         self.fetch_links()
-        self.outlinks = []
-        for n in set(self.links):
-            if n is not None:
-                if not n.startswith("#") and n !="/" and n != self.url and n not in ["javascript"]:
-                    url = Link(n)
-                    url = url.prepare_url(self.url)
-                    self.outlinks.append({"url":url, "depth":self.depth+1, "source_url": self.url})
-            # if n != None and n != "" and  n != "/" and n != self.source_url and n != self.url and n not in links:
-            #     l = Link(n, origin="crawl", depth = self.depth+1, source_url= self.source_url)
-            #     if l.status is True:
-            #         print l.url
-            #         # self.outlinks.append({"url":l.url, "depth":l.depth, "source_url": self.source_url})
-            #         # self.links.append(l.clean_url)
+        self.outlinks= [{"url":n, "depth":self.depth+1, "source_url": self.url} for n in self.links]  
+        
         return self.outlinks
-        # return self.links
+        
     
     def is_valid_url(self):
         """Performs a check on the url of this link to determine if article
