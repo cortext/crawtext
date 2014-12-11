@@ -9,7 +9,7 @@ A simple crawler in command line for targeted websearch.
 
 Usage:
 	crawtext.py (<name>)
-	crawtext.py (<name>) (--query=<query>) (--key=<key> |--file=<file> [--nb=<nb>] |--url=<url>) [--mode=(hard|soft)] [--lang=<lang>] [--user=<email>] [--r=<repeat>] [--depth=<depth>]
+	crawtext.py (<name>) (--query=<query>) (--key=<key> |--file=<file> [--nb=<nb>] |--url=<url>) [--lang=<lang>] [--user=<email>] [--r=<repeat>] [--depth=<depth>]
 	crawtext.py <name> add [--url=<url>] [--file=<file>] [--key=<key>] [--user=<email>] [--r=<repeat>] [--option=<expand>] [--depth=<depth>] [--nb=<nb>]
 	crawtext.py <name> delete [-q] [-k] [-f] [--url=<url>] [-u] [-r] [-d]
 	crawtext.py (<name>) report [-email] [--user=<email>] [--r=<repeat>]
@@ -89,7 +89,7 @@ class Worker(object):
 		return p
 
 	def clean_options(self, options):
-		opt = {"-q":"query","-k":"key","-f":"file","-u":"user","-r":"repeat", "--url":"url", "-d":"depth", "--mode": "mode"}
+		opt = {"-q":"query","-k":"key","-f":"file","-u":"user","-r":"repeat", "--url":"url", "-d":"depth"}
 		for k,v in options.items():
 			if k in opt.keys():
 				del options[k]
@@ -297,8 +297,8 @@ class Worker(object):
 				self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"config crawl", "status": False, "date": dt.now(), "msg": "Ok"}})
 				return
 			else:
-				self.check_mode()
-				if self.crawl(self.mode):
+				
+				if self.crawl():
 					self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"run crawl", "status": True, "date": dt.now(), "msg": "Ok"}})
 				else:
 					self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"run crawl", "status": False, "date": dt.now(), "msg": "Ok"}})
@@ -383,12 +383,6 @@ class Worker(object):
 			print "\tpython crawtext.py %s add --file=\"seed_examples.txt\""
 			print "python crawtext.py %s add --key=\"3X4MPL3\""			
 			return False
-	def check_mode(self):
-		try:
-			self.mode = self.task["mode"]	
-		except KeyError:
-			self.mode = "soft"	
-		return self.mode	
 	
 	def config(self):
 		print "Checking configuration:"
@@ -479,7 +473,7 @@ class Worker(object):
 			print "self.debug: %s" %str(e)
 			return False
 
-	def crawl(self, mode):
+	def crawl(self):
 		from article import Article
 		self.project_db = Database(self.project_name)
 		self.project_db.set_colls()
