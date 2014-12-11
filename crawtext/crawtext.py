@@ -358,7 +358,7 @@ class Worker(object):
 			self.max_depth = 100
 			self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"config crawl", "status": "True", "date": dt.now(), "msg": "Setting up defaut max_depth to 100"}})
 			return True 
-			
+
 	def check_lang(self):
 		if self.debug:
 			print "check language filter"
@@ -367,7 +367,7 @@ class Worker(object):
 		except KeyError:
 			self.lang = 'en'
 		if self.debug:
-			print "defaut filter language is  %s" self.lang
+			print "defaut filter language is  %s" %self.lang
 		return True
 	def reload_sources(self):
 		if self.check_file() is False:

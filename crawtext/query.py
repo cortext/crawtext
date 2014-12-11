@@ -6,7 +6,8 @@ from whoosh.fields import *
 from whoosh.qparser import QueryParser
 from whoosh.qparser import MultifieldParser
 import os
-from newspaper.utils import encodeValue
+from utils import encodeValue
+
 class Query(object):
 	def __init__(self, query, directory=""):
 		if directory != "":
