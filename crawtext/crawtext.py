@@ -489,12 +489,7 @@ class Worker(object):
 			return False
 
 	def crawl(self, mode):
-		if mode == "hard":
-			from article import Article as Page
-		else:
-			from newspaper.article import Article as Page
-
-
+		from article import Article
 		self.project_db = Database(self.project_name)
 		self.project_db.set_colls()
 		self.results = self.project_db.results.distinct("url")
@@ -519,7 +514,7 @@ class Worker(object):
 				if self.debug is True: print item
 				if item['url'] not in self.results and item['url'] not in self.logs:
 					if self.debug is True: print "not in logs and not in results"
-					a = Page(item["url"], item["depth"], item["source_url"], self.debug)
+					a = Article(item["url"], item["depth"], item["source_url"], self.debug)
 					if self.debug is True: print "Article loaded"
 					if a.fetch():
 						if self.debug is True: print "fetch"
