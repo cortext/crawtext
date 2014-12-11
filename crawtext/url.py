@@ -20,7 +20,7 @@ from filter import Filter
 
 from w3lib.url import *
 
-from encoding import unicode_to_str
+#from utils import unicode_to_str
 
 from tldextract import tldextract
 
@@ -148,6 +148,9 @@ class Link(object):
         if self.url is None or len(self.url) < 11:
             self.msg ='Url is too short (less than 11) %s' % self.url
             return False
+        elif self.url.startswith('javascript'):
+            self.msg ='Javascript %s' % self.url
+            return False
         #invalid protocol
         if self.check_scheme() is False:
             self.msg = 'wrong protocol %s' % self.scheme
@@ -205,7 +208,7 @@ class Link(object):
 
         return urlunsplit(parsed[:3] + (filtered_query,) + frag)
 
-    def redirect_back(url, source_domain):
+    def redirect_back(self, url, source_domain):
         """
         Some sites like Pinterest have api's that cause news
         args to direct to their site with the real news url as a
@@ -237,7 +240,7 @@ class Link(object):
             if source_url is not None:
                 source_domain = urlparse(source_url).netloc
                 proper_url = urljoin(source_url, self.url)
-                proper_url = redirect_back(proper_url, source_domain)
+                proper_url = self.redirect_back(proper_url, source_domain)
                 proper_url = self.remove_args(proper_url)
             else:
                 proper_url = self.remove_args(self.url)

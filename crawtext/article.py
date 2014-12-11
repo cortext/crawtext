@@ -37,8 +37,14 @@ class Article(object):
 
         url = encodeValue(url)
         self.url = Link(url)
-        self.url = self.url.prepare_url(self.source_url)
-
+        if self.url.is_valid():
+            self.url = self.url.prepare_url(self.source_url)
+        else:
+            self.status = False
+            self.msg = self.url.msg
+            self.code = self.url.code
+            self.url = url
+            
         self.title = u''
 
         
@@ -61,38 +67,44 @@ class Article(object):
         self.links = []
 
     def fetch(self):
-        try:
-
-            # req = requests.get((self.url), headers = headers ,allow_redirects=True, proxies=None, timeout=5)
-            req = requests.get(self.url, allow_redirects=True, timeout=5)
-            req.raise_for_status()
+        if self.status:
             try:
-                self.html = req.text
-                self.msg = "Ok"
-                self.code = 200
-                self.status = True
-                if 'text/html' not in req.headers['content-type']:
-                    self.msg ="Control: Content type is not TEXT/HTML"
-                    self.code = 404
-                    self.status = False
-                    return False
-            #Error on ressource or on server
-                elif req.status_code in range(400,520):
-                    self.code = req.status_code
-                    self.msg = "Control: Request error on connexion no ressources or not able to reach server"
-                    self.status = False
-                    return False
-                else:
-                    return True
 
+                # req = requests.get((self.url), headers = headers ,allow_redirects=True, proxies=None, timeout=5)
+                req = requests.get(self.url, allow_redirects=True, timeout=5)
+                req.raise_for_status()
+                try:
+                    self.html = req.text
+                    self.msg = "Ok"
+                    self.code = 200
+                    self.status = True
+                    if 'text/html' not in req.headers['content-type']:
+                        self.msg ="Control: Content type is not TEXT/HTML"
+                        self.code = 404
+                        self.status = False
+                        return False
+                #Error on ressource or on server
+                    elif req.status_code in range(400,520):
+                        self.code = req.status_code
+                        self.msg = "Control: Request error on connexion no ressources or not able to reach server"
+                        self.status = False
+                        return False
+                    else:
+                        return True
+
+                except Exception as e:
+                    self.msg = "Requests: answer was not understood %s" %e
+                    self.code = 400
+                    self.status = False
+                    return False
             except Exception as e:
                 self.msg = "Requests: answer was not understood %s" %e
                 self.code = 400
                 self.status = False
                 return False
-        except Exception as e:
-            self.msg = "Requests: answer was not understood %s" %e
-            self.code = 400
+        else:
+            self.code = 300
+            self.msg = "Fetch: url is invalid %s" %self.url
             self.status = False
             return False
 
@@ -100,16 +112,15 @@ class Article(object):
         self.doc = BeautifulSoup(self.html)
         # self.clean_doc = copy.deepcopy(self.doc)
         self.body = self.doc.body
-        description = self.doc.find("meta", {"name":re.compile("description", re.I)}).find("content")
-        print description
-        keywords = self.doc.find("meta", {"name":re.compile("keywords", re.I)}).find("content")
-        print keywords
+        #print self.doc.findAll("meta")
+        self.description = self.doc.find("meta", {"name":re.compile("description", re.I)})['content']
+        self.keywords = re.split(",", self.doc.find("meta", {"name":re.compile("keywords", re.I)})['content'])
+        self.metalang = self.doc.find("meta", {"http-equiv":"content-language"})['content']
         self.title = (self.doc.find("title").text).encode('utf-8')
         
         # self.links = self.fetch_links()
         
         self.text = re.sub("\s\s|\n|\t", " ", (self.doc.find("body").text)).encode('utf-8')
-        print self.text[0:50]
         self.status = True
         self.msg = "Ok"
         self.code = 200
@@ -136,6 +147,9 @@ class Article(object):
                 "links": self.links,
                 "html": self.html,
                 "text": self.text,
+                "keywords": self.keywords,
+                "description": self.description,
+                "lang": self.lang,
                 }
     
     
@@ -173,7 +187,14 @@ class Article(object):
         """
         return urls.valid_url(self.url)
 
-    
+    def check_lang(self, lang):
+        if self.lang is not None:
+            if self.lang == self.metalang:
+                return True
+            else:
+                return False
+        return False
+
     def is_relevant(self,query):
         return query.match({"content": self.text})
             
