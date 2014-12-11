@@ -1,80 +1,12 @@
 # -*- coding: utf-8 -*-
-import types
+"""
+Byte string <---> unicode conversions take place
+here, pretty much anything encoding related
+"""
 import datetime
+import types
+
 from decimal import Decimal
-def unique(list_, key=lambda x: x):
-    """efficient function to uniquify a list preserving item order"""
-    seen = set()
-    result = []
-    for item in list_:
-        seenkey = key(item)
-        if seenkey in seen:
-            continue
-        seen.add(seenkey)
-        result.append(item)
-    return result
-
-
-def str_to_unicode(text, encoding=None, errors='strict'):
-    """Return the unicode representation of text in the given encoding. Unlike
-    .encode(encoding) this function can be applied directly to a unicode
-    object without the risk of double-decoding problems (which can happen if
-    you don't use the default 'ascii' encoding)
-    """
-
-    if encoding is None:
-        encoding = 'utf-8'
-    if isinstance(text, str):
-        return text.decode(encoding, errors)
-    elif isinstance(text, unicode):
-        return text
-    else:
-        raise TypeError('str_to_unicode must receive a str or unicode object, got %s' % type(text).__name__)
-
-def unicode_to_str(text, encoding=None, errors='strict'):
-    """Return the str representation of text in the given encoding. Unlike
-    .encode(encoding) this function can be applied directly to a str
-    object without the risk of double-decoding problems (which can happen if
-    you don't use the default 'ascii' encoding)
-    """
-
-    if encoding is None:
-        encoding = 'utf-8'
-    if isinstance(text, unicode):
-        return text.encode(encoding, errors)
-    elif isinstance(text, str):
-        return text
-    else:
-        raise TypeError('unicode_to_str must receive a unicode or str object, got %s' % type(text).__name__)
-
-def re_rsearch(pattern, text, chunk_size=1024):
-    """
-    This function does a reverse search in a text using a regular expression
-    given in the attribute 'pattern'.
-    Since the re module does not provide this functionality, we have to find for
-    the expression into chunks of text extracted from the end (for the sake of efficiency).
-    At first, a chunk of 'chunk_size' kilobytes is extracted from the end, and searched for
-    the pattern. If the pattern is not found, another chunk is extracted, and another
-    search is performed.
-    This process continues until a match is found, or until the whole file is read.
-    In case the pattern wasn't found, None is returned, otherwise it returns a tuple containing
-    the start position of the match, and the ending (regarding the entire text).
-    """
-    def _chunk_iter():
-        offset = len(text)
-        while True:
-            offset -= (chunk_size * 1024)
-            if offset <= 0:
-                break
-            yield (text[offset:], offset)
-        yield (text, 0)
-
-    pattern = re.compile(pattern) if isinstance(pattern, basestring) else pattern
-    for chunk, offset in _chunk_iter():
-        matches = [match for match in pattern.finditer(chunk)]
-        if matches:
-            return (offset + matches[-1].span()[0], offset + matches[-1].span()[1])
-    return None
 
 
 class DjangoUnicodeDecodeError(UnicodeDecodeError):
@@ -85,13 +17,11 @@ class DjangoUnicodeDecodeError(UnicodeDecodeError):
     def __str__(self):
         original = UnicodeDecodeError.__str__(self)
         return '%s. You passed in %r (%s)' % (original, self.obj,
-                type(self.obj))
+                                              type(self.obj))
 
 
 class StrAndUnicode(object):
-    """
-    A class whose __str__ returns its __unicode__ as a UTF-8 bytestring.
-
+    """A class whose __str__ returns its __unicode__ as a UTF-8 bytestring.
     Useful as a mix-in.
     """
     def __str__(self):
@@ -99,10 +29,8 @@ class StrAndUnicode(object):
 
 
 def smart_unicode(s, encoding='utf-8', strings_only=False, errors='strict'):
-    """
-    Returns a unicode object representing 's'. Treats bytestrings using the
+    """Returns a unicode object representing 's'. Treats bytestrings using the
     'encoding' codec.
-
     If strings_only is True, don't convert (some) non-string-like objects.
     """
     # if isinstance(s, Promise):
@@ -126,10 +54,8 @@ def is_protected_type(obj):
 
 
 def force_unicode(s, encoding='utf-8', strings_only=False, errors='strict'):
-    """
-    Similar to smart_unicode, except that lazy instances are resolved to
+    """Similar to smart_unicode, except that lazy instances are resolved to
     strings, rather than kept as lazy objects.
-
     If strings_only is True, don't convert (some) non-string-like objects.
     """
     # Handle the common case first, saves 30-40% in performance when s
@@ -156,7 +82,7 @@ def force_unicode(s, encoding='utf-8', strings_only=False, errors='strict'):
                     # approximation to what the Exception's standard str()
                     # output should be.
                     s = u' '.join([force_unicode(arg, encoding, strings_only,
-                            errors) for arg in s])
+                                   errors) for arg in s])
         elif not isinstance(s, unicode):
             # Note: We use .decode() here, instead of unicode(s, encoding,
             # errors), so that if s is a SafeString, it ends up being a
@@ -172,14 +98,12 @@ def force_unicode(s, encoding='utf-8', strings_only=False, errors='strict'):
             # further exception by individually forcing the exception args
             # to unicode.
             s = u' '.join([force_unicode(arg, encoding, strings_only,
-                    errors) for arg in s])
+                           errors) for arg in s])
     return s
 
 
 def smart_str(s, encoding='utf-8', strings_only=False, errors='strict'):
-    """
-    Returns a bytestring version of 's', encoded as specified in 'encoding'.
-
+    """Returns a bytestring version of 's', encoded as specified in 'encoding'.
     If strings_only is True, don't convert (some) non-string-like objects.
     """
     if strings_only and isinstance(s, (types.NoneType, int)):
@@ -195,7 +119,7 @@ def smart_str(s, encoding='utf-8', strings_only=False, errors='strict'):
                 # know how to print itself properly. We shouldn't raise a
                 # further exception.
                 return ' '.join([smart_str(arg, encoding, strings_only,
-                        errors) for arg in s])
+                                 errors) for arg in s])
             return unicode(s).encode(encoding, errors)
     elif isinstance(s, unicode):
         return s.encode(encoding, errors)
