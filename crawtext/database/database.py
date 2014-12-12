@@ -109,7 +109,7 @@ class Database(object):
 					return
 		else:
 			if url not in self.db.logs.distinct("url"):	
-				self.db.logs.insert({"url":url,"msg":log["msg"], "status":log["status"], "code": log["code"], "date": dt.now()})
+				self.db.logs.insert({"url":url,"msg":log["msg"], "status":log["status"], "code": log["code"], "date": datetime.now()})
 				return
 	def insert_results(self,results):
 		for log in results:
