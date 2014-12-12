@@ -82,10 +82,15 @@ class Database(object):
 		for n in self.db.logs.find():
 			print n['code'], n['msg'], n['url']
 	'''
-	
+	def insert_logs(self, log_list):
+		for log in log_list:
+			self.insert_log(self, log)
+
+
 	def insert_log(self, log):
 		print "insert log", log
 		url = log["url"]
+
 		try:
 			del log['html']
 		except KeyError:
@@ -95,21 +100,34 @@ class Database(object):
 		if url in self.db.sources.distinct("url"):
 			exists = self.db.sources.find_one({"url":url})	
 			if exists is not None:
-				self.db.sources.update({"_id":exists["_id"]}, {"$push": log})
+				del log["url"]
+				try:
+					self.db.sources.update({"_id":exists["_id"]}, {"$push": log})
+					return
+				except:
+					self.db.sources.update({"url":url}, {"$push": log})
+					return
 		else:
 			if url not in self.db.logs.distinct("url"):	
-				self.db.logs.insert({"url":url,"msg":[log["msg"]], "status":[log["status"]], "code": [log["code"]]})
-			
-	
+				self.db.logs.insert({"url":url,"msg":log["msg"], "status":log["status"], "code": log["code"], "date": dt.now()})
+				return
+	def insert_results(self,results):
+		for log in results:
+			self.insert_result(self, log)
+
 	def insert_result(self, log):
 		if log["url"] not in self.db.results.distinct("url"):
-			return self.db.results.insert(log)
-		else:
-			return self.db.results.update({"url":log["url"]}, log)
+			self.db.results.insert(log)
+			return
+
 	def insert_queue(self, log):
 		for l in log:
 			if l["url"] not in self.db.queue.distinct("url"):
 				self.db.queue.insert(l)
+	def remove_queues(self, log):
+		for l in log:
+			print l
+			self.db.queue.remove(l)
 	def sources_stats(self):
 		self.show_stats()
 		return self.template[3]

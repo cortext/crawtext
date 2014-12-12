@@ -42,32 +42,36 @@ class Article(object):
         if self.url.is_valid():
             self.url = self.url.prepare_url(self.source_url)
             if self.debug: print ">>Treating", self.url
+            self.title = u''
+            # Body text from this article
+            self.text = u''
+
+            # This article's unchanged and raw HTML
+            self.html = u''
+
+            # Flags warning users in-case they forget to download() or parse()
+            # or if they call methods out of order
+            self.is_parsed = False
+            self.is_downloaded = False
+
+            self.status = True
+            if url == None:
+                self.status = False
+            if url == "":
+                self.status = False
+            self.links = []
+            self.keywords = []
+            self.description = u''
+            self.authors = []
+            self.generator = None
+
         else:
             self.status = False
             self.msg = self.url.msg
             self.code = self.url.code
             self.url = url
             
-        self.title = u''
-
         
-        # Body text from this article
-        self.text = u''
-
-        # This article's unchanged and raw HTML
-        self.html = u''
-
-        # Flags warning users in-case they forget to download() or parse()
-        # or if they call methods out of order
-        self.is_parsed = False
-        self.is_downloaded = False
-
-        self.status = True
-        if url == None:
-            self.status = False
-        if url == "":
-            self.status = False
-        self.links = []
 
     def fetch(self):
         if self.status:
@@ -115,11 +119,17 @@ class Article(object):
         self.doc = BeautifulSoup(self.html)
         # self.clean_doc = copy.deepcopy(self.doc)
         self.body = self.doc.body
-        #print self.doc.findAll("meta")
-        self.description = self.doc.find("meta", {"name":re.compile("description", re.I)})['content']
-        self.keywords = re.split(",", self.doc.find("meta", {"name":re.compile("keywords", re.I)})['content'])
-        self.metalang = self.doc.find("meta", {"http-equiv":"content-language"})['content']
         self.title = (self.doc.find("title").text).encode('utf-8')
+        self.get_meta()
+        #print self.doc.findAll("meta")
+        # self.description = self.doc.find("meta", {"name":re.compile("description", re.I)})['content']
+        # self.keywords = re.split(",", self.doc.find("meta", {"name":re.compile("keywords", re.I)})['content'])
+        try:
+            self.metalang = self.doc.find("meta", {"http-equiv":"content-language"})['content']
+        except Exception:
+            self.metalang = None
+
+        
         
         # self.links = self.fetch_links()
         
@@ -128,6 +138,13 @@ class Article(object):
         self.msg = "Ok"
         self.code = 200
         return True
+
+    def get_meta(self):
+        self.meta = self.doc.findAll("meta")
+        self.meta = [(n["name"], n["content"]) for n in self.meta if n is not None and "content" in n and "name" in n]
+        for k,v in self.meta:
+            print k
+            setattr(self, k,v)
 
     def correct_lang(self,filter_lang):
         if filter_lang is True and self.metalang is not None:
@@ -139,9 +156,10 @@ class Article(object):
             return True
     def parse(self, query):
         try:
-            print "Parsing ..."
+            if self.debug: print "Parsing ..."
+            
             if self.is_relevant(query):
-                print "Relevant"
+                if self.debug :print "Relevant"
                 self.outlinks = self.clean_outlinks()
                 return True
             else:
@@ -173,13 +191,12 @@ class Article(object):
     def fetch_links(self):
         if self.links == []:
             self.links = [n.get('href') for n in self.doc.findAll("a")]
-        return set(self.links)
+        return list(set(self.links))
 
     def clean_outlinks(self):
         if self.debug: print "Calculate next links"
         self.fetch_links()
         self.outlinks= [{"url":n, "depth":self.depth+1, "source_url": self.url} for n in self.links]  
-        
         return self.outlinks
         
     
@@ -198,9 +215,9 @@ class Article(object):
         return False
 
     def is_relevant(self,query):
-        return query.match({"content": self.text})
-            
+        
         self.relevant = query.match({"content": self.text})
+        if self.relevant and self.debug : print query.hit
         return self.relevant
         #return query.match(indexed)
     
