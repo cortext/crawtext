@@ -31,7 +31,7 @@ from report import send_mail, generate_report
 import hashlib
 from article import Article
 from config import Config
-from multip import crawl
+from crawl import crawl
 
 ABSPATH = os.path.dirname(os.path.abspath(sys.argv[0]))
 RESULT_PATH = os.path.join(ABSPATH, "projects")
