@@ -16,7 +16,8 @@ class Config(object):
 		self.name = name
 		self.type = job_type
 		self.msg = ""
-
+		self.task = self.coll.find_one({"name":self.name, "type": self.type})
+		
 	def exists(self):	
 		self.task = self.coll.find_one({"name":self.name, "type": self.type})
 		if self.task is not None:
@@ -26,6 +27,7 @@ class Config(object):
 			return False
 
 	def setup(self):
+		print "Setup"
 		if self.exists():
 			self.project_db = Database(self.task["project_name"])
 			if self.type == "crawl":
@@ -58,27 +60,34 @@ class Config(object):
 		return self.crawl_config()
 	
 	def crawl_config(self):
+		print "=====\nCrawl configuration:"
 		if self.exists():
 			try:
+				self.project_name = self.task["project_name"]
 				self.project_db = Database(self.task["project_name"])
+				self.project_db.set_colls()
+				print "=====\nChecking configuration:"
+				if self.check_sources() is False:
+					return False
+				
+				if self.check_query() is False:
+					return False
+
+				else:
+					self.check_depth()
+					self.check_lang()	
+					self.check_directory()
+					if self.put_to_queue():
+						return True
+					else:
+						return False
 			except KeyError:
 				self.msg = "No crawl project %s found" %(self.name)
 				print self.msg
 				return False
-
-			print "=====\nChecking configuration:"
-			if self.check_sources() is False:
-				return False
-			if self.check_query() is False:
-				return False
-
-			else:
-				self.check_depth()
-				self.check_lang()	
-				self.check_directory()
-				return True
-		else:
-			return False
+		
+		return False
+	
 	def check_directory(self):
 		try:
 			self.directory = self.task['directory']
@@ -108,10 +117,22 @@ class Config(object):
 			# self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"config", "status": "False", "date": dt.now(), "msg": self.msg}})	
 			print "No sources found\nHelp: You need at least one url into sources database to start crawl."
 			return False
-		
-		# self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"config crawl", "status": "True", "date": dt.now(), "msg": "Ok"}})
-		print "\tx sources nb:", sources_nb
-		return True
+		else:
+			# self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"config crawl", "status": "True", "date": dt.now(), "msg": "Ok"}})
+			print "\tx sources nb:", sources_nb
+			return True
+
+	def put_to_queue(self):
+		print "Putting url to crawl"
+		for item in self.project_db.sources.find():
+			if item["url"] not in self.project_db.queue.distinct("url"):
+				self.project_db.queue.insert(item)
+			else:
+				pass
+		if self.project_db.queue.count() > 0:
+			return True
+		else:
+			False
 
 	def check_query(self):
 		print "- Verifying query:"
@@ -205,7 +226,7 @@ class Config(object):
 		'''Insert url into sources with its status inserted or updated'''
 		self.sources = self.project_db.use_coll("sources")
 		link = Link(url, origin, depth, source_url)
-		
+		print link.msg
 		exists = self.sources.find_one({"url": link.url})
 		if exists is not None:
 		 	print "\tx Url updated: %s \n\t\t>Status is set to %s" %(link.url, link.status)
