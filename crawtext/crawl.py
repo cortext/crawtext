@@ -1,22 +1,31 @@
 #!/usr/bin/env python2.7
+from database import Database
+from article import Article, Page
 
 def crawl(db_name, query, directory):
-    while self.db.queue.find() > 0: 
-       for item in self.db.queue.find():
-            if item["url"] not in self.db.logs.distinct("url") and item not in self.db.results.distinct("url"):
+    db = Database(db_name)
+    db.create_colls()
+    while db.queue.find() > 0:
+        for item in db.queue.find():
+            if item["url"] not in db.logs.distinct("url") and item not in db.results.distinct("url"):
+                print "item not in log or results"
                 p = Page(item["url"], item["source_url"], item["depth"],False)
-                if p.is_valid() and  p.fetch():
+                if p.is_valid() and p.fetch():
                     p = p.export()
                     a = Article(p["url"],p["html"], p["source_url"], p["depth"], False)
-                    if a.extract() and a.filter(self.query, self.directory):
-                        print "Insert", a.export()
-                        self.db.results.insert(a.export())
+                    if a.extract() and a.filter(query, directory):
+                        db.results.insert(a.export())
+                        db.queue.insert(a.get_outlinks())
                     else:
-                        self.db.insert_log(a.log())
+                        db.insert_log(a.log())
+                        db.queue.remove(item)
                 else:
-                    self.db.insert_logs(p.log())
-            self.db.queue.remove(item)
-            if self.db.queue.count() < 0:
+                    db.insert_logs(p.log())
+                    db.queue.remove(item)
+            print db.queue.count()
+            if db.queue.count() == 0:
                 break
-        if self.db.queue.count() < 0:
-                break
+        if db.queue.count() == 0:
+            break
+    return True
+        

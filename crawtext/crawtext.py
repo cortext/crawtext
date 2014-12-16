@@ -159,7 +159,6 @@ class Worker(object):
 			return False
 
 	def create_dir(self):
-		
 		self.directory = os.path.join(RESULT_PATH, self.project_name)
 		if not os.path.exists(self.directory):
 			os.makedirs(self.directory)
@@ -272,17 +271,15 @@ class Worker(object):
 			
 	def start(self, params):
 		cfg = Config(self.name, "crawl")
-		cfg.setup()
-		if cfg.crawl_config():
+		
+		if cfg.setup():
 			print "Configuration is Ok"
-			print cfg.project_name
-			print cfg.query
-			print cfg.directory
 			if crawl(cfg.project_name, cfg.query, cfg.directory):
+				self.task = cfg.task
 				return self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"crawl", "status": True, "date": dt.now(), "msg": cfg.msg}})	
+		
 			#put_to_seeds
-		else:
-			return self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"config", "status": False, "date": dt.now(), "msg": cfg.msg}})	
+		return self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"config", "status": False, "date": dt.now(), "msg": cfg.msg}})	
 			
 		
 				
