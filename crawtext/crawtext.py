@@ -31,7 +31,7 @@ from report import send_mail, generate_report
 import hashlib
 from article import Article
 from config import Config
-
+from multip import crawl
 
 ABSPATH = os.path.dirname(os.path.abspath(sys.argv[0]))
 RESULT_PATH = os.path.join(ABSPATH, "projects")
@@ -109,8 +109,7 @@ class Worker(object):
 		print "\n* Last Status"
 		print "------------"
 		print self.task["action"][-1], self.task["status"][-1],self.task["msg"][-1], dt.strftime(self.task["date"][-1], "%d/%m/%y %H:%M:%S")
-		
-		
+				
 	def report(self, params):
 		if self.exists():
 			db = Database(self.task['project_name'])
@@ -189,7 +188,6 @@ class Worker(object):
 			if config.setup():
 				print "Created a new crawl job called %s" %self.name
 				return self.show()
-
 
 	def add(self, params):
 		if self.exists():
@@ -283,10 +281,17 @@ class Worker(object):
 			
 	def start(self, params):
 		cfg = Config(self.name, "crawl")
+		cfg.setup()
 		if cfg.crawl_config():
-			print "Configuration is ok"
+			print "Configuration is Ok"
+			print cfg.project_name
+			print cfg.query
+			print cfg.directory
+			if crawl(cfg.project_name, cfg.query, cfg.directory):
+				return self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"crawl", "status": True, "date": dt.now(), "msg": cfg.msg}})	
+			#put_to_seeds
 		else:
-			self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"config", "status": False, "date": dt.now(), "msg": cfg.msg}})	
+			return self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"config", "status": False, "date": dt.now(), "msg": cfg.msg}})	
 			
 		
 				

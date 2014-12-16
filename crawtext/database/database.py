@@ -12,7 +12,8 @@ TASK_COLL = "job"
 
 class Database(object):
 	'''Database creation''' 
-	def __init__(self, database_name):		
+	def __init__(self, database_name, debug=False):
+		self.debug = debug		
 		self.client = MongoClient('mongodb://localhost,localhost:27017')
 		self.db_name = database_name
 		self.db = getattr(self.client,database_name)
@@ -88,7 +89,7 @@ class Database(object):
 
 
 	def insert_log(self, log):
-		print "insert log", log
+		if self.debug: print "insert log", log["msg"]
 		url = log["url"]
 
 		try:
@@ -117,11 +118,13 @@ class Database(object):
 
 	def insert_result(self, log):
 		if log["url"] not in self.db.results.distinct("url"):
+			if self.debug: print "insert result", results["title"]
 			self.db.results.insert(log)
 			return
 
 	def insert_queue(self, log):
 		for l in log:
+			if self.debug: print "insert queue", log["url"]
 			if l["url"] not in self.db.queue.distinct("url"):
 				self.db.queue.insert(l)
 	def remove_queues(self, log):

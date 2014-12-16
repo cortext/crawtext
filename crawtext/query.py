@@ -34,12 +34,15 @@ class Query(object):
 	def match(self,doc):
 		self.index_doc(doc)
 		with self.ix.searcher() as searcher:
-			results = searcher.search(self.query)
+			self.results = searcher.search(self.query)
 			w = self.ix.writer()
 			w.delete_document(0)
 			try: 
-				hit = results[0]
-				#print hit
+				self.hit = self.results[0]
 				return True
 			except IndexError:
+				self.hit = None
 				return False
+def is_relevant(query, directory, text):
+	q = Query(query, directory)
+	return q.match({"content": encodeValue(text)})
