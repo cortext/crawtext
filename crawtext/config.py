@@ -10,6 +10,8 @@ from database import TaskDB, Database
 #from url import Link
 from datetime import datetime as dt
 from link import Link
+
+MAX_DEPTH = 100
 class Config(object):
 	def __init__(self, name, job_type, debug=False):
 		#project database manager
@@ -70,6 +72,11 @@ class Config(object):
 		except KeyError:
 			error.append("url")
 			pass
+		try:
+			self.max_depth = self.task["max_depth"]
+		except KeyError:
+			self.max_depth = MAX_DEPTH
+		
 		if len(error) < 3:
 			return True
 		else: 
@@ -244,7 +251,7 @@ class Config(object):
 	def add_url(self, url, origin="default", depth=0, source_url = None):
 		'''Insert url into sources with its status inserted or updated'''
 		self.sources = self.project_db.use_coll("sources")
-		link = Link(url, source_url, depth,origin)
+		link = Link(url, source_url, depth, origin)
 		exists = self.sources.find_one({"url": link.url})
 		if exists is not None:
 		 	print "\tx Url updated: %s \n\t\t>Status is set to %s" %(link.url, link.status)

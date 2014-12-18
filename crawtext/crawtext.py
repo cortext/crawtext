@@ -175,7 +175,6 @@ class Worker(object):
 			params["action"] = ["create"]
 			params["directory"] = self.create_dir()
 			params["creation_date"] = dt.now()
-			params["depth"] = 10
 			params["date"] = [dt.now()]
 			params["status"] = ["True"]
 			params["msg"] = ['Ok']
@@ -183,6 +182,7 @@ class Worker(object):
 			config = Config(self.name, self.type)
 			if config.setup():
 				print "Created a new crawl job called %s" %self.name
+				self.exists()
 				return self.show()
 
 	def add(self, params):
@@ -280,7 +280,7 @@ class Worker(object):
 		cfg = Config(self.name, "crawl", self.debug)
 		if cfg.crawl_setup():
 			print "Configuration is Ok"
-			if crawl(cfg.project_name, cfg.query, cfg.directory, self.debug):
+			if crawl(cfg.project_name, cfg.query, cfg.directory, cfg.max_depth, self.debug):
 				print "Finished"
 				return self.coll.update({"_id": cfg.task['_id']}, {"$push": {"action":"crawl", "status": True, "date": dt.now(), "msg": cfg.msg}})	
 		
@@ -382,7 +382,7 @@ class Worker(object):
 if __name__== "crawtext":
 	try:
 		#print docopt(__doc__)	
-		w = Worker(docopt(__doc__), debug=True)
+		w = Worker(docopt(__doc__), debug=False)
 		w.dispatch()
 		sys.exit()	
 	except KeyboardInterrupt:
