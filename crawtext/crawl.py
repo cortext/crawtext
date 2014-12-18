@@ -6,7 +6,9 @@ from article import Article, Page
 def crawl(db_name, query, directory, max_depth, debug=False):
     db = Database(db_name)
     db.create_colls()
+
     while db.queue.find() > 0:
+        print "\nCrawling ..."
         for item in db.queue.find():
             if item is not None:
             # if debug: print "find", item
@@ -16,7 +18,7 @@ def crawl(db_name, query, directory, max_depth, debug=False):
                     p = Page(item["url"], item["source_url"], item["depth"], debug)
                     if debug: print "Page:"
                     if p.is_valid(max_depth) and p.fetch():
-                        print "\t-fetched"
+                        if debug: print "\t-fetched"
                         a = Article(p.url,p.html, p.source_url, p.depth, debug)
                         
                         if a.extract() and a.filter(query, directory):
@@ -35,7 +37,7 @@ def crawl(db_name, query, directory, max_depth, debug=False):
                             db.insert_log(a.log())
                             
                     else:
-                        print "\t-invalid"
+                        if debug: print "\t-invalid"
                         db.insert_log(p.log())
                 db.queue.remove(item)
             # if debug: print db.queue.count()
