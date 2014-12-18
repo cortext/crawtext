@@ -10,7 +10,7 @@ A simple crawler in command line for targeted websearch.
 Usage:
 	crawtext.py (<name>)
 	crawtext.py (<name>) (--query=<query>) (--key=<key> |--file=<file> [--nb=<nb>] |--url=<url>) [--lang=<lang>] [--user=<email>] [--r=<repeat>] [--depth=<depth>]
-	crawtext.py <name> add [--url=<url>] [--file=<file>] [--key=<key>] [--user=<email>] [--r=<repeat>] [--option=<expand>] [--depth=<depth>] [--nb=<nb>] [--lang=<lang>]
+	crawtext.py <name> add [--query=<query>] [--url=<url>] [--file=<file>] [--key=<key>] [--user=<email>] [--r=<repeat>] [--option=<expand>] [--depth=<depth>] [--nb=<nb>] [--lang=<lang>]
 	crawtext.py <name> delete [-q] [-k] [-f] [--url=<url>] [-u] [-r] [-d]
 	crawtext.py (<name>) report [-email] [--user=<email>] [--r=<repeat>]
 	crawtext.py (<name>) export [--format=(csv|json)] [--data=(results|sources|logs|queue)][--r=<repeat>]
@@ -97,15 +97,16 @@ class Worker(object):
 		return options
 
 	def show(self):
-		print "\n===== Project : %s =====\n" %(self.name).capitalize()
-		print "* Parameters"
-		print "------------"
-		for k, v in self.task.items():
-			if k not in ['status', 'msg', 'action', 'date', '_id']:
-				print k, ":", v 
-		print "\n* Last Status"
-		print "------------"
-		print self.task["action"][-1], self.task["status"][-1],self.task["msg"][-1], dt.strftime(self.task["date"][-1], "%d/%m/%y %H:%M:%S")
+		if self.exists():
+			print "\n===== Project : %s =====\n" %(self.name).capitalize()
+			print "* Parameters"
+			print "------------"
+			for k, v in self.task.items():
+				if k not in ['status', 'msg', 'action', 'date', '_id']:
+					print k, ":", v 
+			print "\n* Last Status"
+			print "------------"
+			print self.task["action"][-1], self.task["status"][-1],self.task["msg"][-1], dt.strftime(self.task["date"][-1], "%d/%m/%y %H:%M:%S")
 				
 	def report(self, params):
 		if self.exists():
@@ -219,17 +220,18 @@ class Worker(object):
 
 	def update_sources(self, params):
 		update = [n for n in params.keys() if n in ["file", "url", "key"]]
+		cfg = Config(self.name, "crawl", debug=False)
 		if len(update) != 0:
 			for n in update:		
 				if n == "file":
-					if self.check_file() is False:
+					if cfg.check_file() is False:
 						print "Error no url from file %s has been added to sources" %params[n]
 				elif n == "url":
-					if self.check_url() is False:
+					if cfg.check_url() is False:
 						print "Error no url has been added"
 				else:
 					self.query = self.task["query"]
-					if self.check_bing() is False:
+					if cfg.check_bing() is False:
 						print "Error no url from search result has been added"
 		return
 
