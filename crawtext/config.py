@@ -111,7 +111,6 @@ class Config(object):
 				self.msg = "No crawl project %s found" %(self.name)
 				print self.msg
 				return False
-		
 		return False
 	
 	def check_directory(self):

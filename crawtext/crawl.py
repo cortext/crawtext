@@ -24,7 +24,7 @@ def crawl(db_name, query, directory, max_depth, debug=False):
                         if a.extract() and a.filter(query, directory):
                             if debug: print "\t-is relevant"                   
                             a.get_outlinks()
-                            # if debug: print "nexts links: %d" %len(a.outlinks)
+                            if debug: print "nexts links: %d" %len(a.outlinks)
                             if len(a.outlinks) > 0:
                                 if debug: print "\t-next pages: %d" %len(a.outlinks)
                                 db.queue.insert(a.outlinks)
@@ -39,6 +39,7 @@ def crawl(db_name, query, directory, max_depth, debug=False):
                     else:
                         if debug: print "\t-invalid"
                         db.insert_log(p.log())
+                
                 db.queue.remove(item)
             # if debug: print db.queue.count()
             if db.queue.count() == 0:
