@@ -2,27 +2,43 @@
 from database import Database
 from article import Article, Page
 
-def crawl(db_name, query, directory):
+
+def crawl(db_name, query, directory, max_depth, debug="False"):
     db = Database(db_name)
     db.create_colls()
     while db.queue.find() > 0:
         for item in db.queue.find():
-            if item["url"] not in db.logs.distinct("url") and item not in db.results.distinct("url"):
-                print "item not in log or results"
-                p = Page(item["url"], item["source_url"], item["depth"],False)
-                if p.is_valid() and p.fetch():
-                    p = p.export()
-                    a = Article(p["url"],p["html"], p["source_url"], p["depth"], False)
-                    if a.extract() and a.filter(query, directory):
-                        db.results.insert(a.export())
-                        db.queue.insert(a.get_outlinks())
+            if item is not None:
+            # if debug: print "find", item
+            # if debug: print item["url"]
+                if item["url"] not in db.logs.distinct("url") and item not in db.results.distinct("url"):
+                    # if debug: print "item not in log or results"
+                    p = Page(item["url"], item["source_url"], item["depth"], False)
+                    if debug: print "Page:"
+                    if p.is_valid(max_depth) and p.fetch():
+                        print "\t-fetched"
+                        a = Article(p.url,p.html, p.source_url, p.depth, True)
+                        
+                        if a.extract() and a.filter(query, directory):
+                            if debug: print "\t-is relevant"                   
+                            a.get_outlinks()
+                            # if debug: print "nexts links: %d" %len(a.outlinks)
+                            if len(a.outlinks) > 0:
+                                if debug: print "\t-next pages: %d" %len(a.outlinks)
+                                db.queue.insert(a.outlinks)
+                            
+                            if debug: print "\t-exported"
+                            db.results.insert(a.export())
+                            
+                        else:
+                            if debug: print "\t-not relevant"                   
+                            db.insert_log(a.log())
+                            
                     else:
-                        db.insert_log(a.log())
-                        db.queue.remove(item)
-                else:
-                    db.insert_logs(p.log())
-                    db.queue.remove(item)
-            print db.queue.count()
+                        print "\t-invalid"
+                        db.insert_log(p.log())
+                db.queue.remove(item)
+            # if debug: print db.queue.count()
             if db.queue.count() == 0:
                 break
         if db.queue.count() == 0:

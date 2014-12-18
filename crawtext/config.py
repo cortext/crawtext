@@ -1,23 +1,27 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+
 '''
 Utilities for project configuration of a crawler
 '''
 import os, sys
 ABSPATH = os.path.dirname(os.path.abspath(sys.argv[0]))
 from database import TaskDB, Database
-from url import Link
+#from url import Link
 from datetime import datetime as dt
+
 class Config(object):
-	def __init__(self, name, job_type):
+	def __init__(self, name, job_type, debug):
 		#project database manager
+		self.debug = debug
 		self.db = TaskDB()
 		self.coll = self.db.coll
 		self.name = name
 		self.type = job_type
 		self.msg = ""
 		self.task = self.coll.find_one({"name":self.name, "type": self.type})
-		
+
+	
 	def exists(self):	
 		self.task = self.coll.find_one({"name":self.name, "type": self.type})
 		if self.task is not None:
@@ -27,39 +31,52 @@ class Config(object):
 			return False
 
 	def setup(self):
-		print "Setup"
+		if self.debug: print "Setup"
 		if self.exists():
+			if self.debug: print "Already exists"
 			self.project_db = Database(self.task["project_name"])
 			if self.type == "crawl":
-				return self.init_crawl()
+				if self.debug: print "Setup Crawl"
+				return self.crawl_config()
 			elif self.type == "report":
+				if self.debug: print "Setup Report"
 				return self.report_config()
 			elif self.type == "export":
+				if self.debug: print "Setup Export"
 				return self.report_config()
 			else:
 				print "Not config"
 	
-	def init_crawl(self):
+	def crawl_config(self):
 		print "=====\nAdding parameters to configuration:"
 		self.query = self.task["query"]
+		error = []
 		try:
 			self.file  = self.task["file"]
 			self.check_file()
 		except KeyError:
+			error.append("file")
 			pass
 		try:
 			self.key = self.task["key"]
 			self.check_bing()
+
 		except KeyError:
+			error.append("bing")
 			pass
 		try:
 			self.url = self.task["url"]
 			self.check_url()
 		except KeyError:
+			error.append("url")
 			pass
-		return self.crawl_config()
+		if len(error) < 3:
+			return True
+		else: 
+			print "Error configuring sources" 
+			return False
 	
-	def crawl_config(self):
+	def crawl_setup(self):
 		print "=====\nCrawl configuration:"
 		if self.exists():
 			try:
@@ -78,8 +95,10 @@ class Config(object):
 					self.check_lang()	
 					self.check_directory()
 					if self.put_to_queue():
+						if self.debug: print "Ok"
 						return True
 					else:
+
 						return False
 			except KeyError:
 				self.msg = "No crawl project %s found" %(self.name)
@@ -258,9 +277,14 @@ class Config(object):
 			
 			print "- Getting new sources from BING API Keys"
 			results =  [self.add_url(e["Url"], "bing", 0) for e in r.json()['d']['results']]
+			if self.debug: print results
 			new = [n for n in results if n is not False]
+			if self.debug: print new
 			status_t = [n for n in results if n['status'] is True]
+			if self.debug: print status_t
 			status_b = [n for n in results if n['status'] is False]
+			if self.debug: print status_b
+
 			print "\tx %d urls inserted" %len(new)
 			print "\tx %d urls updated" %(len(results)-len(new))
 			print "\t\t> %d urls with correct status" %len(status_t)
