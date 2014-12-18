@@ -210,10 +210,19 @@ class Worker(object):
 	def add(self, params):
 		if self.exists():
 			if len(params) != 0:
+				
+
 				params = self.clean_params(params)
 				action = "add: %s" %(",".join(params.keys()))
 				date = dt.now()
 				status = True
+				try:
+					self.add_url(params["url"], "manual", 0)
+					self.coll.update({"_id": self.task['_id']}, {"$push": {"action":action, "status": status, "date": date, "msg":'Ok'}})	
+					return self.show()
+				except Exception:
+					pass
+
 				try:
 					self.coll.update({"_id": self.task['_id']}, {"$set": params})
 					self.coll.update({"_id": self.task['_id']}, {"$push": {"action":action, "status": status, "date": date, "msg":'Ok'}})	
