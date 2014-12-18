@@ -31,14 +31,15 @@ class Page(object):
         self.url = url
         self.source_url = source_url
         self.html = u''
-    
+        self.status = True
+
     def is_valid(self, max_depth):
         url = Link(self.url, self.source_url, self.debug)
-        if self.depth > max_depth:
-            print "max"
+        if self.depth > max_depth :
+            if self.debug: print "depth for this page is %d and max is set to %d" %(self.depth,max_depth)
             self.step = "Validating url"
             self.code = "102"
-            self.msg = "Depth of the page is > %d" %(max_depth)
+            self.msg = "Depth of this page is > %d" %self.depth
             self.status = False
 
         if url.is_valid():
@@ -106,6 +107,7 @@ class Article(object):
         self.description = u''
         self.metalang = ""
         self.meta = None
+        self.status = True
 
     def extract(self):
         self.doc = BeautifulSoup(self.html)
@@ -116,11 +118,12 @@ class Article(object):
                 self.get_meta()
                 return True
             except Exception as ex:
-
+                self.status = False
                 self.msg = str(ex)
                 self.code = "700"
                 return False
         else:
+            self.status = False
             self.msg = "No html loaded"
             self.code = "700"
             return False

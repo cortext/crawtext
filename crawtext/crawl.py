@@ -3,7 +3,7 @@ from database import Database
 from article import Article, Page
 
 
-def crawl(db_name, query, directory, max_depth, debug="False"):
+def crawl(db_name, query, directory, max_depth, debug=False):
     db = Database(db_name)
     db.create_colls()
     while db.queue.find() > 0:
@@ -13,11 +13,11 @@ def crawl(db_name, query, directory, max_depth, debug="False"):
             # if debug: print item["url"]
                 if item["url"] not in db.logs.distinct("url") and item not in db.results.distinct("url"):
                     # if debug: print "item not in log or results"
-                    p = Page(item["url"], item["source_url"], item["depth"], False)
+                    p = Page(item["url"], item["source_url"], item["depth"], debug)
                     if debug: print "Page:"
                     if p.is_valid(max_depth) and p.fetch():
                         print "\t-fetched"
-                        a = Article(p.url,p.html, p.source_url, p.depth, True)
+                        a = Article(p.url,p.html, p.source_url, p.depth, debug)
                         
                         if a.extract() and a.filter(query, directory):
                             if debug: print "\t-is relevant"                   
