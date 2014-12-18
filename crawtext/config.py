@@ -9,9 +9,9 @@ ABSPATH = os.path.dirname(os.path.abspath(sys.argv[0]))
 from database import TaskDB, Database
 #from url import Link
 from datetime import datetime as dt
-
+from link import Link
 class Config(object):
-	def __init__(self, name, job_type, debug):
+	def __init__(self, name, job_type, debug=False):
 		#project database manager
 		self.debug = debug
 		self.db = TaskDB()
@@ -244,8 +244,7 @@ class Config(object):
 	def add_url(self, url, origin="default", depth=0, source_url = None):
 		'''Insert url into sources with its status inserted or updated'''
 		self.sources = self.project_db.use_coll("sources")
-		link = Link(url, origin, depth, source_url)
-		print link.msg
+		link = Link(url, source_url, depth,origin)
 		exists = self.sources.find_one({"url": link.url})
 		if exists is not None:
 		 	print "\tx Url updated: %s \n\t\t>Status is set to %s" %(link.url, link.status)
@@ -253,7 +252,7 @@ class Config(object):
 		 	return False
 		else:
 			print "\tx Url added: %s \n\t\t>Status is set to %s" %(link.url, link.status)
-			self.sources.insert(link.json())
+			self.sources.insert({"url":link.url, "source_url":None, "origin": origin, "depth": 0, "date":[dt.now()], "step":["Added"], "status":[link.status], "msg":["inserted"]})
 			exists = self.sources.find_one({"url": link.url})
 			if exists is not None:
 				self.sources.update({"_id":exists['_id']}, {"$push": {"date":dt.now(),"status": link.status,"step": link.step, "msg": link.msg}}, upsert=False)

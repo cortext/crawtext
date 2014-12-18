@@ -34,16 +34,16 @@ class Page(object):
     
     def is_valid(self, max_depth):
         url = Link(self.url, self.source_url, self.debug)
-        if url.is_valid():
-            self.url = url.url
-            return True
-
         if self.depth > max_depth:
+            print "max"
             self.step = "Validating url"
             self.code = "102"
             self.msg = "Depth of the page is > %d" %(max_depth)
             self.status = False
 
+        if url.is_valid():
+            self.url = url.url
+            return True
         else:
             self.msg = url.msg
             self.code = "100"
