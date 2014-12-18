@@ -37,13 +37,17 @@ ALLOWED_TYPES = ['html', 'htm', 'md', 'rst', 'aspx', 'jsp', 'rhtml', 'cgi',
 BAD_DOMAINS = ['amazon', 'doubleclick', 'twitter', 'facebook']
 
 class Link(object):
-    def __init__(self, url, source_url, debug=False):
+    def __init__(self, url, source_url, origin = "", debug=False):
         self.url = url
         self.source_url = source_url
         self.debug = debug
-    
+        self.origin = origin
+        self.status = True
+        self.step = "link created"
+        self.msg = ""
     def parse_url(self,url):
         '''complete info on url'''
+        self.step = "parse"
         parsed_url = urlparse(url)
         self.scheme = parsed_url.scheme
         self.netloc = parsed_url.netloc
@@ -67,8 +71,10 @@ class Link(object):
     def relative2abs(self):
         
         self.parse_url(self.url)
-        
-        self.source = parse_url(self.source_url)
+        if self.source_url is not None:
+            self.source = parse_url(self.source_url)
+        else:
+            self.source = parse_url(self.url)
         if self.netloc == "":
             if self.path.startswith("."):
                 self.path = re.sub(".", "", self.path)
@@ -76,36 +82,46 @@ class Link(object):
         return self
     
     def is_valid(self):
-        
+        self.step = "Valid"    
         self.relative2abs()
 
         if self.url in ["void", ";"]:
             self.msg ='Javascript %s' % self.url
+            self.status = False
             return False
 
         if self.url is None or len(self.url) < 11:
             self.msg ='Url is too short (less than 11) %s' % self.url
+            self.status = False
+            self.status = False
             return False
         elif self.url.startswith('javascript'):
             self.msg ='Javascript %s' % self.url
+            self.status = False
             return False
         #invalid protocol
         if check_scheme(self.scheme) is False:
             self.msg = 'wrong protocol %s' % self.scheme
+            self.status = False
+
             return False
         if check_path(self.path) is False:
             self.msg ='wrong path %s' % self.path
+            self.status = False
             return False
 
         if not self.path.startswith('/'):
             self.msg = 'Invalid path for url %s' % self.path
+            self.status = False
             return False
     
         if self.filetype in BAD_TYPES:
             self.msg = 'Invalid webpage type %s' % self.filetype
+            self.status = False
             return False
         if self.tld in BAD_DOMAINS:
             self.msg = 'bad domain %s' % self.tld
+            self.status = False
             return False
         return True
 
@@ -113,6 +129,7 @@ class Link(object):
         adblock = Filter(file(ABSPATH+'/ressources/easylist.txt'), is_local=True)
         if len(adblock.match(self.url)) != 0:
             self.msg = 'Adblock url'
+            self.status = False
             return False
 
         match_date = re.search(DATE_REGEX, self.url)
@@ -133,6 +150,8 @@ class Link(object):
                 return self.data
             else:
                 return None
+
+    
 
 
 
