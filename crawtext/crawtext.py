@@ -267,6 +267,7 @@ class Worker(object):
 		return True
 			
 	def start(self, params):
+		self.debug = True
 		if self.debug: print "start"
 		cfg = Config(self.name, "crawl", self.debug)
 		if cfg.crawl_setup():

@@ -216,7 +216,7 @@ class Article(object):
         return q.match({"content": encodeValue(self.text)})
     def log(self):
         if self.debug is True:
-            print "Log", self.status, self.msg, self.code 
+            print "Log sent", {"url":self.url, "status": self.status, "msg": self.msg, "code": self.code}
         return {"url":self.url, "status": self.status, "msg": self.msg, "code": self.code}    
 
     # def json(self):
