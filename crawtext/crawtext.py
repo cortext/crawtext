@@ -13,7 +13,7 @@ Usage:
 	crawtext.py <name> add [--url=<url>] [--file=<file>] [--key=<key>] [--user=<email>] [--r=<repeat>] [--option=<expand>] [--depth=<depth>] [--nb=<nb>]
 	crawtext.py <name> delete [-q] [-k] [-f] [--url=<url>] [-u] [-r] [-d]
 	crawtext.py (<name>) report [-email] [--user=<email>] [--r=<repeat>]
-	crawtext.py (<name>) export [--format=(csv|json)] [--r=<repeat>]
+	crawtext.py (<name>) export [--format=(csv|json)] [--data=(results|sources|logs|queue)][--r=<repeat>]
 	crawtext.py (<name>) start [--maxdepth=<depth>]
 	crawtext.py (<name>) stop
 	crawtext.py (<name>) toobig
