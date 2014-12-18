@@ -9,14 +9,20 @@ import os
 from utils import encodeValue
 
 class Query(object):
-	def __init__(self, query, directory=""):
+	def __init__(self, query, directory="", debug=False):
+		self.debug = debug
+		if self.debug: print "query"
 		if directory != "":
+			if self.debug: print "no directory"
 			dir_index = os.path.join(directory, "index")
 			if not os.path.exists(dir_index):
-				os.makedirs(dir_index)	
+				os.makedirs(dir_index)
+				if self.debug: print "dir created"
 		else:
+			if self.debug: print "no directory"
 			if not os.path.exists("index"):
 				os.makedirs("index")
+				if self.debug: print "no directory"
 		schema = Schema(title=TEXT(stored=True), content=TEXT(stored=True))
 		self.ix = create_in("index", schema)
 		self.q = query
@@ -43,6 +49,3 @@ class Query(object):
 			except IndexError:
 				self.hit = None
 				return False
-def is_relevant(query, directory, text):
-	q = Query(query, directory)
-	return q.match({"content": encodeValue(text)})

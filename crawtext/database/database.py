@@ -41,7 +41,7 @@ class Database(object):
 		#return self.__dict__[str(coll_name)]
 		return self
 
-	def create_colls(self, coll_names=["results","sources", "log", "queue"]):
+	def create_colls(self, coll_names=["results","sources", "logs", "queue"]):
 		for n in coll_names:
 			setattr(self, n, self.db[str(n)])
 		# self.queue = self.db['queue'] 

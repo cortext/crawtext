@@ -26,7 +26,7 @@ from datetime import datetime as dt
 from database import *
 from random import choice
 import datetime
-from url import Link
+#from url import Link
 from report import send_mail, generate_report
 import hashlib
 from article import Article
@@ -40,7 +40,6 @@ class Worker(object):
 	def __init__(self,user_input,debug=False):
 		'''Job main config'''
 		self.debug = debug
-		print debug
 		if self.debug:
 			print "debug mode activated"
 		self.db = TaskDB()
@@ -49,9 +48,7 @@ class Worker(object):
 		self.name = self.user_input['<name>']
 		self.project_name = re.sub('[^0-9a-zA-Z]+', '_', self.name)
 		del self.user_input['<name>']
-		
-			
-		
+				
 	def dispatch(self):
 		params = dict()
 		action = None
@@ -279,43 +276,17 @@ class Worker(object):
 		return True
 			
 	def start(self, params):
-		cfg = Config(self.name, "crawl")
-		
-		if cfg.setup():
+		if self.debug: print "start"
+		cfg = Config(self.name, "crawl", self.debug)
+		if cfg.crawl_setup():
 			print "Configuration is Ok"
-			if crawl(cfg.project_name, cfg.query, cfg.directory):
-				self.task = cfg.task
-				return self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"crawl", "status": True, "date": dt.now(), "msg": cfg.msg}})	
+			if crawl(cfg.project_name, cfg.query, cfg.directory, self.debug):
+				print "Finished"
+				return self.coll.update({"_id": cfg.task['_id']}, {"$push": {"action":"crawl", "status": True, "date": dt.now(), "msg": cfg.msg}})	
 		
 			#put_to_seeds
 		return self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"config", "status": False, "date": dt.now(), "msg": cfg.msg}})	
-			
-		
-				
-	
-	
-	def process(self, item_list, q):
-		for item in item_list:
-			if item['url'] not in self.results and item['url'] not in self.logs:
-				a = Article(item["url"], item["depth"], item["source_url"],self.debug)
-				if self.debug: print "-> Article loaded"
-				if a.status:
-					if self.debug: print "-> Url is correct"
-					if a.fetch() and a.correct_lang(self.lang) and a.extract() and a.parse(q):
-						if self.debug is True: "-> Article is relevant"
-						if a.depth < self.max_depth:
-							if self.debug is True: "-> Article is less profound than the max depth"
-							outlinks = [link for link in a.outlinks if link["url"] not in self.project_db.queue.distinct("url") and link["url"] not in self.results and link["url"] not in self.logs]
-							if len(outlinks) > 0:
-								if self.debug is True: print "-> Next links nb:", len(outlinks)
-								self.project_db.insert_queue(outlinks)
-							yield (True, a.export(), a.url)
-				yield (False, a.log(), a.url)
-	
-	
-	
-	
-	
+
 	def stop(self, params):
 		import subprocess, signal
 		p = subprocess.Popen(['ps', 'ax'], stdout=subprocess.PIPE)
