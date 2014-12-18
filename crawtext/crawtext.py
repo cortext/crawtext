@@ -189,16 +189,15 @@ class Worker(object):
 	def add(self, params):
 		if self.exists():
 			if len(params) != 0:
-				
-
 				params = self.clean_params(params)
 				action = "add: %s" %(",".join(params.keys()))
 				date = dt.now()
 				status = True
 				try:
+					
 					self.add_url(params["url"], "manual", 0)
 					self.coll.update({"_id": self.task['_id']}, {"$push": {"action":action, "status": status, "date": date, "msg":'Ok'}})	
-					return self.show()
+					return True
 				except Exception:
 					pass
 
@@ -206,14 +205,17 @@ class Worker(object):
 					self.coll.update({"_id": self.task['_id']}, {"$set": params})
 					self.coll.update({"_id": self.task['_id']}, {"$push": {"action":action, "status": status, "date": date, "msg":'Ok'}})	
 					print "Sucessfully added parameters %s from %s crawl job" %(",".join(params.keys()), self.name)
-					self.update_sources(params)
+					# self.update_sources(params)
+					# ret
+					return True
 					
 				except Exception, e:
 					self.coll.update({"_id": self.task['_id']}, {"$push": {"action":action, "status": False, "date": date, "msg": str(e)}})	
+					return False
 			else:
 				print "Nothing to add to crawl job %s" %self.name
-				
-			return self.show()
+				return self.show()	
+			
 		else:
 			print "No crawl job %s found" %self.name
 			return False
