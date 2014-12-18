@@ -184,7 +184,6 @@ class Article(object):
         if self.is_relevant(query, directory):
             return True
         else:
-            if self.debug :print "Not relevant"
             self.code = 800
             self.msg = "Article Query: not relevant"
             self.status = False
