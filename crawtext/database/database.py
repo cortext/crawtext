@@ -12,7 +12,8 @@ TASK_COLL = "job"
 
 class Database(object):
 	'''Database creation''' 
-	def __init__(self, database_name):		
+	def __init__(self, database_name, debug=False):
+		self.debug = debug		
 		self.client = MongoClient('mongodb://localhost,localhost:27017')
 		self.db_name = database_name
 		self.db = getattr(self.client,database_name)
@@ -40,7 +41,7 @@ class Database(object):
 		#return self.__dict__[str(coll_name)]
 		return self
 
-	def create_colls(self, coll_names=["results","sources", "log", "queue"]):
+	def create_colls(self, coll_names=["results","sources", "logs", "queue"]):
 		for n in coll_names:
 			setattr(self, n, self.db[str(n)])
 		# self.queue = self.db['queue'] 
@@ -82,10 +83,15 @@ class Database(object):
 		for n in self.db.logs.find():
 			print n['code'], n['msg'], n['url']
 	'''
-	
+	def insert_logs(self, log_list):
+		for log in log_list:
+			self.insert_log(self, log)
+
+
 	def insert_log(self, log):
-		print "insert log", log
+		if self.debug: print "insert log", log["msg"]
 		url = log["url"]
+
 		try:
 			del log['html']
 		except KeyError:
@@ -93,32 +99,38 @@ class Database(object):
 		# print "insert into log %s" %url
 		
 		if url in self.db.sources.distinct("url"):
-			print "is a sources"
 			exists = self.db.sources.find_one({"url":url})	
 			if exists is not None:
-				self.db.sources.update({"_id":exists["_id"]}, {"$push": log})
+				del log["url"]
+				try:
+					self.db.sources.update({"_id":exists["_id"]}, {"$push": log})
+					return
+				except:
+					self.db.sources.update({"url":url}, {"$push": log})
+					return
 		else:
 			if url not in self.db.logs.distinct("url"):	
-				print "not in log"
-				self.db.logs.insert({"url":url,"msg":[log["msg"]], "status":[log["status"]], "code": [log["code"]]})
-			else:
-				print "already in log"
-				exists = self.db.logs.find_one({"url":url})
-				if exists is not None:
-					try:
-						self.db.logs.update({"_id":exists["_id"]}, {"$push": log})
-					except Exception as e:
-						self.db.logs.insert({"url":url,"msg":[log["msg"]], "status":[log["status"]], "code": [log["code"]]})		
-	
+				self.db.logs.insert({"url":url,"msg":log["msg"], "status":log["status"], "code": log["code"], "date": datetime.now()})
+				return
+	def insert_results(self,results):
+		for log in results:
+			self.insert_result(self, log)
+
 	def insert_result(self, log):
 		if log["url"] not in self.db.results.distinct("url"):
-			return self.db.results.insert(log)
-		else:
-			return self.db.results.update({"url":log["url"]}, log)
+			if self.debug: print "insert result", results["title"]
+			self.db.results.insert(log)
+			return
+
 	def insert_queue(self, log):
 		for l in log:
+			if self.debug: print "insert queue", log["url"]
 			if l["url"] not in self.db.queue.distinct("url"):
 				self.db.queue.insert(l)
+	def remove_queues(self, log):
+		for l in log:
+			print l
+			self.db.queue.remove(l)
 	def sources_stats(self):
 		self.show_stats()
 		return self.template[3]
