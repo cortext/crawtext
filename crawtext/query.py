@@ -15,6 +15,7 @@ class Query(object):
 		if directory != "":
 			if self.debug: print "no directory"
 			dir_index = os.path.join(directory, "index")
+			
 			if not os.path.exists(dir_index):
 				os.makedirs(dir_index)
 				if self.debug: print "dir created"
@@ -24,7 +25,7 @@ class Query(object):
 				os.makedirs("index")
 				if self.debug: print "no directory"
 		schema = Schema(title=TEXT(stored=True), content=TEXT(stored=True))
-		self.ix = create_in("index", schema)
+		self.ix = create_in(dir_index, schema)
 		self.q = query
 		self.query = QueryParser("content", self.ix.schema).parse(query)
 		
