@@ -103,9 +103,16 @@ Once the script has check the starting urls a few informations on the project wi
 
 If everything is ok, lauch the crawl:
 ```
-	$ python crawtext.py pesticides start
+	$python crawtext.py pesticides start
 ```
-
+When crawl is finished a report will be stored in the directory of your project:
+```
+	$cd projects/pesticides
+```
+If you want to receive it by mail add a mail to your project
+```
+	$python crawtext.py pesticides add --user="constance@cortext.net"
+```
 Monitoring the project
 ====
 See how is your crawl going using the report option:
