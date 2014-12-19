@@ -286,8 +286,9 @@ class Worker(object):
 		if cfg.setup():
 			if cfg.crawl_setup():
 				print "Configuration is Ok"
-				crawl(cfg.project_name, cfg.query, cfg.directory, cfg.max_depth, self.debug)
-				print "Finished"
+				if crawl(cfg.project_name, cfg.query, cfg.directory, cfg.max_depth, self.debug):
+					print "Finished"
+				report(self, params)
 				return self.coll.update({"_id": cfg.task['_id']}, {"$push": {"action":"crawl", "status": True, "date": dt.now(), "msg": cfg.msg}})	
 		
 			#put_to_seeds
