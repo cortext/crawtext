@@ -181,6 +181,7 @@ class Article(object):
         return False
 
     def filter(self, query, directory):
+        
         if self.is_relevant(query, directory):
             return True
         else:

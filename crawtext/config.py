@@ -118,6 +118,8 @@ class Config(object):
 			self.directory = self.task['directory']
 			if not os.path.exists(self.directory):
 				os.makedirs(self.directory)
+				index = os.path.join(self.directory, 'index')
+				self.index_dir = os.makedirs('index')
 				print "A specific directory has been created to store your projects\n Location:%s"	%(self.directory)
 			return True	
 		except KeyError:
@@ -129,14 +131,37 @@ class Config(object):
 			self.directory = os.path.join(ABSPATH, self.project_name)
 			if not os.path.exists(self.directory):
 				os.makedirs(self.directory)
+				index = os.path.join(self.directory, 'index')
+				self.index_dir = os.makedirs('index')
 				print "A specific directory has been created to store your projects\n Location:%s"	%(self.directory)
 				self.coll.update({"name": self.name, "type": self.type, "directory": self.directory})
 			return True	
-						
+	
+	def update_sources(self):
+		print "updated sources"
+		try:
+			self.file = self.task['file']
+			self.add_file()
+		except KeyError:
+			pass
+		try:
+			self.key = self.task['key']
+			self.query = self.task['query']
+			self.add_bing()
+		except KeyError:
+			pass
+		try:
+			self.url = self.task['url']
+			self.add_url(self.task['url'], "manual", 0)
+		except KeyError:
+			pass
+
 	def check_sources(self):
 		print "- Verifying sources:"
+		self.update_sources()
 		self.sources = self.project_db.use_coll("sources")
 		sources_nb = self.sources.count()
+		
 		if sources_nb == 0:
 			self.msg = "No sources in database"
 			# self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"config", "status": "False", "date": dt.now(), "msg": self.msg}})	
@@ -163,6 +188,7 @@ class Config(object):
 		print "- Verifying query:"
 		try:
 			self.query = self.task["query"]
+			self.check_directory()
 			print "\tx query: %s" %self.query
 			return True
 		except KeyError:
@@ -282,18 +308,14 @@ class Config(object):
 			
 			print "- Getting new sources from BING API Keys"
 			results =  [self.add_url(e["Url"], "bing", 0) for e in r.json()['d']['results']]
-			if self.debug: print results
+			# if self.debug: print results, 
+
 			new = [n for n in results if n is not False]
-			if self.debug: print new
-			status_t = [n for n in results if n['status'] is True]
-			if self.debug: print status_t
-			status_b = [n for n in results if n['status'] is False]
-			if self.debug: print status_b
+			# if self.debug: print len(new)
+			# if self.debug: print status_b
 
 			print "\tx %d urls inserted" %len(new)
 			print "\tx %d urls updated" %(len(results)-len(new))
-			print "\t\t> %d urls with correct status" %len(status_t)
-			print "\t\t> %d urls with wrong status" %len(status_b)
 			return True
 		
 		except requests.exceptions.HTTPError as e:
