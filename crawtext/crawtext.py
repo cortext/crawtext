@@ -118,7 +118,10 @@ class Worker(object):
 				try:
 					format = self.task['format']
 				except KeyError:
-					format = "email"
+					try: 
+						format = params['format']
+					except KeyError:
+						format = "email"
 					
 				if format == "email":
 					try:
@@ -130,8 +133,16 @@ class Worker(object):
 						else:
 							self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"report: mail", "status":False, "date": dt.now(), "msg": "Error while sending the mail"}})
 					except KeyError:
-						print "No user has been set: \ndeclare a user email for your project to receive it by mail."
-						self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"report: mail", "status":False, "date": dt.now(), "msg": "User email unset, unable to send mail"}})
+						try:
+							user = params['user']
+							if send_mail(user, db) is True:
+								print "A report email has been sent to %s\nCheck your mailbox!" %user
+								self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"report: mail", "status":True, "date": dt.now(), "msg": "Ok"}})
+								self.coll.upsert({"_id": self.task['_id']}, {"user":params["user"]}, False)
+								self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"report: add user", "status":True, "date": dt.now(), "msg": "Ok"}})
+						except KeyError:
+							print "No user has been set: \ndeclare a user email for your project to receive it by mail."
+							self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"report: mail", "status":False, "date": dt.now(), "msg": "User email unset, unable to send mail"}})
 						
 				if generate_report(self.task, db):
 					self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"report: document", "status": True, "date": dt.now(), "msg": "Ok"}})
@@ -288,7 +299,11 @@ class Worker(object):
 				print "Configuration is Ok"
 				if crawl(cfg.project_name, cfg.query, cfg.directory, cfg.max_depth, self.debug):
 					print "Finished"
-				report(self, params)
+				try:
+					user = cfg.task['user']
+				except KeyError:
+					params['user'] = "constance@cortext.net"
+				self.report(params)
 				return self.coll.update({"_id": cfg.task['_id']}, {"$push": {"action":"crawl", "status": True, "date": dt.now(), "msg": cfg.msg}})	
 		
 			#put_to_seeds
