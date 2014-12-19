@@ -33,7 +33,7 @@ class Config(object):
 			return False
 
 	def setup(self):
-		if self.debug: print "Setup"
+		if self.debug: print "\n=====Setup"
 		if self.exists():
 			if self.debug: print "Already exists"
 			self.project_db = Database(self.task["project_name"])
@@ -48,39 +48,46 @@ class Config(object):
 				return self.report_config()
 			else:
 				print "Not config"
+		else:
+			print "No project %s found." %self.name
+			return False
 	
 	def crawl_config(self):
-		print "=====\nAdding parameters to configuration:"
-		self.query = self.task["query"]
-		error = []
-		try:
-			self.file  = self.task["file"]
-			self.check_file()
-		except KeyError:
-			error.append("file")
-			pass
-		try:
-			self.key = self.task["key"]
-			self.check_bing()
+		if self.exists():
+			print "=====\nAdding parameters to configuration:"
+			self.query = self.task["query"]
+			error = []
+			try:
+				self.file  = self.task["file"]
+				self.check_file()
+			except KeyError:
+				error.append("file")
+				pass
+			try:
+				self.key = self.task["key"]
+				self.check_bing()
 
-		except KeyError:
-			error.append("bing")
-			pass
-		try:
-			self.url = self.task["url"]
-			self.check_url()
-		except KeyError:
-			error.append("url")
-			pass
-		try:
-			self.max_depth = self.task["max_depth"]
-		except KeyError:
-			self.max_depth = MAX_DEPTH
-		
-		if len(error) < 3:
-			return True
-		else: 
-			print "Error configuring sources" 
+			except KeyError:
+				error.append("bing")
+				pass
+			try:
+				self.url = self.task["url"]
+				self.check_url()
+			except KeyError:
+				error.append("url")
+				pass
+			try:
+				self.max_depth = self.task["depth"]
+			except KeyError:
+				self.max_depth = MAX_DEPTH
+			
+			if len(error) < 3:
+				return True
+			else: 
+				print "Error configuring sources" 
+				return False
+		else:
+			print "No project %s found" %self.name
 			return False
 	
 	def crawl_setup(self):
@@ -105,7 +112,6 @@ class Config(object):
 						if self.debug: print "Ok"
 						return True
 					else:
-
 						return False
 			except KeyError:
 				self.msg = "No crawl project %s found" %(self.name)
@@ -173,8 +179,9 @@ class Config(object):
 			return True
 
 	def put_to_queue(self):
-		print "Putting url to crawl"
+		
 		for item in self.project_db.sources.find():
+			print "Putting url to crawl", item
 			if item["url"] not in self.project_db.queue.distinct("url"):
 				self.project_db.queue.insert(item)
 			else:
@@ -238,11 +245,11 @@ class Config(object):
 	def check_depth(self):
 		print "- Verifying defaut depth for crawl:"
 		try:
-			self.max_depth = self.task['max_depth']
+			self.max_depth = int(self.task['depth'])
 			print "\tx maximum depth is set to:  %d" %(self.max_depth)
 			
 		except KeyError:
-			self.max_depth = 100
+			self.max_depth = int(MAX_DEPTH)
 			print "\tx defaut maximum depth is set to:  %d" %(self.max_depth)
 			self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"config crawl", "status": "True", "date": dt.now(), "msg": "Setting up defaut max_depth to 100"}})
 			

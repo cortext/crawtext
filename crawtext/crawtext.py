@@ -283,10 +283,10 @@ class Worker(object):
 		self.debug = True
 		if self.debug: print "start"
 		cfg = Config(self.name, "crawl", self.debug)
-		if cfg.crawl_setup():
-			print "Configuration is Ok"
-			if crawl(cfg.project_name, cfg.query, cfg.directory, cfg.max_depth, self.debug):
-
+		if cfg.setup():
+			if cfg.crawl_setup():
+				print "Configuration is Ok"
+				crawl(cfg.project_name, cfg.query, cfg.directory, cfg.max_depth, self.debug)
 				print "Finished"
 				return self.coll.update({"_id": cfg.task['_id']}, {"$push": {"action":"crawl", "status": True, "date": dt.now(), "msg": cfg.msg}})	
 		
