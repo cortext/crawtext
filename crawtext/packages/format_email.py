@@ -1,15 +1,12 @@
-
 def createhtmlmail(html, text, subject, fromEmail):
     """Create a mime-message that will render HTML in popular
     MUAs, text in better ones"""
     import MimeWriter
     import mimetools
     import cStringIO
-
-    out = cStringIO.StringIO() # output buffer for our message 
+    out = cStringIO.StringIO() # output buffer for our message
     htmlin = cStringIO.StringIO(html)
     txtin = cStringIO.StringIO(text)
-
     writer = MimeWriter.MimeWriter(out)
     #
     # set up some basic headers... we put subject here
@@ -52,5 +49,6 @@ def createhtmlmail(html, text, subject, fromEmail):
     writer.lastpart()
     msg = out.getvalue()
     out.close()
-    
     return msg
+
+
