@@ -1,0 +1,19 @@
+Metadata-Version: 1.0
+Name: pybing
+Version: 0.12
+Summary: PyBing is a Python wrapper for the Bing Search API
+Home-page: http://pybing.googlecode.com/
+Author: JJ Geewax
+Author-email: jj@geewax.org
+License: GPL v2
+Description: PyBing is a Python wrapper for the Bing Search API
+Keywords: bing api
+Platform: UNKNOWN
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: GNU General Public License (GPL)
+Classifier: Natural Language :: English
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python
+Classifier: Topic :: Internet :: WWW/HTTP :: Indexing/Search
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
