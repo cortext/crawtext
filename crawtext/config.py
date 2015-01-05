@@ -54,7 +54,7 @@ class Config(object):
 	
 	def crawl_config(self):
 		if self.exists():
-			print "=====\nAdding parameters to configuration:"
+			if self.debug : print "=====\nAdding parameters to configuration:"
 			self.query = self.task["query"]
 			error = []
 			try:
@@ -91,7 +91,7 @@ class Config(object):
 			return False
 	
 	def crawl_setup(self):
-		print "=====\nCrawl configuration:"
+		if self.debug : print "=====\nCrawl configuration:"
 		if self.exists():
 			try:
 				self.project_name = self.task["project_name"]
@@ -115,7 +115,7 @@ class Config(object):
 						return False
 			except KeyError:
 				self.msg = "No crawl project %s found" %(self.name)
-				print self.msg
+				if self.debug: print self.msg
 				return False
 		return False
 	
@@ -126,7 +126,7 @@ class Config(object):
 				os.makedirs(self.directory)
 				index = os.path.join(self.directory, 'index')
 				self.index_dir = os.makedirs('index')
-				print "A specific directory has been created to store your projects\n Location:%s"	%(self.directory)
+				if self.debug: print "A specific directory has been created to store your projects\n Location:%s"	%(self.directory)
 			return True	
 		except KeyError:
 			try:
@@ -144,7 +144,7 @@ class Config(object):
 			return True	
 	
 	def update_sources(self):
-		print "updated sources"
+		if self.debug: print "updated sources"
 		try:
 			self.file = self.task['file']
 			self.add_file()
@@ -163,7 +163,7 @@ class Config(object):
 			pass
 
 	def check_sources(self):
-		print "- Verifying sources:"
+		if self.ebug: print "- Verifying sources:"
 		self.update_sources()
 		self.sources = self.project_db.use_coll("sources")
 		sources_nb = self.sources.count()
@@ -281,17 +281,17 @@ class Config(object):
 			return False
 		return True
 	
-	def add_url(self, url, origin="default",depth=0, source_url = None, nb=0):
+	def add_url(self, url, origin="default",depth=0, source_url = None, nb=0, nb_results=0):
 		'''Insert url into sources with its status inserted or updated'''
 		self.sources = self.project_db.use_coll("sources")
 		if origin == "bing":
 			exists = self.sources.find_one({"url": url})	
 			#~ print exists
 			if exists is not None:
-				self.sources.update({"_id":exists['_id']}, {"$push": {"date":dt.now(),"status": True, "step": "Updated", "nb": nb, "msg": "Ok"}}, upsert=False)
+				self.sources.update({"_id":exists['_id']}, {"$push": {"date":dt.now(),"status": True, "step": "Updated", "nb": nb,"nb_results": nb_results, "msg": "Ok"}}, upsert=False)
 				return False
 			else:
-				self.sources.insert({"url":url, "source_url":None, "origin": origin, "nb":[nb],"depth": 0, "date":[dt.now()], "step":["Added"], "status":[True], "msg":["Inserted"]})	
+				self.sources.insert({"url":url, "source_url":None, "origin": origin, "nb":[nb], "nb_results":[nb_results],"depth": 0, "date":[dt.now()], "step":["Added"], "status":[True], "msg":["Inserted"]})	
 				return True
 		# 	pass
 		else:
@@ -309,14 +309,14 @@ class Config(object):
 				# 	self.sources.update({"_id":exists['_id']}, {"$push": {"date":dt.now(),"status": link.status,"step": link.step, "msg": link.msg}}, upsert=False)
 				return True
 		
-	def add_bing(self, nb = 1000):
+	def add_bing(self, nb = 500):
 		''' Method to extract results from BING API (Limited to 5000 req/month) automatically sent to sources DB ''' 
 		import requests, time
 		start = 0
 		step = 50
-		if nb > 1000:
-			print "Maximum search results is 1000 results."
-			nb = 1000
+		if nb > 500:
+			print "Maximum search results is 500 results."
+			nb = 500
 		
 		
 		if nb%50 != 0:
@@ -325,7 +325,7 @@ class Config(object):
 
 
 		web_results = []
-		print "Searching %i results" %nb
+		if self.debug: print "Searching %i results" %nb
 		for i in range(start,nb, step):
 			r = requests.get(
 					'https://api.datamarket.azure.com/Bing/Search/v1/Web', 
@@ -339,17 +339,18 @@ class Config(object):
 					)
 			web_results.extend([e["Url"] for e in r.json()['d']['results']])
 		
-		print len(web_results)
 		results = [(x,y) for x,y in enumerate(web_results)]
 		new = []
 		inserted = []
-		for nb, url in results:
-			if self.add_url(url, origin="bing",depth=0, source_url = None, nb=nb) is True:
+		for i, url in results:
+			if self.add_url(url, origin="bing",depth=0, source_url = None, nb=i, nb_results=len(results)) is True:
 				new.append(url)
 			else:
 				inserted.append(url)
+		print "===="
+		print self.name, self.query
 		print "%i urls updated, %i added"%(len(inserted), len(new))
-		return True
+		return results
 
 	def add_file(self):
 		''' Method to extract url list from text file'''

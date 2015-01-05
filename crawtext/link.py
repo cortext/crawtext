@@ -3,6 +3,7 @@ from urlparse import (
 from tldextract import tldextract
 from filter import Filter
 import os, sys, re
+import urllib2 as ul
 
 ABSPATH = os.path.dirname(os.path.abspath(sys.argv[0]))
 DATE_REGEX = r'([\./\-_]{0,1}(19|20)\d{2})[\./\-_]{0,1}(([0-3]{0,1}[0-9][\./\-_])|(\w{3,5}[\./\-_]))([0-3]{0,1}[0-9][\./\-]{0,1})?'
@@ -39,12 +40,15 @@ BAD_DOMAINS = ['amazon', 'doubleclick', 'twitter', 'facebook']
 class Link(object):
     def __init__(self, url, source_url, origin = "", debug=False):
         self.url = url
+        
+        self.url = ul.unquote(self.url)
         self.source_url = source_url
         self.debug = debug
         self.origin = origin
         self.status = True
         self.step = "link created"
         self.msg = ""
+    
     def parse_url(self,url):
         '''complete info on url'''
         self.step = "parse"
@@ -60,31 +64,34 @@ class Link(object):
         #subdomain and tld
         tld_dat = tldextract.extract(url)
         self.subdomain = tld_dat.subdomain
-        self.tld = tld_dat.domain.lower()
-
+        self.domain = tld_dat.domain.lower()
         self.extension =  tld_dat.suffix
         #info on page
         self.path_chunk = [x for x in self.path.split('/') if len(x) > 0]
-        self.indepth = len(self.path_chunk)
+        self.name = self.path_chunk[-1]
+        self.in_depth = len(self.path_chunk)
+        
         return self    
 
-    def relative2abs(self):
-        
-        self.parse_url(self.url)
-        if self.source_url is not None:
-            self.source = parse_url(self.source_url)
+    def relative2abs(self,url, source_url):
+        #print "rel2abs"
+        # self.parse_url(self.url)
+        if source_url is not None and source_url != "":
+            self.source = parse_url(source_url)
         else:
-            self.source = parse_url(self.url)
-        if self.netloc == "":
+            self.source = parse_url(url)
+        if self.source['netloc'] == "":
             if self.path.startswith("."):
                 self.path = re.sub(".", "", self.path)
             self.url = "http://"+self.source["netloc"]+self.path
-        return self
+        return self.url
     
     def is_valid(self):
-        self.step = "Valid"    
-        self.relative2abs()
-
+        #print "isvalid"
+        self.step = "Valid"
+        self.parse_url(self.url)
+        #print self.relative2abs(self.url, self.source_url)    
+        self.url = self.relative2abs(self.url, self.source_url)    
         if self.url in ["void", ";"]:
             self.msg ='Javascript %s' % self.url
             self.status = False
@@ -119,8 +126,9 @@ class Link(object):
             self.msg = 'Invalid webpage type %s' % self.filetype
             self.status = False
             return False
-        if self.tld in BAD_DOMAINS:
-            self.msg = 'bad domain %s' % self.tld
+        
+        if self.domain in BAD_DOMAINS:
+            self.msg = 'bad domain %s' % self.domain
             self.status = False
             return False
         return True
@@ -138,7 +146,7 @@ class Link(object):
             self.date = match_date.group()
         return True
     
-    def export(self, depth, mode="simple"):
+    def export(self, depth, mode="advanced"):
         if mode == "simple":
             if self.is_valid():
                 return {"url":self.url, "source_url":self.source_url, "depth": depth}
@@ -151,15 +159,11 @@ class Link(object):
             else:
                 return None
 
-    
-
-
-
-
 def parse_url(url):
     info = {}
     info['url'] = url
     parsed_url = urlparse(url)
+    
     info['scheme'] = parsed_url.scheme
     info['netloc'] = parsed_url.netloc
     info['path'] = parsed_url.path
@@ -170,9 +174,8 @@ def parse_url(url):
     info["filetype"] = url_to_filetype(info["path"])
     #subdomain and tld
     tld_dat = tldextract.extract(url)
-    
     info['subdomain'] = tld_dat.subdomain
-    info['tld'] = tld_dat.domain.lower()
+    info['domain'] = tld_dat.domain.lower()
     info['extension'] =  tld_dat.suffix
     #info on page
     info['path_chunk'] = [x for x in info['path'].split('/') if len(x) > 0]
@@ -183,9 +186,10 @@ def relative2abs(url, source_url):
     info = parse_url(url)
     if source_url is None:
         source = parse_url(url)
-    source = parse_url(source_url)
+    else:
+        source = parse_url(source_url)
     if info["netloc"] == "":
-        info["url"] = source['scheme']+"://"+urljoin(source["netloc"], info["path"])
+        info["url"] = source['scheme']+"://"+ urljoin(source["netloc"], info["path"])
     info["source"] = source
     return info
 
@@ -248,8 +252,8 @@ def is_valid(url, source_url):
     if info['filetype'] in BAD_TYPES:
         info['msg'] = 'Invalid webpage type %s' % info["filetype"]
         return (False, info)
-    if info["tld"] in BAD_DOMAINS:
-        info['msg'] = 'bad domain %s' % info["tld"]
+    if info["domain"] in BAD_DOMAINS:
+        info['msg'] = 'bad domain %s' % info["domain"]
         return (False, info)
     else:
         return (True, info)
