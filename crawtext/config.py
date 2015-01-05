@@ -12,6 +12,7 @@ from datetime import datetime as dt
 from link import Link
 
 MAX_DEPTH = 100
+		
 class Config(object):
 	def __init__(self, name, job_type, debug=False):
 		#project database manager
@@ -22,7 +23,6 @@ class Config(object):
 		self.type = job_type
 		self.msg = ""
 		self.task = self.coll.find_one({"name":self.name, "type": self.type})
-
 	
 	def exists(self):	
 		self.task = self.coll.find_one({"name":self.name, "type": self.type})
@@ -221,6 +221,7 @@ class Config(object):
 		try:
 			self.key = self.task['key']
 			print "-Verifying key for Bing"
+			print self.key
 			if self.add_bing() is False:
 	 			# self.msg = "Unable to add urls from search"
 	 			# self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"config crawl: add sources from file", "status": False, "date": dt.now(), "msg": "API Key: Wrong credential for Search"}})
@@ -280,54 +281,75 @@ class Config(object):
 			return False
 		return True
 	
-	def add_url(self, url, origin="default", depth=0, source_url = None):
+	def add_url(self, url, origin="default",depth=0, source_url = None, nb=0):
 		'''Insert url into sources with its status inserted or updated'''
 		self.sources = self.project_db.use_coll("sources")
-		link = Link(url, source_url, depth, origin)
-		exists = self.sources.find_one({"url": link.url})
-		if exists is not None:
-		 	print "\tx Url updated: %s \n\t\t>Status is set to %s" %(link.url, link.status)
-		 	self.sources.update({"_id":exists['_id']}, {"$push": {"date":dt.now(),"status": link.status, "step": link.step, "msg": link.msg}}, upsert=False)
-		 	return False
+		if origin == "bing":
+			exists = self.sources.find_one({"url": url})	
+			#~ print exists
+			if exists is not None:
+				self.sources.update({"_id":exists['_id']}, {"$push": {"date":dt.now(),"status": True, "step": "Updated", "nb": nb, "msg": "Ok"}}, upsert=False)
+				return False
+			else:
+				self.sources.insert({"url":url, "source_url":None, "origin": origin, "nb":[nb],"depth": 0, "date":[dt.now()], "step":["Added"], "status":[True], "msg":["Inserted"]})	
+				return True
+		# 	pass
 		else:
-			print "\tx Url added: %s \n\t\t>Status is set to %s" %(link.url, link.status)
-			self.sources.insert({"url":link.url, "source_url":None, "origin": origin, "depth": 0, "date":[dt.now()], "step":["Added"], "status":[link.status], "msg":["inserted"]})
+			link = Link(url, source_url, depth, origin)
 			exists = self.sources.find_one({"url": link.url})
 			if exists is not None:
-				self.sources.update({"_id":exists['_id']}, {"$push": {"date":dt.now(),"status": link.status,"step": link.step, "msg": link.msg}}, upsert=False)
-			return True
+			 	print "\tx Url updated: %s \n\t\t>Status is set to %s" %(link.url, link.status)
+			 	self.sources.update({"_id":exists['_id']}, {"$push": {"date":dt.now(),"status": link.status, "step": link.step, "msg": link.msg}}, upsert=False)
+			 	return False
+			else:
+				print "\tx Url added: %s \n\t\t>Status is set to %s" %(link.url, link.status)
+				self.sources.insert({"url":link.url, "source_url":None, "origin": origin, "depth": 0, "date":[dt.now()], "step":["Added"], "status":[link.status], "msg":["inserted"]})
+				exists = self.sources.find_one({"url": link.url})
+				if exists is not None:
+					self.sources.update({"_id":exists['_id']}, {"$push": {"date":dt.now(),"status": link.status,"step": link.step, "msg": link.msg}}, upsert=False)
+				return True
 		
-	def add_bing(self, nb = 50):
+	def add_bing(self, nb = 500):
 		''' Method to extract results from BING API (Limited to 5000 req/month) automatically sent to sources DB ''' 
-		import requests
-		try:
-			r = requests.get(
-				'https://api.datamarket.azure.com/Bing/Search/v1/Web', 
-				params={
-					'$format' : 'json',
-					'$top' : 51,
-					'Query' : '\'%s\'' %self.query,
-				},	
-				auth=(self.key, self.key)
-				)
-			
-			r.raise_for_status()
-			
-			print "- Getting new sources from BING API Keys"
-			results =  [self.add_url(e["Url"], "bing", 0) for e in r.json()['d']['results']]
-			# if self.debug: print results, 
-
-			new = [n for n in results if n is not False]
-			# if self.debug: print len(new)
-			# if self.debug: print status_b
-
-			print "\tx %d urls inserted" %len(new)
-			print "\tx %d urls updated" %(len(results)-len(new))
-			return True
+		import requests, time
+		start = 0
+		step = 50
+		if nb > 1000:
+			print "Maximum search results is 1000 results."
+			nb = 1000
 		
-		except requests.exceptions.HTTPError as e:
-			self.msg = "Wrong key authentication"
-			return False
+		
+		if nb%50 != 0:
+			print "Nb of results must be a multiple of 50:"
+			nb = nb -(nb%50)
+
+
+		web_results = []
+		print "Searching %i results" %nb
+		for i in range(start,nb, step):
+			r = requests.get(
+					'https://api.datamarket.azure.com/Bing/Search/v1/Web', 
+					params={
+						'$format' : 'json',
+						'$skip' : i,
+						'$top': step,
+						'Query' : '\'%s\'' %self.query,
+					},	
+					auth=(self.key, self.key)
+					)
+			web_results.extend([e["Url"] for e in r.json()['d']['results']])
+		
+		print len(web_results)
+		results = [(x,y) for x,y in enumerate(web_results)]
+		new = []
+		inserted = []
+		for nb, url in results:
+			if self.add_url(url, origin="bing",depth=0, source_url = None, nb=nb) is True:
+				new.append(url)
+			else:
+				inserted.append(url)
+		print "%i urls updated, %i added"%(len(inserted), len(new))
+		return True
 
 	def add_file(self):
 		''' Method to extract url list from text file'''
@@ -365,3 +387,4 @@ class Config(object):
 	def export_config(self):
 		"Config for Export"
 		pass
+
