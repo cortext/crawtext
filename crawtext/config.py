@@ -298,18 +298,18 @@ class Config(object):
 			link = Link(url, source_url, depth, origin)
 			exists = self.sources.find_one({"url": link.url})
 			if exists is not None:
-			 	print "\tx Url updated: %s \n\t\t>Status is set to %s" %(link.url, link.status)
+			 	# print "\tx Url updated: %s \n\t\t>Status is set to %s" %(link.url, link.status)
 			 	self.sources.update({"_id":exists['_id']}, {"$push": {"date":dt.now(),"status": link.status, "step": link.step, "msg": link.msg}}, upsert=False)
 			 	return False
 			else:
-				print "\tx Url added: %s \n\t\t>Status is set to %s" %(link.url, link.status)
+				#print "\tx Url added: %s \n\t\t>Status is set to %s" %(link.url, link.status)
 				self.sources.insert({"url":link.url, "source_url":None, "origin": origin, "depth": 0, "date":[dt.now()], "step":["Added"], "status":[link.status], "msg":["inserted"]})
-				exists = self.sources.find_one({"url": link.url})
-				if exists is not None:
-					self.sources.update({"_id":exists['_id']}, {"$push": {"date":dt.now(),"status": link.status,"step": link.step, "msg": link.msg}}, upsert=False)
+				# exists = self.sources.find_one({"url": link.url})
+				# if exists is not None:
+				# 	self.sources.update({"_id":exists['_id']}, {"$push": {"date":dt.now(),"status": link.status,"step": link.step, "msg": link.msg}}, upsert=False)
 				return True
 		
-	def add_bing(self, nb = 500):
+	def add_bing(self, nb = 1000):
 		''' Method to extract results from BING API (Limited to 5000 req/month) automatically sent to sources DB ''' 
 		import requests, time
 		start = 0
