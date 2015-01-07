@@ -17,11 +17,12 @@ from utils import encodeValue
 from text import clean_text
 from query import Query
 from link import Link
+from datetime import datetime as dt
 
 class Page(object):
     """Article objects abstract an online news article page
     """
-    def __init__(self, url, source_url= None, depth = "",  debug= False):
+    def __init__(self, url, source_url= None, depth ="",  debug= False):
         """The **kwargs argument may be filled with config values, which
         is added into the config object
         """
@@ -91,8 +92,9 @@ class Page(object):
                 return False
     def log(self):
         if self.debug is True:
-            print "Log", self.status, self.msg, self.code 
+            print {"url":self.url, "status": self.status, "msg": self.msg, "code": self.code}
         return {"url":self.url, "status": self.status, "msg": self.msg, "code": self.code}    
+    
     def export(self):
         return {"url":self.url, "source_url": self.source_url, "depth": self.depth, "html": self.html}
 
@@ -115,6 +117,8 @@ class Article(object):
         if self.doc is not None:
             try:
                 self.title = (self.doc.find("title").text).encode('utf-8')
+                self.text = (self.doc.find("body").text).encode('utf-8')
+                self.links, self.domains = self.fetch_links()
                 self.get_meta()
                 return True
             except Exception as ex:
@@ -127,6 +131,7 @@ class Article(object):
             self.msg = "No html loaded"
             self.code = "700"
             return False
+    
     def get_meta(self):
         self.meta = self.doc.findAll("meta")
         self.meta = [(n["name"], n["content"]) for n in self.meta if n is not None and "content" in n and "name" in n]
@@ -134,12 +139,9 @@ class Article(object):
 
     def correct_lang(self,filter_lang):
         if filter_lang is True and self.metalang is not None:
-            if self.metalang == filter_lang:
-                return True
-            else:
+            if self.metalang != filter_lang:
                 return False
-        else:
-            return True
+        return True
     
     def check_link(self, url, source_url):
         url = Link(url, source_url)
@@ -153,22 +155,45 @@ class Article(object):
             yield {"url":link, "depth":self.depth+1, "source_url": self.url}
         
     def fetch_links(self):
+        ''' extract raw_links '''
         links = []
-        
+        domains = []
         for n in self.doc.findAll("a"):
-            if n is not None:
+            if n is not None and n != "":
                 try:
-                    url = self.check_link(n.get('href'), self.source_url)
-                    if url is not None:
-                        links.append(url)
+                    url = n.get('href')
+                    if url is not None and url != "":
+                        l = Link(url)
+                        url, domain = l.clean_url(url, self.url)
+                        if url is not None:
+                            links.append([url, domain])
+                            
                 except Exception as ex:
                     pass
-        self.links = list(set(links))
-        return self.links
+            elif n.startswith('mailto'):
+                pass
+            else:
+                pass
+        # self.links = list(set(links))
+        # self.domains = domains
+        self.links = [u[0] for u in links if u[0] not in links]
+        self.domains = [u[1] for u in links if u[0] not in links]
+        return (self.links, self.domains)
+    
+
+    def fetch_domains(self):
+        self.domains = []
+        for n in self.links:
+            url = Link(n, self.url)
+            if url.is_valid():
+                self.domains.append(url.domain)
+        return self.domains
+
 
     def get_outlinks(self):
         self.fetch_links()
         self.outlinks= [n for n in self.format_outlink(self.links)]
+        self.fetch_domains()
         return self.outlinks
         
 
@@ -196,24 +221,28 @@ class Article(object):
 
         return {
                 "url": self.url,
+                "domain": l.domain,
                 "subdomain": l.subdomain,
                 "extension": l.extension,
-                "dt": l.filetype,
+                "filetype": l.filetype,
+                "date": [dt.now()],
                 "source": self.source_url,
                 "title": self.title,
-                "links": self.links,
+                "cited_links": self.links,
+                "cited_domains": self.domains,
                 "html": self.html,
                 "text": self.text,
-                "keywords": self.keywords,
-                "description": self.description,
+                #"keywords": self.keywords,
+                #"description": self.description,
                 "meta": self.meta,
-                "lang": self.metalang,
+                #"lang": self.metalang,
                 }
         
     
     def is_relevant(self, query, directory):
         q = Query(query, directory)
         return q.match({"content": encodeValue(self.text)})
+    
     def log(self):
         if self.debug is True:
             print "Log sent", {"url":self.url, "status": self.status, "msg": self.msg, "code": self.code}

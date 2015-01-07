@@ -38,16 +38,26 @@ ALLOWED_TYPES = ['html', 'htm', 'md', 'rst', 'aspx', 'jsp', 'rhtml', 'cgi',
 BAD_DOMAINS = ['amazon', 'doubleclick', 'twitter', 'facebook']
 
 class Link(object):
-    def __init__(self, url, source_url, origin = "", debug=False):
+    def __init__(self, url, source_url="", origin = "", debug=False):
         self.url = url
-        
-        self.url = ul.unquote(self.url)
+        # self.url = ul.unquote(self.url)
         self.source_url = source_url
         self.debug = debug
         self.origin = origin
         self.status = True
         self.step = "link created"
-        self.msg = ""
+        self.msg = "Ok"
+        self.parse_url(self.url)
+        
+    def clean_url(self, url, source_url):
+        if url.startswith('mailto'):
+            return None
+        if url.startswith('/'):
+            l = self.parse_url(source_url)
+            return ("http://"+l.netloc+url, l.domain)
+        else:
+            l = self.parsed_url(url)
+            return (url, l.domain)
     
     def parse_url(self,url):
         '''complete info on url'''
@@ -65,33 +75,18 @@ class Link(object):
         tld_dat = tldextract.extract(url)
         self.subdomain = tld_dat.subdomain
         self.domain = tld_dat.domain.lower()
+        if self.domain == "":
+            print self.url
         self.extension =  tld_dat.suffix
         #info on page
         self.path_chunk = [x for x in self.path.split('/') if len(x) > 0]
         self.name = self.path_chunk[-1]
         self.in_depth = len(self.path_chunk)
-        
         return self    
 
-    def relative2abs(self,url, source_url):
-        #print "rel2abs"
-        # self.parse_url(self.url)
-        if source_url is not None and source_url != "":
-            self.source = parse_url(source_url)
-        else:
-            self.source = parse_url(url)
-        if self.source['netloc'] == "":
-            if self.path.startswith("."):
-                self.path = re.sub(".", "", self.path)
-            self.url = "http://"+self.source["netloc"]+self.path
-        return self.url
-    
     def is_valid(self):
         #print "isvalid"
         self.step = "Valid"
-        self.parse_url(self.url)
-        #print self.relative2abs(self.url, self.source_url)    
-        self.url = self.relative2abs(self.url, self.source_url)    
         if self.url in ["void", ";"]:
             self.msg ='Javascript %s' % self.url
             self.status = False
