@@ -155,7 +155,7 @@ class Article(object):
             yield {"url":link, "depth":self.depth+1, "source_url": self.url}
         
     def fetch_links(self):
-        ''' extract raw_links '''
+        ''' extract raw_links and domains '''
         links = []
         domains = []
         for n in self.doc.findAll("a"):
@@ -165,8 +165,9 @@ class Article(object):
                     if url is not None and url != "":
                         l = Link(url)
                         url, domain = l.clean_url(url, self.url)
-                        if url is not None:
-                            links.append([url, domain])
+                        if url is not None and url not in links:
+                            links.append(url)
+                            domains.append(domain)
                             
                 except Exception as ex:
                     pass
@@ -174,10 +175,7 @@ class Article(object):
                 pass
             else:
                 pass
-        links2 = list(set([url[0] for url in links]))
-        self.all = [(url[0], url[1]) for url in links if url[0] in links2]
-        
-        self.links = [u[0] for u in links if u[0] not in self.all]
+        self.links = links
         self.domains = [u[1] for u in links if u[0] not in self.all]
         return (self.links, self.domains)
     
