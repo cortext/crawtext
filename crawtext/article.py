@@ -174,10 +174,11 @@ class Article(object):
                 pass
             else:
                 pass
-        # self.links = list(set(links))
-        # self.domains = domains
-        self.links = [u[0] for u in links if u[0] not in links]
-        self.domains = [u[1] for u in links if u[0] not in links]
+        links2 = list(set([url[0] for url in links]))
+        self.all = [(url[0], url[1]) for url in links if url[0] in links2]
+        
+        self.links = [u[0] for u in links if u[0] not in self.all]
+        self.domains = [u[1] for u in links if u[0] not in self.all]
         return (self.links, self.domains)
     
 
