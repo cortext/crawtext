@@ -52,7 +52,9 @@ class Worker(object):
 		self.db = TaskDB()
 		self.coll = self.db.coll
 		self.project_name = re.sub('[^0-9a-zA-Z]+', '_', self.name)
-		
+		self.date = dt.now()
+		self.date.replace(second=0, microsecond=0)
+
 				
 	def dispatch(self, params=None):
 		if params is not None:
@@ -114,7 +116,32 @@ class Worker(object):
 			print "\n* Last Status"
 			print "------------"
 			print self.task["action"][-1], self.task["status"][-1],self.task["msg"][-1], dt.strftime(self.task["date"][-1], "%d/%m/%y %H:%M:%S")
-				
+	def cron(self, params):
+		hoy = datetime.datetime.now()
+		hoy.replace(second=0, microsecond=0)
+		if self.exists():
+			print self.task["next"]
+
+	def schedule(self, params):
+		from datetime import *; from dateutil.relativedelta import *
+		import calendar
+		if self.exists():
+			print self.task["date"][-1]
+			if self.task["repeat"] == "day":
+				next = self.task["date"][-1]+relativedelta(days=+1)
+			elif self.task["repeat"] == "week":
+				next = self.task["date"][-1]+relativedelta(weeks=+1)
+			elif self.task["repeat"] == "month":
+				next = self.task["date"][-1]+relativedelta(months=+1)
+			else:
+				#here prepare a cronlight version
+				next = self.task["date"][-1]+relativedelta(weeks=+1)
+			self.coll.update({"_id": self.task['_id']}, {"next": next})
+			return True
+		return False
+
+
+
 	def report(self, params):
 		if self.exists():
 			db = Database(self.task['project_name'])
@@ -197,6 +224,7 @@ class Worker(object):
 			params["date"] = [dt.now()]
 			params["status"] = ["True"]
 			params["msg"] = ['Ok']
+			params["repeat"] = "week"
 			self.coll.insert(params)
 			config = Config(self.name, self.type)
 			if config.setup():
@@ -303,14 +331,17 @@ class Worker(object):
 		cfg = Config(self.name, "crawl", self.debug)
 		if cfg.setup():
 			if cfg.crawl_setup():
+
 				print "Configuration is Ok"
+				self.schedule(params)
 				if crawl(cfg.project_name, cfg.query, cfg.directory, cfg.max_depth, self.debug):
 					print "Finished"
 				try:
 					user = cfg.task['user']
 				except KeyError:
-					params['user'] = "constance@cortext.net"
+					params['user'] = "constance@cortext.fr"
 				self.report(params)
+				self.export(params)
 				return self.coll.update({"_id": cfg.task['_id']}, {"$push": {"action":"crawl", "status": True, "date": dt.now(), "msg": cfg.msg}})	
 		
 			#put_to_seeds
@@ -328,15 +359,15 @@ class Worker(object):
 				print "Current crawl project %s killed" %self.name
 				if self.exists():
 					try:
-						self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"stop crawl", "status": True, "date": dt.now(), "msg": "Ok"}})
+						self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"stop crawl", "status": True, "date": self.date, "msg": "Ok"}})
 					except Exception, e:
-						self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"start crawl", "status": False, "date": date, "msg": e}})
+						self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"start crawl", "status": False, "date": self.date, "msg": e}})
 
 				os.kill(pid, signal.SIGKILL)
 				return True
 				
 		if self.exists():
-			self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"stop crawl", "status": False, "date": dt.now(), "msg": "No running project found"}})
+			self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"stop crawl", "status": False, "date": self.date, "msg": "No running project found"}})
 			print "No running project %s found" %self.name
 			return False
 		else:
