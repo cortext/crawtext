@@ -7,7 +7,7 @@ def crawl(db_name, query, directory, max_depth, debug=True):
     db = Database(db_name)
     db.create_colls()
     datenow = datetime.now()
-    treated = db.results.find()
+    treated = [n for n in db.results.find()]
     print len(treated)
     while db.queue.find() > 0:
         if debug: print "\nCrawling ..."
@@ -38,19 +38,20 @@ def crawl(db_name, query, directory, max_depth, debug=True):
                         if item["depth"] < max_depth:
                             if debug:print "Next" 
                             a.fetch_links()
-                            if debug is True: print "nexts links: %d" %len(a.outlinks)    
-                            if len(a.outlinks) > 0:
-                                if debug is True: print "\t-next pages: %d" %len(a.outlinks)
-                                db.queue.insert(a.outlinks)
+                            if debug is True: print "nexts links: %d" %len(a.links)    
+                            if len(a.links) > 0:
+                                if debug is True: print "\t-next pages: %d" %len(a.links)
+                                db.queue.insert(a.links)
 
                         else:    
                             if debug: print "max_depth exceeded %d"(self.depth)
+                        print a.export()
                         db.insert_results(a.export())
                         
             treated.append(item["url"])
             db.queue.remove(item)          
             if debug:
-                print db.queue.count()
+                print "To treat", len([n for n in db.queue.distinct("url") if n not in treated])
             if db.queue.count() == 0:
                 break
             

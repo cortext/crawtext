@@ -17,7 +17,7 @@ class Database(object):
 		self.client = MongoClient('mongodb://localhost,localhost:27017')
 		self.db_name = database_name
 		self.db = getattr(self.client,database_name)
-		
+		self.date = datetime.now()
 		
 	def set_colls(self):
 		self.sources = self.db["sources"]
@@ -87,59 +87,71 @@ class Database(object):
 		for log in log_list:
 			self.insert_log(self, log)
 
-
 	def insert_log(self, log):
-		if self.debug: print "insert log", log["msg"]
+		# if self.debug: print "insert log", log["msg"]
 		url = log["url"]
-
 		try:
 			del log['html']
 		except KeyError:
 			pass
-		# print "insert into log %s" %url
-		
 		if url in self.db.sources.distinct("url"):
+			if self.debug: print "Source updated"
 			exists = self.db.sources.find_one({"url":url})	
+			print exists
 			if exists is not None:
 				del log["url"]
 				try:
 					self.db.sources.update({"_id":exists["_id"]}, {"$push": log})
-					return
+					return True
 				except:
 					self.db.sources.update({"url":url}, {"$push": log})
-					return
+					return True
 		else:
 			if url not in self.db.logs.distinct("url"):	
-				self.db.logs.insert({"url":url,"msg":log["msg"], "status":log["status"], "code": log["code"], "date": datetime.now()})
-				return
+				self.db.logs.insert({"url":url,"msg":log["msg"], "status":log["status"], "code": log["code"], "date": [datetime.now()]})
+				return True
+			else:
+				exists = self.db.logs.find_one({"url": url})
+				self.db.sources.update({"_id":exists["_id"]}, {"$push": log})
+				return True
 	def insert_results(self,results):
 		for log in results:
 			self.insert_result(self, log)
+		return True
 
 	def insert_result(self, log):
+		exists = self.db.sources.find_one({"url":log['url']})
 		if log["url"] not in self.db.results.distinct("url"):
 			if self.debug: print "insert result", results["title"]
 			self.db.results.insert(log)
-			return
+			return True
+		else:
+			self.db.results.update({"_id":exists["_id"]}, {"$push": log})
+			self.db.results.update({"_id":exists["_id"]}, {"$inc": {"crawl_nb":+1}})
+			return True
 
 	def insert_queue(self, log):
-		for l in log:
-			if self.debug: print "insert queue", log["url"]
-			if l["url"] not in self.db.queue.distinct("url"):
-				self.db.queue.insert(l)
-	def remove_queues(self, log):
-		for l in log:
-			print l
-			self.db.queue.remove(l)
+		if self.debug: print "insert queue", log["url"]
+		if log["url"] not in self.db.queue.distinct("url"):
+			self.db.queue.insert(log)
+			return True
+
+	def remove_queue(self, log):
+		self.db.queue.remove({"url":log["url"]})
+		return True
+
 	def sources_stats(self):
 		self.show_stats()
 		return self.template[3]
+
 	def results_stats(self):
 		self.show_stats()
 		return self.template[1]
+
 	def results_stats(self):
 		self.show_stats()
 		return self.template[2]	
+
 	def show_stats(self):
 		'''Output the current stats of database in Terminal'''
 		self.stats()

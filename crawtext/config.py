@@ -27,6 +27,7 @@ class Config(object):
 	def exists(self):	
 		self.task = self.coll.find_one({"name":self.name, "type": self.type})
 		if self.task is not None:
+			self.project_name = self.task["project_name"]
 			return True
 		else:
 			print "No %s job %s found" %(self.type, self.name)
@@ -56,6 +57,8 @@ class Config(object):
 		if self.exists():
 			if self.debug : print "=====\nAdding parameters to configuration:"
 			self.query = self.task["query"]
+			if self.check_query() is False:
+				return False
 			error = []
 			try:
 				self.file  = self.task["file"]
@@ -66,6 +69,7 @@ class Config(object):
 			try:
 				self.key = self.task["key"]
 				self.check_bing()
+				
 
 			except KeyError:
 				error.append("bing")
@@ -163,7 +167,7 @@ class Config(object):
 			pass
 
 	def check_sources(self):
-		if self.ebug: print "- Verifying sources:"
+		print "- Verifying sources:"
 		self.update_sources()
 		self.sources = self.project_db.use_coll("sources")
 		sources_nb = self.sources.count()
@@ -179,9 +183,8 @@ class Config(object):
 			return True
 
 	def put_to_queue(self):
-		
 		for item in self.project_db.sources.find():
-			print "Putting url to crawl", item
+			if self.debug : print "Putting url to crawl", item["url"], item["status"]
 			if item["url"] not in self.project_db.queue.distinct("url"):
 				self.project_db.queue.insert(item)
 			else:
@@ -209,7 +212,7 @@ class Config(object):
 			print "-Verifying urls from file:"
 			print "\tx file: %s" %self.file
 			if self.add_file() is False:
-				# self.msg = "Unable to add urls from file"
+				self.msg = "Unable to add urls from file"
 				# self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"config crawl: add sources from file", "status": False, "date": dt.now(), "msg": "Filename incorrect"}})
 				return False
 			else:
@@ -221,10 +224,9 @@ class Config(object):
 		try:
 			self.key = self.task['key']
 			print "-Verifying key for Bing"
-			print self.key
+			if self.debug: print self.key
 			if self.add_bing() is False:
-	 			# self.msg = "Unable to add urls from search"
-	 			# self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"config crawl: add sources from file", "status": False, "date": dt.now(), "msg": "API Key: Wrong credential for Search"}})
+	 			self.msg = "Unable to add urls from search %s" %(self.resp)
 	 			return False
 	 		return True
 		except AttributeError, KeyError:
@@ -273,7 +275,7 @@ class Config(object):
 		elif self.check_url() is False:
 			error.append('url')
 		if len(error) == 3:
-			self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"config crawl", "status": False, "date": dt.now(), "msg": "No sources set by user"}})
+			self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"config crawl", "status": False, "date": dt.now(), "msg": self.msg}})
 			print "add url or key or file to you project:"
 			print "\tpython crawtext.py %s add --url=\"yoururl.com/examples\"" %(self.project_name)
 			print "\tpython crawtext.py %s add --file=\"seed_examples.txt\"" %(self.project_name)
@@ -299,7 +301,7 @@ class Config(object):
 			exists = self.sources.find_one({"url": link.url})
 			if exists is not None:
 			 	# print "\tx Url updated: %s \n\t\t>Status is set to %s" %(link.url, link.status)
-			 	self.sources.update({"_id":exists['_id']}, {"$push": {"date":dt.now(),"status": link.status, "step": link.step, "msg": link.msg}}, upsert=False)
+			 	self.sources.update({"_id":exists['_id']}, {"$push": {"date":datenow,"status": link.status, "step": link.step, "msg": link.msg}}, upsert=False)
 			 	return False
 			else:
 				#print "\tx Url added: %s \n\t\t>Status is set to %s" %(link.url, link.status)
@@ -321,12 +323,11 @@ class Config(object):
 		
 		if nb%50 != 0:
 			print "Nb of results must be a multiple of 50:"
-			nb = nb -(nb%50)
-
+			nb = nb - (nb%50)
 
 		web_results = []
 		if self.debug: print "Searching %i results" %nb
-		for i in range(start,nb, step):
+		for i in range(start,nb, step):	
 			r = requests.get(
 					'https://api.datamarket.azure.com/Bing/Search/v1/Web', 
 					params={
@@ -337,20 +338,25 @@ class Config(object):
 					},	
 					auth=(self.key, self.key)
 					)
-			web_results.extend([e["Url"] for e in r.json()['d']['results']])
-		
-		results = [(x,y) for x,y in enumerate(web_results)]
-		new = []
-		inserted = []
-		for i, url in results:
-			if self.add_url(url, origin="bing",depth=0, source_url = None, nb=i, nb_results=len(results)) is True:
-				new.append(url)
+			# print r.status_code
+			self.msg = r.raise_for_status()
+			if self.msg is None:
+				web_results.extend([e["Url"] for e in r.json()['d']['results']])
+				results = [(x,y) for x,y in enumerate(web_results)]
+				new = []
+				inserted = []
+				for i, url in results:
+					if self.add_url(url, origin="bing",depth=0, source_url = None, nb=i, nb_results=len(results)) is True:
+						new.append(url)
+					else:
+						inserted.append(url)
+				print "===="
+				print self.name, self.query
+				print "%i urls updated, %i added"%(len(inserted), len(new))
+				return results
 			else:
-				inserted.append(url)
-		print "===="
-		print self.name, self.query
-		print "%i urls updated, %i added"%(len(inserted), len(new))
-		return results
+				return False
+		
 
 	def add_file(self):
 		''' Method to extract url list from text file'''

@@ -1,27 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-__name__ = "crawtext"
-__version__ = "4.2.0b2"
-__doc__ = '''Crawtext.
-Description:
-A simple crawler in command line for targeted websearch.
-
-Usage:
-	crawtext.py (<name>)
-	crawtext.py (<name>) (--query=<query>) (--key=<key> |--file=<file> [--nb=<nb>] |--url=<url>) [--lang=<lang>] [--user=<email>] [--r=<repeat>] [--depth=<depth>]
-	crawtext.py <name> add [--query=<query>] [--url=<url>] [--file=<file>] [--key=<key>] [--user=<email>] [--r=<repeat>] [--option=<expand>] [--depth=<depth>] [--nb=<nb>] [--lang=<lang>]
-	crawtext.py <name> delete [-q] [-k] [-f] [--url=<url>] [-u] [-r] [-d]
-	crawtext.py (<name>) report [-email] [--user=<email>] [--r=<repeat>]
-	crawtext.py (<name>) export [--format=(csv|json)] [--data=(results|sources|logs|queue)][--r=<repeat>]
-	crawtext.py (<name>) start [--maxdepth=<depth>]
-	crawtext.py (<name>) stop
-	crawtext.py (<name>) toobig
-	crawtext.py (-h | --help)	
-'''
 
 import os, sys, re
-from docopt import docopt
+
 from datetime import datetime as dt
 from database import *
 from random import choice
@@ -32,9 +14,6 @@ import hashlib
 from article import Article
 from config import Config
 from crawl import crawl
-from datetime import *
-from dateutil.relativedelta import *
-import calendar
 
 ABSPATH = os.path.dirname(os.path.abspath(sys.argv[0]))
 RESULT_PATH = os.path.join(ABSPATH, "projects")
@@ -55,9 +34,7 @@ class Worker(object):
 		self.db = TaskDB()
 		self.coll = self.db.coll
 		self.project_name = re.sub('[^0-9a-zA-Z]+', '_', self.name)
-		self.date = dt.now()
-		self.date.replace(second=0, microsecond=0)
-
+		
 				
 	def dispatch(self, params=None):
 		if params is not None:
@@ -119,31 +96,7 @@ class Worker(object):
 			print "\n* Last Status"
 			print "------------"
 			print self.task["action"][-1], self.task["status"][-1],self.task["msg"][-1], dt.strftime(self.task["date"][-1], "%d/%m/%y %H:%M:%S")
-	def cron(self, params):
-		hoy = datetime.datetime.now()
-		hoy.replace(second=0, microsecond=0)
-		if self.exists():
-			print self.task["next"]
-
-	def schedule(self, params):
-		if self.exists():
-			if self.debug: print  "Last Run", self.task["date"][-1]
-			if self.task["repeat"] == "day":
-				next = self.task["date"][-1]+relativedelta(days=+1)
-			elif self.task["repeat"] == "week":
-				next = self.task["date"][-1]+relativedelta(weeks=+1)
-			elif self.task["repeat"] == "month":
-				next = self.task["date"][-1]+relativedelta(months=+1)
-			else:
-				#here prepare a cronlight version
-				next = self.task["date"][-1]+relativedelta(weeks=+1)
-			print next
-			#self.coll.update({"_id": self.task['_id']}, {"next": next})
-			return True
-		return False
-
-
-
+				
 	def report(self, params):
 		if self.exists():
 			db = Database(self.task['project_name'])
@@ -226,7 +179,6 @@ class Worker(object):
 			params["date"] = [dt.now()]
 			params["status"] = ["True"]
 			params["msg"] = ['Ok']
-			params["repeat"] = "week"
 			self.coll.insert(params)
 			config = Config(self.name, self.type)
 			if config.setup():
@@ -333,17 +285,14 @@ class Worker(object):
 		cfg = Config(self.name, "crawl", self.debug)
 		if cfg.setup():
 			if cfg.crawl_setup():
-
 				print "Configuration is Ok"
-				self.schedule(params)
 				if crawl(cfg.project_name, cfg.query, cfg.directory, cfg.max_depth, self.debug):
 					print "Finished"
 				try:
 					user = cfg.task['user']
 				except KeyError:
-					params['user'] = "constance@cortext.fr"
+					params['user'] = "constance@cortext.net"
 				self.report(params)
-				self.export(params)
 				return self.coll.update({"_id": cfg.task['_id']}, {"$push": {"action":"crawl", "status": True, "date": dt.now(), "msg": cfg.msg}})	
 		
 			#put_to_seeds
@@ -361,40 +310,26 @@ class Worker(object):
 				print "Current crawl project %s killed" %self.name
 				if self.exists():
 					try:
-						self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"stop crawl", "status": True, "date": self.date, "msg": "Ok"}})
+						self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"stop crawl", "status": True, "date": dt.now(), "msg": "Ok"}})
 					except Exception, e:
-						self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"start crawl", "status": False, "date": self.date, "msg": e}})
+						self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"start crawl", "status": False, "date": date, "msg": e}})
 
 				os.kill(pid, signal.SIGKILL)
 				return True
 				
 		if self.exists():
-			self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"stop crawl", "status": False, "date": self.date, "msg": "No running project found"}})
+			self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"stop crawl", "status": False, "date": dt.now(), "msg": "No running project found"}})
 			print "No running project %s found" %self.name
 			return False
 		else:
 			print "No crawl job %s found" %self.name
 			return False	
-		
 
-	# def toobig(self,params):
-	# 	project_db = Database(self.name)
-	# 	db , size = project_db.get_size()
-	# 	if size > 99:
-	# 		self.stop(params)
+	def toobig(self,params):
+		project_db = Database(self.name)
+		db , size = project_db.get_size()
+		if size > 99:
+			self.stop(params)
 
 	
 
-'''
-if __name__== "crawtext":
-	try:
-		#print docopt(__doc__)	
-		w = Worker(docopt(__doc__), debug=False)
-		w.dispatch()
-		sys.exit()	
-	except KeyboardInterrupt:
-		sys.exit()
-	except Exception, e:
-		print e
-		sys.exit()
-'''

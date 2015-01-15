@@ -33,16 +33,19 @@ class Page(object):
         self.source_url = source_url
         self.html = u''
         self.status = True
-
-    def is_valid(self, max_depth):
-        url = Link(self.url, self.source_url, self.debug)
+    
+    def check_depth(self, depth, max_depth):
         if self.depth > max_depth :
             if self.debug: print "depth for this page is %d and max is set to %d" %(self.depth,max_depth)
             self.step = "Validating url"
             self.code = "102"
-            self.msg = "Depth of this page is > %d" %self.depth
+            self.msg = "Depth of this page is %d and > %d" %(self.depth, max_depth)
             self.status = False
+            return False
+        return True
 
+    def is_valid(self):
+        url = Link(self.url, self.source_url, self.debug)
         if url.is_valid():
             self.url = url.url
             return True
@@ -91,12 +94,19 @@ class Page(object):
                 self.status = False
                 return False
     def log(self):
-        if self.debug is True:
-            print {"url":self.url, "status": self.status, "msg": self.msg, "code": self.code}
+        # if self.debug is True:
+        #     print {"url":self.url, "status": self.status, "msg": self.msg, "code": self.code}
         return {"url":self.url, "status": self.status, "msg": self.msg, "code": self.code}    
     
     def export(self):
         return {"url":self.url, "source_url": self.source_url, "depth": self.depth, "html": self.html}
+    
+    def download(self, max_depth):
+        if self.check_depth(self.depth, max_depth) and self.is_valid() and self.fetch():
+            return True
+        return False
+
+
 
 class Article(object):
     def __init__(self, url, html, source_url=u'', depth="",  debug= False):
@@ -110,6 +120,8 @@ class Article(object):
         self.metalang = ""
         self.meta = None
         self.status = True
+        self.crawl_nb = 0
+
 
     def extract(self):
         self.doc = BeautifulSoup(self.html)
@@ -165,6 +177,7 @@ class Article(object):
                     if url is not None and url != "":
                         l = Link(url)
                         url, domain = l.clean_url(url, self.url)
+                        # print url, domain
                         if url is not None and url not in links:
                             links.append(url)
                             domains.append(domain)
@@ -176,8 +189,8 @@ class Article(object):
             else:
                 pass
         self.links = links
-        self.domains = [u[1] for u in links if u[0] not in self.all]
-        return (self.links, self.domains)
+        self.domains = domains
+        return 
     
 
     def fetch_domains(self):
@@ -231,9 +244,12 @@ class Article(object):
                 "cited_domains": self.domains,
                 "html": self.html,
                 "text": self.text,
+                "depth": self.depth,
+                
                 #"keywords": self.keywords,
                 #"description": self.description,
                 "meta": self.meta,
+                "crawl_nb": 0,
                 #"lang": self.metalang,
                 }
         

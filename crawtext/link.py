@@ -75,13 +75,16 @@ class Link(object):
         tld_dat = tldextract.extract(url)
         self.subdomain = tld_dat.subdomain
         self.domain = tld_dat.domain.lower()
-        if self.domain == "":
-            print self.url
         self.extension =  tld_dat.suffix
         #info on page
         self.path_chunk = [x for x in self.path.split('/') if len(x) > 0]
-        self.name = self.path_chunk[-1]
         self.in_depth = len(self.path_chunk)
+        
+
+        if self.in_depth < 1:
+            self.name = ""
+        else:    
+            self.name = self.path_chunk[-1]
         return self    
 
     def is_valid(self):
