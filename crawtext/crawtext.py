@@ -313,9 +313,11 @@ class Worker(object):
                 self.report(params)
                 self.export(params)
                 return self.coll.update({"_id": cfg.task['_id']}, {"$push": {"action":"crawl", "status": True, "date": dt.now(), "msg": cfg.msg}})  
+            else:
+                return self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"setup crawl", "status": False, "date": dt.now(), "msg": cfg.msg}})       
         else:
             #put_to_seeds
-        return self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"config", "status": False, "date": dt.now(), "msg": cfg.msg}})   
+            return self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"config", "status": False, "date": dt.now(), "msg": cfg.msg}})   
 
     def stop(self, params):
         import subprocess, signal
