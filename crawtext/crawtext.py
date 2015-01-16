@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 __name__ = "crawtext"
-__version__ = "4.2.0b2"
+__version__ = "4.2.1"
 __doc__ = '''Crawtext.
 Description:
 A simple crawler in command line for targeted websearch.
@@ -311,8 +311,9 @@ class Worker(object):
                 except KeyError:
                     params['user'] = "constance@cortext.net"
                 self.report(params)
+                self.export(params)
                 return self.coll.update({"_id": cfg.task['_id']}, {"$push": {"action":"crawl", "status": True, "date": dt.now(), "msg": cfg.msg}})  
-        
+        else:
             #put_to_seeds
         return self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"config", "status": False, "date": dt.now(), "msg": cfg.msg}})   
 
