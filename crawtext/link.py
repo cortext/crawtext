@@ -50,15 +50,17 @@ class Link(object):
         self.parse_url(self.url)
         
     def clean_url(self, url, source_url):
-        if url.startswith('mailto'):
-            return None
+        domain = self.get_domain(url)
         if url.startswith('/'):
             l = self.parse_url(source_url)
-            return ("http://"+l.netloc+url, l.domain)
+            return ("http://"+l.netloc+url, domain)
         else:
-            l = self.parsed_url(url)
-            return (url, l.domain)
+            return (url, domain)
     
+    def get_domain(self, url):
+        tld_dat = tldextract.extract(url)
+        return tld_dat.domain.lower()
+
     def parse_url(self,url):
         '''complete info on url'''
         self.step = "parse"

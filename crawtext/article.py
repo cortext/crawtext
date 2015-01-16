@@ -137,11 +137,13 @@ class Article(object):
                 self.status = False
                 self.msg = str(ex)
                 self.code = "700"
+                print ex
                 return False
         else:
             self.status = False
             self.msg = "No html loaded"
             self.code = "700"
+            print self.msg
             return False
     
     def get_meta(self):
@@ -168,30 +170,65 @@ class Article(object):
         
     def fetch_links(self):
         ''' extract raw_links and domains '''
-        links = []
-        domains = []
-        for n in self.doc.findAll("a"):
-            if n is not None and n != "":
-                try:
-                    url = n.get('href')
-                    if url is not None and url != "":
-                        l = Link(url)
-                        url, domain = l.clean_url(url, self.url)
-                        # print url, domain
-                        if url is not None and url not in links:
-                            links.append(url)
-                            domains.append(domain)
-                            
-                except Exception as ex:
-                    pass
-            elif n.startswith('mailto'):
+        self.domains = []
+        self.links = []
+        links = [n.get('href') for n in self.doc.find_all("a")]
+        links = [n for n in links if n is not None and n != ""]
+
+        for url in self.links:
+            if url == "/":
+                pass
+            if url.startswith('mailto'):
+                pass
+            if url.startswith('javascript'):
                 pass
             else:
-                pass
-        self.links = links
-        self.domains = domains
-        return 
-    
+                l = Link(url)
+                if l.is_valid():
+                    url, domain = l.clean_url(url, self.url)
+                    self.domains.append(domain)
+                    self.links.append(url)
+                
+        return (self.links, self.domains)
+        '''
+        if len(self.doc.find_all("a")) > 0:
+            try:
+                print ">>>>>> FETCH LINKS"
+
+                for n in self.doc.find_all("a"):
+                    try:
+                        print ">>", n.get('href')
+                    except KeyError:
+                        pass
+                #     if n is not None or n != "":
+                #         if n.startswith('mailto'):
+                #             pass
+                #         if n.startswith('javascript'):
+                #             pass
+                #         else:
+                #             print "????"
+                #             url = n.get('href')
+
+                #             if url is not None and url != "":
+                #                 l = Link(url)
+
+                #                 url, domain = l.clean_url(url, self.url)
+                #                 print url, domain
+                #                 if url is not None and url not in links:
+                #                     print url
+                #                     links.append(url)
+                #                     domains.append(domain)
+                                    
+                        
+                #     else:
+                #         pass
+                # self.links = links
+                # self.domains = domains
+                # return 
+            except Exception as ex:
+                print "FETCH", ex
+                return
+        '''
 
     def fetch_domains(self):
         self.domains = []
