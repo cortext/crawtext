@@ -175,7 +175,7 @@ class Article(object):
         links = [n.get('href') for n in self.doc.find_all("a")]
         links = [n for n in links if n is not None and n != ""]
 
-        for url in self.links:
+        for url in links:
             if url == "/":
                 pass
             if url.startswith('mailto'):

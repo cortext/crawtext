@@ -44,13 +44,13 @@ def crawl(db_name, query, directory, max_depth, debug=True):
                             a.fetch_links()
                             if debug is True: print "nexts links: %d" %len(a.links)    
                             if len(a.links) > 0:
-                                print a.links
                                 if debug is True: print "\t-next pages: %d" %len(a.links)
-                                db.queue.insert(a.links)
+                                print a.links
+                                db.queue.insert([{"url": url} for url in a.links])
 
                         else:    
                             if debug: print "max_depth exceeded %d"(self.depth)
-                        if debug: print a.export()
+                        # if debug: print a.export()
                         db.insert_result(a.export())
                         
             treated.append(item["url"])
