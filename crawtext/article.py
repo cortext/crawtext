@@ -22,24 +22,30 @@ from datetime import datetime as dt
 class Page(object):
     """Article objects abstract an online news article page
     """
-    def __init__(self, url, source_url= None, depth ="",  debug= False):
+    def __init__(self, url, source_url= None, depth ="",date="", debug= False):
         """The **kwargs argument may be filled with config values, which
         is added into the config object
         """
 
         self.debug = debug
         self.depth = depth
+        self.date = date
         self.url = url
         self.source_url = source_url
         self.html = u''
         self.status = True
     
     def check_depth(self, depth, max_depth):
-        if self.depth > max_depth :
-            if self.debug: print "depth for this page is %d and max is set to %d" %(self.depth,max_depth)
+        print repr(depth), repr(max_depth)
+        if depth == "":
+            depth = 0   
+        depth = int(depth)
+        max_depth = int(max_depth)
+        if depth > max_depth :
+            if self.debug: print "depth for this page is %d and max is set to %d" %(depth,max_depth)
             self.step = "Validating url"
             self.code = "102"
-            self.msg = "Depth of this page is %d and > %d" %(self.depth, max_depth)
+            self.msg = "Depth of this page is %d and > %d" %(depth, max_depth)
             self.status = False
             return False
         return True
@@ -101,19 +107,20 @@ class Page(object):
     def export(self):
         return {"url":self.url, "source_url": self.source_url, "depth": self.depth, "html": self.html}
     
-    def download(self, max_depth):
-        if self.check_depth(self.depth, max_depth) and self.is_valid() and self.fetch():
+    def download(self):
+        if self.is_valid() and self.fetch():
             return True
         return False
 
 
 
 class Article(object):
-    def __init__(self, url, html, source_url=u'', depth="",  debug= False):
+    def __init__(self, url, html, source_url=u'', depth="",  date="", debug= False):
         self.url = url
         self.html = html
         self.source_url = source_url
         self.depth = depth
+        self.date = date
         self.debug = debug
         self.keywords = []
         self.description = u''
@@ -137,13 +144,11 @@ class Article(object):
                 self.status = False
                 self.msg = str(ex)
                 self.code = "700"
-                print ex
                 return False
         else:
             self.status = False
             self.msg = "No html loaded"
             self.code = "700"
-            print self.msg
             return False
     
     def get_meta(self):
@@ -190,45 +195,7 @@ class Article(object):
                     self.links.append(url)
                 
         return (self.links, self.domains)
-        '''
-        if len(self.doc.find_all("a")) > 0:
-            try:
-                print ">>>>>> FETCH LINKS"
-
-                for n in self.doc.find_all("a"):
-                    try:
-                        print ">>", n.get('href')
-                    except KeyError:
-                        pass
-                #     if n is not None or n != "":
-                #         if n.startswith('mailto'):
-                #             pass
-                #         if n.startswith('javascript'):
-                #             pass
-                #         else:
-                #             print "????"
-                #             url = n.get('href')
-
-                #             if url is not None and url != "":
-                #                 l = Link(url)
-
-                #                 url, domain = l.clean_url(url, self.url)
-                #                 print url, domain
-                #                 if url is not None and url not in links:
-                #                     print url
-                #                     links.append(url)
-                #                     domains.append(domain)
-                                    
-                        
-                #     else:
-                #         pass
-                # self.links = links
-                # self.domains = domains
-                # return 
-            except Exception as ex:
-                print "FETCH", ex
-                return
-        '''
+        
 
     def fetch_domains(self):
         self.domains = []
@@ -264,6 +231,17 @@ class Article(object):
             self.status = False
             return False
 
+    def check_depth(self, max_depth):
+        if self.depth > max_depth :
+            if self.debug: print "depth for this page is %d and max is set to %d" %(self.depth,max_depth)
+            self.step = "Validating url"
+            self.code = "102"
+            self.msg = "Depth of this page is %d and > %d" %(depth, max_depth)
+            self.status = False
+            return False
+        return True
+
+
     def export(self):
         l = Link(self.url,self.source_url)
         l = l.parse_url(self.url)
@@ -287,6 +265,8 @@ class Article(object):
                 #"description": self.description,
                 "meta": self.meta,
                 "crawl_nb": 0,
+                "status": [True],
+                "msg": ["Ok"]
                 #"lang": self.metalang,
                 }
         
