@@ -362,7 +362,13 @@ class Worker(object):
             self.coll.update({"_id": self.task['_id']}, {"next": next})
             return True
         return False    
-            
+    
+    def flush(self):
+        cfg = Config(self.name, "crawl", self.debug)
+        cfg.flush()
+
+
+
 if __name__== "crawtext":
     try:
         #print docopt(__doc__)  
@@ -370,6 +376,7 @@ if __name__== "crawtext":
         w.dispatch()
         sys.exit()  
     except KeyboardInterrupt:
+        w.flush()
         sys.exit()
     except Exception, e:
         print e

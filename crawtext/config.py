@@ -23,7 +23,10 @@ class Config(object):
 		self.type = job_type
 		self.msg = ""
 		self.task = self.coll.find_one({"name":self.name, "type": self.type})
-	
+		self.date = dt.now()
+		print self.date
+    	# self.date = (self.date).replace(hour=0, minute=0, second=0, microsecond=0)
+
 	def exists(self):	
 		self.task = self.coll.find_one({"name":self.name, "type": self.type})
 		if self.task is not None:
@@ -184,7 +187,7 @@ class Config(object):
 
 	def put_to_queue(self):
 		for item in self.project_db.sources.find():
-			if self.debug : print "Putting url to crawl", item["url"], item["status"]
+			if self.debug : print "Putting url to crawl", item["url"], item["status"][-1], item["depth"]
 			if item["url"] not in self.project_db.queue.distinct("url"):
 				self.project_db.queue.insert(item)
 			else:
@@ -254,7 +257,7 @@ class Config(object):
 		except KeyError:
 			self.max_depth = int(MAX_DEPTH)
 			print "\tx defaut maximum depth is set to:  %d" %(self.max_depth)
-			self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"config crawl", "status": "True", "date": dt.now(), "msg": "Setting up defaut max_depth to 100"}})
+			self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"config crawl", "status": "True", "date": self.date, "msg": "Setting up defaut max_depth to 100"}})
 			
 	def check_lang(self):
 		try:
@@ -275,7 +278,7 @@ class Config(object):
 		elif self.check_url() is False:
 			error.append('url')
 		if len(error) == 3:
-			self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"config crawl", "status": False, "date": dt.now(), "msg": self.msg}})
+			self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"config crawl", "status": False, "date": self.date, "msg": self.msg}})
 			print "add url or key or file to you project:"
 			print "\tpython crawtext.py %s add --url=\"yoururl.com/examples\"" %(self.project_name)
 			print "\tpython crawtext.py %s add --file=\"seed_examples.txt\"" %(self.project_name)
@@ -290,10 +293,10 @@ class Config(object):
 			exists = self.sources.find_one({"url": url})	
 			#~ print exists
 			if exists is not None:
-				self.sources.update({"_id":exists['_id']}, {"$push": {"date":dt.now(),"status": True, "step": "Updated", "nb": nb,"nb_results": nb_results, "msg": "Ok"}}, upsert=False)
+				self.sources.update({"_id":exists['_id']}, {"$push": {"date":self.date,"status": True, "step": "Updated", "nb": nb,"nb_results": nb_results, "msg": "Ok"}}, upsert=False)
 				return False
 			else:
-				self.sources.insert({"url":url, "source_url":None, "origin": origin, "nb":[nb], "nb_results":[nb_results],"depth": 0, "date":[dt.now()], "step":["Added"], "status":[True], "msg":["Inserted"]})	
+				self.sources.insert({"url":url, "source_url":None, "origin": origin, "nb":[nb], "nb_results":[nb_results],"depth": 0, "date":[self.date], "step":["Added"], "status":[True], "msg":["Inserted"]})	
 				return True
 		# 	pass
 		else:
@@ -305,7 +308,7 @@ class Config(object):
 			 	return False
 			else:
 				#print "\tx Url added: %s \n\t\t>Status is set to %s" %(link.url, link.status)
-				self.sources.insert({"url":link.url, "source_url":None, "origin": origin, "depth": 0, "date":[dt.now()], "step":["Added"], "status":[link.status], "msg":["inserted"]})
+				self.sources.insert({"url":link.url, "source_url":None, "origin": origin, "depth": 0, "date":[self.date], "step":["Added"], "status":[link.status], "msg":["inserted"]})
 				# exists = self.sources.find_one({"url": link.url})
 				# if exists is not None:
 				# 	self.sources.update({"_id":exists['_id']}, {"$push": {"date":dt.now(),"status": link.status,"step": link.step, "msg": link.msg}}, upsert=False)
@@ -394,4 +397,18 @@ class Config(object):
 	def export_config(self):
 		"Config for Export"
 		pass
+	
+	def flush(self):
+		if self.exists():
+			try:
+				self.project_name = self.task["project_name"]
+				self.project_db = Database(self.task["project_name"])
+			except Exception:
+				print "No project %s found", self.name
+				return False
+		self.queue = self.project_db.use_coll("queue")
+		sources_nb = self.queue.count()
+		self.queue.drop()
+		print sources_nb, "deleted"
+		return True
 

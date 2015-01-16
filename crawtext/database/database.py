@@ -97,7 +97,6 @@ class Database(object):
 		if url in self.db.sources.distinct("url"):
 			if self.debug: print "Source updated"
 			exists = self.db.sources.find_one({"url":url})	
-			print exists
 			if exists is not None:
 				del log["url"]
 				try:
@@ -120,15 +119,38 @@ class Database(object):
 		return True
 
 	def insert_result(self, log):
-		exists = self.db.sources.find_one({"url":log['url']})
-		if log["url"] not in self.db.results.distinct("url"):
-			if self.debug: print "insert result", results["title"]
+		self.debug = True
+		result = self.db.results.find_one({"url":log['url']})
+		source = self.db.sources.find_one({"url":log['url']})
+		if source is not None:
+			if self.debug: print "\t- sources udpated"			
+			self.db.sources.update({"_id":source["_id"]}, {"$push": {"date": log["date"], "status": True, "msg": "Result stored"}})
+		if result is not None:
+			return self.update_result(log)
+
+		else:
+			if self.debug: print "\t-page inserted"
 			self.db.results.insert(log)
 			return True
-		else:
-			self.db.results.update({"_id":exists["_id"]}, {"$push": log})
-			self.db.results.update({"_id":exists["_id"]}, {"$inc": {"crawl_nb":+1}})
+		
+
+	def update_result(self, log):
+		"\t-result updated"
+		try:
+			result = self.db.results.find_one({"url":log['url']})
+			
+
+			updated = self.db.results.update({"_id":result["_id"]},{"$push": {"date": log["date"], "status": True, "msg": "Result stored"}})
+			# print updated
+			try:
+				incremented = self.db.results.update({"_id":result["_id"]},{"$set": {"crawl_nb":result["crawl_nb"]+1}})
+			except:
+				incremented = self.db.results.update({"_id":result["_id"]},{"$set": {"crawl_nb":1}})
+			# print incremented
 			return True
+		except Exception:
+			print "No url provided"
+			return False
 
 	def insert_queue(self, log):
 		if self.debug: print "insert queue", log["url"]
