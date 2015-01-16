@@ -14,7 +14,7 @@ Usage:
     crawtext.py <name> delete [-q] [-k] [-f] [--url=<url>] [-u] [-r] [-d]
     crawtext.py (<name>) report [-email] [--user=<email>] [--r=<repeat>]
     crawtext.py (<name>) export [--format=(csv|json)] [--data=(results|sources|logs|queue)][--r=<repeat>]
-    crawtext.py (<name>) start [--maxdepth=<depth>]
+    crawtext.py (<name>) start [--maxdepth=<depth>] [--debug]
     crawtext.py (<name>) stop
     crawtext.py (<name>) toobig
     crawtext.py (-h | --help)   
@@ -93,7 +93,7 @@ class Worker(object):
         return p
 
     def clean_options(self, options):
-        opt = {"-q":"query","-k":"key","-f":"file","-u":"user","-r":"repeat", "--url":"url", "-d":"depth"}
+        opt = {"-q":"query","-k":"key","-f":"file","-u":"user","-r":"repeat", "--url":"url", "-d":"depth", "--debug":"debug"}
         for k,v in options.items():
             if k in opt.keys():
                 del options[k]
@@ -311,6 +311,7 @@ class Worker(object):
                 except KeyError:
                     params['user'] = "constance@cortext.net"
                 self.report(params)
+                self.export({})
                 return self.coll.update({"_id": cfg.task['_id']}, {"$push": {"action":"crawl", "status": True, "date": dt.now(), "msg": cfg.msg}})  
         
             #put_to_seeds
