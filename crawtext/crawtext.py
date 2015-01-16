@@ -2,7 +2,11 @@
 # -*- coding: utf-8 -*-
 
 __name__ = "crawtext"
+<<<<<<< HEAD
 __version__ = "4.2.1"
+=======
+__version__ = "4.3.0"
+>>>>>>> last
 __doc__ = '''Crawtext.
 Description:
 A simple crawler in command line for targeted websearch.
@@ -14,7 +18,7 @@ Usage:
     crawtext.py <name> delete [-q] [-k] [-f] [--url=<url>] [-u] [-r] [-d]
     crawtext.py (<name>) report [-email] [--user=<email>] [--r=<repeat>]
     crawtext.py (<name>) export [--format=(csv|json)] [--data=(results|sources|logs|queue)][--r=<repeat>]
-    crawtext.py (<name>) start [--maxdepth=<depth>]
+    crawtext.py (<name>) start [--maxdepth=<depth>] [--debug]
     crawtext.py (<name>) stop
     crawtext.py (<name>) toobig
     crawtext.py (-h | --help)   
@@ -93,7 +97,7 @@ class Worker(object):
         return p
 
     def clean_options(self, options):
-        opt = {"-q":"query","-k":"key","-f":"file","-u":"user","-r":"repeat", "--url":"url", "-d":"depth"}
+        opt = {"-q":"query","-k":"key","-f":"file","-u":"user","-r":"repeat", "--url":"url", "-d":"depth", "--debug":"debug"}
         for k,v in options.items():
             if k in opt.keys():
                 del options[k]
@@ -311,7 +315,11 @@ class Worker(object):
                 except KeyError:
                     params['user'] = "constance@cortext.net"
                 self.report(params)
+<<<<<<< HEAD
                 self.export(params)
+=======
+                self.export({})
+>>>>>>> last
                 return self.coll.update({"_id": cfg.task['_id']}, {"$push": {"action":"crawl", "status": True, "date": dt.now(), "msg": cfg.msg}})  
             else:
                 return self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"setup crawl", "status": False, "date": dt.now(), "msg": cfg.msg}})       
@@ -346,11 +354,22 @@ class Worker(object):
             print "No crawl job %s found" %self.name
             return False    
 
-    def toobig(self,params):
-        project_db = Database(self.name)
-        db , size = project_db.get_size()
-        if size > 99:
-            self.stop(params)
+    def schedule(self, params):
+        if self.exists():
+            if self.debug: print "Last Run", self.task["date"][-1]
+            if self.task["repeat"] == "day":
+                next = self.task["date"][-1]+relativedelta(days=+1)
+            elif self.task["repeat"] == "week":
+                next = self.task["date"][-1]+relativedelta(weeks=+1)
+            elif self.task["repeat"] == "month":
+                next = self.task["date"][-1]+relativedelta(months=+1)
+            else:
+            #here prepare a cronlight version
+                next = self.task["date"][-1]+relativedelta(weeks=+1)
+            if self.debug: print"Next run", next
+            self.coll.update({"_id": self.task['_id']}, {"next": next})
+            return True
+        return False    
             
 if __name__== "crawtext":
     try:
