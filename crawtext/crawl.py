@@ -56,17 +56,22 @@ def update_result(db,treated, item, debug):
     exists = db.results.find_one({"url":item["url"]})
     if exists is not None :
         next_urls = []
-        next = [n for n in exists["cited_links"] if n not in treated]
-        if len(next) > 0:
+        try:
+            next = [n for n in exists["cited_links"] if n not in treated]
+            if len(next) > 0:
+                
         # print exists['cited_links']
-            for url in exists["cited_links"]:
-                next_urls.append({"url": url, "source_url":item["url"], "depth": item["depth"]+1, "date": item["date"]})
-            if len(next_urls) > 0:
-                db.queue.insert(next_urls)
-                print ">>inserted", len(next_urls)
-                return True
-        else:
-            return  True
+                for url in exists["cited_links"]:
+                    next_urls.append({"url": url, "source_url":item["url"], "depth": item["depth"]+1, "date": item["date"]})
+                if len(next_urls) > 0:
+                    db.queue.insert(next_urls)
+                    print ">>inserted", len(next_urls)
+                    return True
+            
+            else:
+                return  True
+        except KeyError:
+            return True
     else:
         return False
 

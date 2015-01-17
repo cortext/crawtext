@@ -304,7 +304,7 @@ class Config(object):
 			exists = self.sources.find_one({"url": link.url})
 			if exists is not None:
 			 	# print "\tx Url updated: %s \n\t\t>Status is set to %s" %(link.url, link.status)
-			 	self.sources.update({"_id":exists['_id']}, {"$push": {"date":datenow,"status": link.status, "step": link.step, "msg": link.msg}}, upsert=False)
+			 	self.sources.update({"_id":exists['_id']}, {"$push": {"date":self.date,"status": link.status, "step": link.step, "msg": link.msg}}, upsert=False)
 			 	return False
 			else:
 				#print "\tx Url added: %s \n\t\t>Status is set to %s" %(link.url, link.status)
