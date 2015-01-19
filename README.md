@@ -32,18 +32,18 @@ Installation
 
 * Install MongoDB (Mandatory)
 
-** For Debian distribution
+    - For Debian distribution
 ```
 $ sudo apt-get install mongodb
 ```
 
-** For OSX distribution install it with brew:
+    - For OSX distribution install it with brew:
 
 ```
 $ brew install mongodb
 ```
 
-NB: (By defaut, in NIX systems mongodb datasets are stored in /data/db please be sure that you have enought space)
+NB: (By defaut, in NIX systems mongodb datasets are stored in /data/db please be sure that you have enought space there)
 
 
 * Set up a VirtualEnv (Recommended)
@@ -219,14 +219,15 @@ The crawl by default will be run every week, but you can change to repeat the pr
 every month, every week or every day.
 
 ```
-$python crawtext.py pesticides -r="day"
+$python crawtext.py pesticides --r="day"
 ```
 To activate the scheduler in your machine, you will need to add to your crontab the python script scheduler.py 
 to be run every day
 
 
 Outputs
-===
+====
+
 Datasets are stored in json and zip in 3 collections in the dedicated directory of your project:
 * results
 * sources
@@ -318,6 +319,7 @@ Log
     "msg" : "Article Query: not relevant" }
 
 >> See logs_example.json
+
 Put the data into the Cortext manager
 ====
 1. Zip the json file you want to analyse
