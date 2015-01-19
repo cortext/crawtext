@@ -58,7 +58,7 @@ class Database(object):
 			return False
 		
 	def show_coll_items(self, coll_name):
-		return [n for n in self.db[str(coll_name)].find()]	
+		return [n for n in self.db[str(coll_name)].find(timeout=False)]	
 
 	def drop(self, type, name):
 		if type == "collection":
@@ -77,12 +77,7 @@ class Database(object):
 		for n in self.show_dbs():
 			#if n not in ["projects", "tasks"]:
 			self.use_db(n)
-			self.drop("database", n)
-	'''
-	def get_error_list(self):
-		for n in self.db.logs.find():
-			print n['code'], n['msg'], n['url']
-	'''
+	
 	def insert_logs(self, log_list):
 		for log in log_list:
 			self.insert_log(self, log)
@@ -96,7 +91,7 @@ class Database(object):
 			pass
 		if url in self.db.sources.distinct("url"):
 			if self.debug: print "Source updated"
-			exists = self.db.sources.find_one({"url":url})	
+			exists = self.db.sources.find_one({"url":url},timeout=False)	
 			if exists is not None:
 				del log["url"]
 				try:
@@ -110,7 +105,7 @@ class Database(object):
 				self.db.logs.insert({"url":url,"msg":log["msg"], "status":log["status"], "code": log["code"], "date": [datetime.now()]})
 				return True
 			else:
-				exists = self.db.logs.find_one({"url": url})
+				exists = self.db.logs.find_one({"url": url},timeout=False)
 				self.db.sources.update({"_id":exists["_id"]}, {"$push": log})
 				return True
 	def insert_results(self,results):
@@ -120,8 +115,8 @@ class Database(object):
 
 	def insert_result(self, log):
 		self.debug = True
-		result = self.db.results.find_one({"url":log['url']})
-		source = self.db.sources.find_one({"url":log['url']})
+		result = self.db.results.find_one({"url":log['url']},timeout=False)
+		source = self.db.sources.find_one({"url":log['url']},timeout=False)
 		if source is not None:
 			if self.debug: print "\t- sources udpated"			
 			self.db.sources.update({"_id":source["_id"]}, {"$push": {"date": log["date"], "status": True, "msg": "Result stored"}})
@@ -137,7 +132,7 @@ class Database(object):
 	def update_result(self, log):
 		"\t-result updated"
 		try:
-			result = self.db.results.find_one({"url":log['url']})
+			result = self.db.results.find_one({"url":log['url']},timeout=False)
 			
 
 			updated = self.db.results.update({"_id":result["_id"]},{"$push": {"date": log["date"], "status": True, "msg": "Result stored"}})
@@ -194,12 +189,12 @@ class Database(object):
 		self.uniq_sources_nb = len(self.db.sources.distinct("url"))
 		
 		#self.active_sources_nb = self.db.sources.find({"status":True}, { "status": {"$slice": -1 } } ).count()
-		self.inactive_sources_nb = self.db.sources.find({"status":False}, { "status": {"$slice": -1 } } ).count()
+		self.inactive_sources_nb = self.db.sources.find({"status":False}, { "status": {"$slice": -1 } },timeout=False ).count()
 		self.active_sources_nb = self.sources_nb - self.inactive_sources_nb
-		self.bing_sources = self.db.sources.find({"origin":"bing"}).count()
-		self.file_sources = self.db.sources.find({"origin":"file"}).count()
-		self.manual_sources = self.db.sources.find({"origin":"manual"}).count()
-		self.expanded_sources = self.db.sources.find({"origin":"automatic"}).count()
+		self.bing_sources = self.db.sources.find({"origin":"bing"},timeout=False).count()
+		self.file_sources = self.db.sources.find({"origin":"file"},timeout=False).count()
+		self.manual_sources = self.db.sources.find({"origin":"manual"},timeout=False).count()
+		self.expanded_sources = self.db.sources.find({"origin":"automatic"},timeout=False).count()
 
 		#results
 		self.results_nb = self.db.results.count()
@@ -207,7 +202,7 @@ class Database(object):
 		#logs
 		self.logs_nb = self.db.logs.count()
 		self.uniq_logs_nb = len(self.db.logs.distinct("url"))
-		self.non_pertinent_nb = self.db.logs.find({"code":800}, { "code": {"$slice": -1 } } ).count()
+		self.non_pertinent_nb = self.db.logs.find({"code":800}, { "code": {"$slice": -1 } }, timeout=False ).count()
 		#treated
 		self.treated_nb = int(int(self.db.results.count()) + int(self.db.logs.count()))
 		self.queue_nb = self.db.queue.count()

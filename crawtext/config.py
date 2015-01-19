@@ -22,13 +22,13 @@ class Config(object):
 		self.name = name
 		self.type = job_type
 		self.msg = ""
-		self.task = self.coll.find_one({"name":self.name, "type": self.type})
+		self.task = self.coll.find_one({"name":self.name, "type": self.type},timeout=False)
 		self.date = dt.now()
 		print self.date
     	# self.date = (self.date).replace(hour=0, minute=0, second=0, microsecond=0)
 
 	def exists(self):	
-		self.task = self.coll.find_one({"name":self.name, "type": self.type})
+		self.task = self.coll.find_one({"name":self.name, "type": self.type},timeout=False)
 		if self.task is not None:
 			self.project_name = self.task["project_name"]
 			return True
@@ -301,7 +301,7 @@ class Config(object):
 		# 	pass
 		else:
 			link = Link(url, source_url, depth, origin)
-			exists = self.sources.find_one({"url": link.url})
+			exists = self.sources.find_one({"url": link.url},timeout=False)
 			if exists is not None:
 			 	# print "\tx Url updated: %s \n\t\t>Status is set to %s" %(link.url, link.status)
 			 	self.sources.update({"_id":exists['_id']}, {"$push": {"date":self.date,"status": link.status, "step": link.step, "msg": link.msg}}, upsert=False)

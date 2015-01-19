@@ -17,7 +17,7 @@ def crawl(db_name, query, directory, max_depth, debug=True):
     if debug: print len(treated), "already in results"
     while db.queue.count() > 0:
         if debug: print "\nCrawling ..."
-        for item in db.queue.find():
+        for item in db.queue.find(timeout=False):
             if debug:
                 print "\nTreating", db.queue.count(), "pages \n"
                 print item["url"]
@@ -40,7 +40,7 @@ def crawl(db_name, query, directory, max_depth, debug=True):
                 break
             print "Results", db.results.count()
             if db.results.count() > 200000:
-                for n in db.results.find({"depth":max(db.results.distinct("depth"))}):
+                for n in db.results.find({"depth":max(db.results.distinct("depth"))}, timeout=False):
                     db.results.remove({"_id":n["_id"]})
                 print db.results.count()
                 db.queue.drop()
@@ -53,7 +53,7 @@ def update_result(db,treated, item, debug):
     print "update"
     print db.update_result(item)
     
-    exists = db.results.find_one({"url":item["url"]})
+    exists = db.results.find_one({"url":item["url"]}, timeout=False)
     if exists is not None :
         next_urls = []
         try:
