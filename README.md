@@ -212,8 +212,19 @@ Next run will start from where it stops
 You can delete the entire project. Every single datasets will be destroyed so be carefull!
 ```
 $python crawtext.py pesticides delete
+```
+
+- **Schedule next run**:
+The crawl by default will be run every week, but you can change to repeat the process:
+every month, every week or every day.
 
 ```
+$python crawtext.py pesticides -r="day"
+```
+To activate the scheduler in your machine, you will need to add to your crontab the python script scheduler.py 
+to be run every day
+
+
 Outputs
 ===
 Datasets are stored in json and zip in 3 collections in the dedicated directory of your project:
@@ -221,77 +232,93 @@ Datasets are stored in json and zip in 3 collections in the dedicated directory 
 * sources
 * logs
 
-```
-Anatomy of a source entry
------
+Sources
+====
 Sources of your project correspond a datatable that can export in json or csv
-informations that are stored are the following:
 Date msg and status are updated for each run of the crawl with the corresponding status msg
+{   "_id" : { "$oid" : "54ba81fddabe6e2e318c2e40" }, 
+    "date" : [ 
+        { "$date" : 1421512716603 }, 
+        { "$date" : 1421512726281 }, 
+        { "$date" : 1421512726281 }, 
+        { "$date" : 1421512728910 }, 
+        { "$date" : 1421663553873 }, 
+        { "$date" : 1421663553873 } 
+        ], 
 
+    "depth" : 0, 
+    "msg" : [ 
+        "Inserted", 
+        "Ok", 
+        "Ok", 
+        "Result stored", 
+        "Ok", 
+        "Ok" ],
+    "nb" : [ 
+            0, 
+            0, 
+            0, 
+            0, 
+            0 ], 
+    "nb_results" : [ 
+            50, 
+            50, 
+            50, 
+            50, 
+            50 ], 
+    "origin" : "bing", 
+    "source_url" : null, 
+    "status" : [ 
+        true, 
+        true, 
+        true, 
+        true, 
+        true, 
+        true ], 
+    "step" : [ 
+        "Added", 
+        "Updated", 
+        "Updated", 
+        "Updated", 
+        "Updated" ], 
+    "url" : "http://fr.wikipedia.org/wiki/Algue_verte" }
 
-{	
-	"_id" : ObjectId("546dc48edabe6e52c2e54908"),
-	"date" : [
-		ISODate("2014-11-20T11:38:06.397Z"),
-		ISODate("2014-11-20T11:38:06.424Z")
-	],
-	"depth" : 2,
-	"extension" : "org",
-	"file_type" : null,
-	"msg" : [
-		"Ok",
-		"Ok"
-	],
-	"netloc" : "fr.wikipedia.org",
-	"origin" : "bing",
-	"path" : "/wiki/Algue_verte",
-	"relative" : true,
-	"scheme" : "http",
-	"source_url" : "http://fr.wikipedia.org",
-	"status" : [
-		true,
-		true
-	],
-	"tld" : "wikipedia",
-	"url" : "http://fr.wikipedia.org/wiki/Algue_verte"
-	}
+>> See sources_examples.json
 
-
-Anatomy of a result entry
------
-			{
-			 "url":http://fr.wikipedia.org/wiki/Algue_verte,
-             "url_info":{ 	"origin" : "", 
-                 				"status" : [ true ], 
-                 				"extension" : "org", 
-                 				"url" : "http://en.wikipedia.org/wiki/Algue_verte", 
-                 				"netloc" : "en.wikipedia.org", 
-                 				"source_url" : "http://en.wikipedia.org", 
-                 				"relative" : false, 
-                 				"file_type" : null, 
-                 				"depth" : 2, 
-                 				"tld" : "wikipedia", 
-                 				"date" : [ { "$date" : 1416293382397 } ], 
-                 				"path" : "/wiki/Responsible_Research_and_Innovation", 
-                 				"scheme" : "http", 
-                 				"msg" : [ "Ok" ] }, 
-                 "title": "Algues vertes", 
-                 "text":"",
-                 "html":"",
-                 "links":[http://www.dmu.ac.uk/study/study.aspx", "http://www.dmu.ac.uk/research", "http://www.dmu.ac.uk/international/en/international.aspx", "http://www.dmu.ac.uk/business-services/business-services.aspx", "http://www.dmu.ac.uk/about-dmu/about-dmu.aspx", "#", "/study/undergraduate-study/undergraduate-study.aspx", "/study/postgraduate-study/postgraduate-study.aspx", "/information-for-parents/information-for-parents.aspx", "/information-for-teachers/information-for-teachers.aspx", "/dmu-students/dmu-students.aspx", "/alumni", "/dmu-staff/dmu-staff.aspx", "/international/en/before-you-apply-to-study-at-dmu/your-country/country-information.aspx", "/business-services/access-our-students-and-graduates/access-our-students-and-graduates.aspx", "/about-dmu/news/contact-details.aspx", "/study/undergraduate-study/student-support/advice-and-guidance-for-mature-students/advice-and-guidance-for-mature-students.aspx", "http://www.dmuglobal.com/", "/about-dmu/events/events.aspx"],
-                 }
-
-Anatomy of a logs entry
------
+Results
+====
 {
-	"_id" : ObjectId("546dc72cdabe6e53c004a603"),
-	"url" : "http://france3-regions.francetvinfo.fr/bretagne/algues-vertes",
-	"status" : false,
-	"code" : 500,
-	"msg" : "Requests Error: HTTPConnectionPool(host='france3-regions.francetvinfo.fr', port=80): Read timed out. (read timeout=5)"
+"url": http://en.wikipedia.org/wiki/Algue_verte,
+"domain":"wikipedia" ,
+"subdomain": "fr",
+"extension": "org",
+"filetype": None,
+"date": [ { "$date" : 1416293382397 } ],
+"source": "http://en.wikipedia.org/wiki/",
+"title": "Title of the webpage",
+"cited_links": ["http://en.wikipedia.org/wiki/",],
+"cited_domains": [wikipedia, ],
+"html": "<body>...</body>",
+"text": "Cleaned text",
+"depth": 0,
+"crawl_nb": 0,
+"status": [True],
+"msg": ["Ok"]
 }
-```
-Integration to the Cortext manager
+
+>> See results_example.json
+
+Log
+====
+{   "_id" : { "$oid" : "54ba8246dabe6e2e3b9c3fa1" }, 
+    "status" : false, 
+    "code" : 800, 
+    "url" : "http://fr.wikipedia.org/wiki/Aide:Redirection", 
+    "date" : [ { "$date" : 1421512790313 } ], 
+    "msg" : "Article Query: not relevant" }
+
+>> See logs_example.json
+Put the data into the Cortext manager
 ====
 1. Zip the json file you want to analyse
 2. Upload it into Cortext Manager
@@ -304,20 +331,23 @@ Ex: Build a map of crossn references:
 3. Choose url and links
 You will have a pdf that maps the relationship
 
+
+Schedule the crawl jobs
+====
+
+Crawtext jobs are stored in a Task Manager Database, to run jobs daily/weekly 
+
 Update
 ===
-- Raw extraction mode (--mode=hard) defaut use Goose article detection (doesn't work for blogs)
-- Extract meta keywords and metadescription in results
-- Extract meta lang
-- Optionnal filter language (defaut: en) activated by (--lang="fr")
+- Bing results defaut is : 500 results
+- Max depth option activated (defaut: 100)
+- Update results without crawling it again
+- Automatic zip export
+
 
 
 Next features:
 ===
-- Automatic zip at export
-- Export of raw html and text
-- Put max_depth has a user option (default: 10)
-- Enable more than 50 results search from BING API
 - Enable Google Search option
 - Simple web interface
 
@@ -339,7 +369,6 @@ If you need any help on interacting with the shell command you can just type to 
 python crawtext.py --help
 ```
 
-
 You can also ask for pull request here http://github.com/cortext/crawtext/, 
 we will be happy to answer to any configuration problem or desired features.
 
@@ -354,25 +383,24 @@ COMMON PROBLEMS
 Sometimes if you shut your programm by forcing, you could have an error to connect to database such has:	
 
 ```
-couldn't connect to server 127.0.0.1:27017 at src/mongo/shell/mongo.js:145```
-
-
+couldn't connect to server 127.0.0.1:27017 at src/mongo/shell/mongo.js:145
+```
 
 The way to repair it is to remove locks of mongod 
 
 ```
-sudo rm /var/lib/mongodb/mongod.lock```
-
-	
+sudo rm /var/lib/mongodb/mongod.lock
+sudo service mongodb restart
 ```
-sudo service mongodb restart```
 
 
 If it doesn't work it means the index is corrupted so you have to repair it:
 
 ```
-sudo mongod --repair```
+sudo mongod --repair
+```
 
 * Article detection: 
-we use the implementation of newspaper based on Goose
-special thanks to them
+We removed article detection system:
+both Goose and Newspaper modules had some problems to detect text in blog
+
