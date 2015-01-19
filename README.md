@@ -232,6 +232,7 @@ Datasets are stored in json and zip in 3 collections in the dedicated directory 
 * results
 * sources
 * logs
+>> See Examples
 
 Sources
 ====
@@ -284,7 +285,8 @@ Date msg and status are updated for each run of the crawl with the corresponding
         "Updated" ], 
     "url" : "http://fr.wikipedia.org/wiki/Algue_verte" }
 
->> See sources_examples.json
+>> See [sources_examples.json](examples/sources_examples.json) for details 
+
 
 Results
 ====
@@ -307,7 +309,7 @@ Results
 "msg": ["Ok"]
 }
 
->> See results_example.json
+>> See [results_examples.json](examples/results_examples.json) for details 
 
 Log
 ====
@@ -318,7 +320,7 @@ Log
     "date" : [ { "$date" : 1421512790313 } ], 
     "msg" : "Article Query: not relevant" }
 
->> See logs_example.json
+>> See [logs_examples.json](examples/log_examples.json) for details 
 
 Put the data into the Cortext manager
 ====
