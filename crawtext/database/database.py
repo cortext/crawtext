@@ -133,8 +133,6 @@ class Database(object):
 		"\t-result updated"
 		try:
 			result = self.db.results.find_one({"url":log['url']},timeout=False)
-			
-
 			updated = self.db.results.update({"_id":result["_id"]},{"$push": {"date": log["date"], "status": True, "msg": "Result stored"}})
 			# print updated
 			try:

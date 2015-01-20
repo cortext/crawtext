@@ -2,6 +2,10 @@
 from database import Database
 from article import Article, Page
 from datetime import datetime
+def uniq(seq):
+    seen = set()
+    seen_add = seen.add
+    return [ x for x in seq if not (x in seen or seen_add(x))]
 
 def crawl(db_name, query, directory, max_depth, debug=True):
     db = Database(db_name)
@@ -9,10 +13,7 @@ def crawl(db_name, query, directory, max_depth, debug=True):
     db.sources = db.use_coll("sources")
     db.queue = db.use_coll("queue")
     db.logs = db.use_coll("logs")
-    treated = db.results.distinct("url")
-    print len(treated)
-    for n in db.logs.distinct("url"):
-        treated.append(n)
+    treated = uniq(db.results.distinct("url"))
 
     if debug: print len(treated), "already in results"
     while db.queue.count() > 0:
@@ -21,12 +22,14 @@ def crawl(db_name, query, directory, max_depth, debug=True):
             if debug:
                 print "\nTreating", db.queue.count(), "pages \n"
                 print item["url"]
+                print "\n"
             if item["url"] in treated:
                 print "treated"
+                update_result(db,treated, item, debug)
                 if update_result(db,treated, item, debug) is False:
                     item['msg'] = "Result not found but treated"
-
-                db.queue.remove(item) 
+                for n  in db.queue.find({"url":item["url"]}):
+                    db.queue.remove(item) 
             else:
                 print "new"
                 resp, data = create_result(db, treated, item,query, directory, max_depth, debug)
@@ -35,7 +38,8 @@ def crawl(db_name, query, directory, max_depth, debug=True):
                         db.insert_log(data)
                     except:
                         pass
-                db.queue.remove(item)
+                for n in db.queue.find({"url":item["url"]}):
+                    db.queue.remove(item)
             if db.queue.count() == 0:
                 break
             print "Results", db.results.count()
@@ -55,6 +59,7 @@ def update_result(db,treated, item, debug):
     
     exists = db.results.find_one({"url":item["url"]}, timeout=False)
     if exists is not None :
+        print exists
         next_urls = []
         try:
             next = [n for n in exists["cited_links"] if n not in treated]
@@ -76,7 +81,6 @@ def update_result(db,treated, item, debug):
         return False
 
 def create_result(db, treated, item, query, directory,max_depth, debug):
-    
     p = Page(item["url"], item["source_url"],item["depth"], item["date"], debug)
     if p.download():
         if debug: print ">Page downloaded"
@@ -94,12 +98,14 @@ def create_result(db, treated, item, query, directory,max_depth, debug):
                 #     if debug: print "\t-page depth:", item['depth'],"<", max_depth
 
             db.insert_result(a.export())
-            treated.append(item["url"])
+            if item["url"] not in treated:
+                treated.append(item["url"])
             return (True, "")
         else:
             return (False, a.log())        
     else:
-        treated.append(item["url"])
+        if item["url"] not in treated:
+            treated.append(item["url"])
         return (False, p.log())
     
     

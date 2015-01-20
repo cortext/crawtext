@@ -61,7 +61,7 @@ class Worker(object):
 			return job(params)
 				
 	def exists(self):
-		self.task = self.coll.find_one({"name":self.name})
+		self.task = self.coll.find_one({"name":self.name}, timeout=False)
 		if self.task is not None:
 			return True
 		else:
