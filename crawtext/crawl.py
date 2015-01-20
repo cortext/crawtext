@@ -96,6 +96,7 @@ def create_result(db, treated, item, query, directory,max_depth, debug):
     else:
         if item["url"] not in treated:
             treated.append(item["url"])
+        print p.log()
         return (False, p.log())
     
     

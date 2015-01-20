@@ -12,6 +12,7 @@ import os
 import glob
 from bs4 import BeautifulSoup
 import requests
+import re
 #from url import Link
 from utils import encodeValue
 from text import clean_text
@@ -271,19 +272,9 @@ class Article(object):
                 }
         
     
-    def is_relevant(self, query, directory):
-        print "relevant"
-        if query.startswith("\"|'"):
-            query = re.sub(" |\"|'", ".", query.lower())
-            q4re = re.compile(query)
-            print q4re.match(self.text)
-            if q4re.match(self.text):
-                return True
-            else:
-                return False
-        else:
-            q = Query(query, directory)
-            return q.match({"content": encodeValue(self.text)})
+    def is_relevant(self, query, directory):    
+        q = Query(query, directory)
+        return q.match({"content": encodeValue(self.text)})
     
     def log(self):
         if self.debug is True:

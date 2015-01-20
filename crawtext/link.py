@@ -117,7 +117,7 @@ class Link(object):
             self.status = False
             return False
 
-        if not self.path.startswith('/'):
+        if self.path != "" and not self.path.startswith('/'):
             self.msg = 'Invalid path for url %s' % self.path
             self.status = False
             return False
@@ -244,8 +244,7 @@ def is_valid(url, source_url):
     if check_path(info["path"]) is False:
         info['msg'] = 'wrong path %s' % info["path"]
         return (False, info)
-
-    if not info["path"].startswith('/'):
+    if info["path"] != "" and not info["path"].startswith('/'):
         info['msg'] = 'Invalid path for url %s' % info["path"]
         return (False, info)
     
