@@ -272,8 +272,18 @@ class Article(object):
         
     
     def is_relevant(self, query, directory):
-        q = Query(query, directory)
-        return q.match({"content": encodeValue(self.text)})
+        print "relevant"
+        if query.startswith("\"|'"):
+            query = re.sub(" |\"|'", ".", query.lower())
+            q4re = re.compile(query)
+            print q4re.match(self.text)
+            if q4re.match(self.text):
+                return True
+            else:
+                return False
+        else:
+            q = Query(query, directory)
+            return q.match({"content": encodeValue(self.text)})
     
     def log(self):
         if self.debug is True:
