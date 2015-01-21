@@ -219,7 +219,8 @@ def check_scheme(scheme):
     if scheme in ["mailto", "ftp", "magnet", "javascript"]:
         return False
 def check_path(path):
-    if path in ["#", "/", "?"]:
+    
+    if path in ["#", "?"]:
         return False
 def remove_args():
     pass

@@ -9,7 +9,7 @@ import os
 from utils import encodeValue
 
 class Query(object):
-	def __init__(self, query, directory="", debug=False):
+	def __init__(self, query, directory="", debug=True):
 		self.debug = debug
 		if self.debug: print "query"
 		if directory != "":
@@ -38,15 +38,26 @@ class Query(object):
 				writer.add_document(content=encodeValue(doc['content']))
 		return writer
 	
+  	def rematch(self,xpr, doc):
+	    if self.debug: print re.findall(xpr, (unicode(doc['content'])).lower())
+	    if len(re.findall(xpr, doc['content'].lower())) == 0:
+	    	return False
+	    return True
+
 	def match(self,doc):
-		self.index_doc(doc)
-		with self.ix.searcher() as searcher:
-			self.results = searcher.search(self.query)
-			w = self.ix.writer()
-			w.delete_document(0)
-			try: 
-				self.hit = self.results[0]
-				return True
-			except IndexError:
-				self.hit = None
-				return False
+		if '"' in self.q:
+			self.query = re.sub('"', '', (self.q).lower())
+			xpr = re.compile(self.query)
+			return self.rematch(xpr, doc)
+		else:
+			self.index_doc(doc)
+			with self.ix.searcher() as searcher:
+				self.results = searcher.search(self.query)
+				w = self.ix.writer()
+				w.delete_document(0)
+				try: 
+					self.hit = self.results[0]
+					return True
+				except IndexError:
+					self.hit = None
+					return False
