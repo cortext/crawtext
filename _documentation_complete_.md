@@ -1,41 +1,49 @@
+![http://www.cortext.net](http://www.cortext.net/IMG/siteon0.png)
+
 CRAWTEXT
-=
+====
 
 Crawtext est un module indépendant du Cortext manager qui permet la constitution de gros corpus web autour d'une thématique ou d'une expression de recherche donnée. La capitalisation de données web produites par Crawtext se fait sur une fréquence journalière, hebdomadaire ou mensuelle en fonction des besoins du projets et paramétrables par l'utilisateur. 
 Crawtext est un crawler web par cible. Il stocke les pages web qui correspondent à l'expression de recherche demandée.
 
 
-== Contexte ==
+Contexte 
+======
 
 Les outils de constitution de corpus traditionnels sont nombreux (publications scientifiques, corpus de presse, rapports...), cependant il manquait aux chercheurs un moyen de collecter facilement des données du Web, de créer des archives issues d'Internet pour examiner la représentation d'un sujet ou d'une polémique en ligne.
-Quelques crawlers ont déjà été développés mais aucun ne propose une approche par cible et par pertinence.
+Quelques crawlers ont déjà été développés mais aucun ne propose une approche par cible et par pertinence priviligiant la pag de départ.
 Ils sont peu robustes ou difficile d'accès pour les non initiés ou parfois simplement limités dans leurs résultats et leur usage:
-- 80legs version de démo gratuite [https://portal.80legs.com/users/sign_up?plan=basic]
+- 80legs version de (démo gratuite et limitée) [https://portal.80legs.com/users/sign_up?plan=basic] non ciblé
 - Navicrawler (module Firefox d'archivage de sa navigation)
-- TIRESIAS [http://prosperologie.org] (client lourd, non ciblé)
+- TIRESIAS http://prosperologie.org (client lourd, non ciblé)
 - Scrapy (installation et gestion complexe des règles, non ciblé, développement nécessaire)
 - pyspider (développement nécessaire)
 
 
-== Usage ==
+Usage
+======
 
 Crawtext est un module d'extraction et d'archivage de pages Internet, il permet la constitution de corpus centrée autour d'un thème ou d'une expression.
 Il permet donc la constitution d'une base de données constituées de pages internet et consolidées par un archivage régulier et son interrogation en l'important dans le Cortext Manager
 
-== Fonctionnement ==
+Fonctionnement
+======
 
 Crawtext est un crawler web ciblé: à partir d'une ou plusieurs urls, le crawler télécharge les pages examine le texte de la page et vérifie la correspondance avec le thème ou l'expression de recherche donnée. Si la page est pertinente, il ajoute les urls trouvées sur la page, télécharge les pages correspondants à ces urls et reproduit le traitement.
 
 On obtient donc un ensemble de pages internet qui correspondent à une requete données et reliées entre elles par des urls communes.
 
-== Architecture ==
+
+Architecture
+======
 
 Module indépendant du cortext manager, il est composé de plusieurs briques logicielles: 
 * un systeme de gestion de tâches (parametrages, crawl, export, reporting) extensible selon les besoins
 * une API de crawl (interrogeable en ligne de commande ou intégrable dans des scripts externes) 
 * une interface web de paramêtrage en accès restreint. 
 
-== Politique d'accès et limitations ==
+Politique d'accès et limitations
+======
 
 Le développement de ce module a été fait de manière indépendante du cortext manager et son utilisation controlée pour plusieurs raisons: le volume de données, l'utilisation de la bande passante et les éventuelles questions juridiques de stockage de données et de téléchargement de pages web. 
 
@@ -51,7 +59,8 @@ Pour optimiser le temps de traitement des crawls lancés à date fixe, les urls 
 ne sont pas retraitées dans leur intégralité mais mis à jour avec la date du crawl.
 
 
-== Aperçu des fonctionnalités ==
+Aperçu des fonctionnalités
+======
 
 Crawtext est un script développé en Python 2.7 avec une base de données Mongo.
 
@@ -81,7 +90,8 @@ L'appel à l'API peut se faire en ligne de commande ou utilisée comme script ad
 Le paramétrage et la création d'un crawl peuvent se faire via l'interface web.
 
 
-== Utilisation ==
+Utilisation
+======
 
 Pour lancer un crawl seules 3 paramêtres sont obligatoires:
 - un nom de projet
@@ -89,7 +99,8 @@ Pour lancer un crawl seules 3 paramêtres sont obligatoires:
 - une ou plusieurs urls de départs: les sources du crawl
 
 
-=== Interface web ===
+Interface web 
+========
 
 La création et le paramêtrage d'un crawl peut se faire via un simple formulaire en ligne 
 pour les utilisateurs muni d'un compte et d'un mot de passe.
@@ -116,7 +127,8 @@ Plusieurs options peuvent être ajoutées:
 - la récurrence du crawl 
     defaut: tous les mois
 
-=== En ligne de commande ===
+En ligne de commande
+========
 
 L'intégralité du projet crawtext peut être téléchargé et installé sur son propre serveur.
 Le seul prérequis est d'avoir préalablement installé MongoDB sur sa machine
@@ -127,29 +139,36 @@ Pour les détails d'installation et d'utilisation voir la documentation techniqu
 
 
 
-== Implémentation technique ==
+Implémentation technique
+======
 
 Crawtext est développé en Python 2.7, les bases de données de gestion des tâches et de stocakges des résultats est MOngoDB
 Hormis l'installation de mongo, l'ajout du scheduler en crontab et l'éventuelle modification de l'adresse du serveur de mail
 Tous les modules externes utilisés sont des modules python disponible via pip
 
-=== Paramêtrage ===
-==== Interface web ====
+Paramêtrage
+========
+Interface web
+==========
 L'interface web est développée avec un mini serveur HTTP: bottle.py un template bootstrap et des scripts en javascript développé en interne. 
-==== Ligne de commande ====
+Ligne de commande
+==========
 La gestion en ligne de commande utilise le module python docopt
 Toutes les valeurs acceptées par la ligne de commande sont listées dans la documenation technique
 
-==== API ====
+API 
+==========
 L'appel direct à l'API via un autre script utilise l'objet Worker() présent dans le fichier wk.py
 
-==== Ajout des sources ====
+Ajout des sources
+==========
 - Ajout de sources de départ via Bing:
     Requete GET sur l' API Search V2 de BING: pour obtenir sa clé API:
      [https://github.com/cortext/crawtext/blob/master/README.md]
      Suite aux limitations de l'api de BING et la découverte de l'aspect aléatoires du nmbre de rsultats maximum: la limitation par défaut du nombre de résultats retourné est de 500 (en théorie <=1000)
 
-=== Téléchargement et extraction ===
+Téléchargement et extraction
+==========
 - Téléchargement et extraction de pages web: requests (pas d'utilisation de proxies ni de multithreading des urls, timeout de 5sec, nombre d'essai 2)
 
 - Extraction et enrichissement des résultats de la page: BeautifulSoup
@@ -160,9 +179,9 @@ L'appel direct à l'API via un autre script utilise l'objet Worker() présent da
         - boilerpipe
     aucune ne s'est avérée capable d'extraire proprement les articles issu des blogs. Le calcul de pertinence de l'article étant faussé nous avons finalement opté pour un extract brute de texte entier de la page html. 
 - Enrichissement des résultats de l'url: tldextract + module spécifique inspiré de Newspapers + Scrapy
-Cf Export
 
-=== Filtrage et calcul de pertinence ===
+Filtrage et calcul de pertinence
+==========
 - Filtrage des urls non pertinentes: 
     - format html uniquement
     - protocol http/https uniquement
@@ -171,7 +190,9 @@ Cf Export
     - recherche exacte: ("") utilisation du module de regex
     - recherche combinée: moteur d'indexation Whoosh et de son parser de requete par défaut
 
-=== Stockage et export ===
+Stockage et export
+==========
+
 - La manipulation et l'accès au base de données MongoDB utilise le module pymongo 
 encapsulé dans un module de gestion interne database/database.py
 
@@ -218,7 +239,8 @@ Chaque projet dispose de sa propre base de données avec 3 "tables" ou "collecti
 - logs [https://github.com/cortext/crawtext/blob/master/examples/logs_example.json]
 
 
-=== Reporting ===
+Reporting
+==========
 
 - Serveur de mail: gmail par défaut (ajout d'un user and passw) 
     L'appel à un autre serveur SMTP est modifiable dans le code utils/mail.py
@@ -226,7 +248,8 @@ Chaque projet dispose de sa propre base de données avec 3 "tables" ou "collecti
 - Les statistiques de traitement sont exposés dans le module de gestion des bases de données développé en interne
     (database/database.py)
 
-=== Scheduler ===
+Scheduler
+==========
 
 Le module de gestion de la des projest par jour/semaine/mois s'effectue à partir de la date de crawl
 Il nécessite la programmation du script scheduler.py en crontab qui sera lancé tous les jours, ce script appelle la base de données de tache et vérifie les dates de crawl. 
@@ -240,7 +263,8 @@ Pour optimiser les crawls lancé à date fixe, les urls déjà traitées et de n
 ne sont pas retraitées dans leur intégralité mais la date de crawl est ajoutée.
 
 
-== Evolutions et Features ==
+Evolutions et Features
+==========
 
 *Interface web:
     * Authentification pour l'accès à l'interface web
