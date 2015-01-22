@@ -86,7 +86,7 @@ L'appel à l'API peut se faire en ligne de commande ou utilisée comme script ad
 Le paramétrage et la création d'un crawl peuvent se faire via l'interface web.
 
 
-Utilisation
+##Utilisation
 =
 
 Pour lancer un crawl seules 3 paramêtres sont obligatoires:
@@ -95,8 +95,7 @@ Pour lancer un crawl seules 3 paramêtres sont obligatoires:
 - une ou plusieurs urls de départs: les sources du crawl
 
 
-Interface web 
-===
+###Interface web 
 
 La création et le paramêtrage d'un crawl peut se faire via un simple formulaire en ligne 
 pour les utilisateurs muni d'un compte et d'un mot de passe.
@@ -123,8 +122,8 @@ Plusieurs options peuvent être ajoutées:
 - la récurrence du crawl 
     defaut: tous les mois
 
-En ligne de commande
-===
+###Ligne de commande
+
 
 L'intégralité du projet crawtext peut être téléchargé et installé sur son propre serveur.
 Le seul prérequis est d'avoir préalablement installé MongoDB sur sa machine
@@ -135,36 +134,31 @@ Pour les détails d'installation et d'utilisation voir la documentation techniqu
 
 
 
-Implémentation technique
-=
+##Implémentation technique
 
 Crawtext est développé en Python 2.7, les bases de données de gestion des tâches et de stocakges des résultats est MOngoDB
 Hormis l'installation de mongo, l'ajout du scheduler en crontab et l'éventuelle modification de l'adresse du serveur de mail
 Tous les modules externes utilisés sont des modules python disponible via pip
 
-Paramêtrage
-===
-Interface web
-=====
-L'interface web est développée avec un mini serveur HTTP: bottle.py un template bootstrap et des scripts en javascript développé en interne. 
-Ligne de commande
-=====
+###Paramêtrage
+
+####Interface web
+
+L'interface web est développée avec un mini serveur HTTP en python bottle.py un template bootstrap et des scripts en javascript développé en interne. 
+####Ligne de commande
 La gestion en ligne de commande utilise le module python docopt
 Toutes les valeurs acceptées par la ligne de commande sont listées dans la documenation technique
 
-API 
-=====
+####API 
 L'appel direct à l'API via un autre script utilise l'objet Worker() présent dans le fichier wk.py
 
-Ajout des sources
-=====
+####Ajout des sources
 - Ajout de sources de départ via Bing:
     Requete GET sur l' API Search V2 de BING: pour obtenir sa clé API:
      [https://github.com/cortext/crawtext/blob/master/README.md]
      Suite aux limitations de l'api de BING et la découverte de l'aspect aléatoires du nmbre de rsultats maximum: la limitation par défaut du nombre de résultats retourné est de 500 (en théorie <=1000)
 
-Téléchargement et extraction
-=====
+###Téléchargement et extraction
 - Téléchargement et extraction de pages web: requests (pas d'utilisation de proxies ni de multithreading des urls, timeout de 5sec, nombre d'essai 2)
 
 - Extraction et enrichissement des résultats de la page: BeautifulSoup
@@ -176,8 +170,7 @@ Téléchargement et extraction
     aucune ne s'est avérée capable d'extraire proprement les articles issu des blogs. Le calcul de pertinence de l'article étant faussé nous avons finalement opté pour un extract brute de texte entier de la page html. 
 - Enrichissement des résultats de l'url: tldextract + module spécifique inspiré de Newspapers + Scrapy
 
-Filtrage et calcul de pertinence
-=====
+###Filtrage et calcul de pertinence
 - Filtrage des urls non pertinentes: 
     - format html uniquement
     - protocol http/https uniquement
@@ -186,8 +179,7 @@ Filtrage et calcul de pertinence
     - recherche exacte: ("") utilisation du module de regex
     - recherche combinée: moteur d'indexation Whoosh et de son parser de requete par défaut
 
-Stockage et export
-=====
+###Stockage et export
 
 - La manipulation et l'accès au base de données MongoDB utilise le module pymongo 
 encapsulé dans un module de gestion interne database/database.py
@@ -202,6 +194,7 @@ A note que l'export csv pour respecter l'aspect tabulaires des données est inco
 Chaque tache est présente dans une base de données appelée crawtext_jobs et stockés dans la même "table" 
 ou collection appelée "job". 
 Elle sont stockées par tache comme suit:
+```
 {
     "_id" : ObjectId("54bf8e4cdabe6e1383ae172f"),
     "status" : [
@@ -228,6 +221,7 @@ Elle sont stockées par tache comme suit:
         "Ok",
     ]
 }
+```
 * Base de données projet:
 Chaque projet dispose de sa propre base de données avec 3 "tables" ou "collections":
 - sources : voir [https://github.com/cortext/crawtext/blob/master/examples/sources_example.json]
@@ -235,8 +229,8 @@ Chaque projet dispose de sa propre base de données avec 3 "tables" ou "collecti
 - logs [https://github.com/cortext/crawtext/blob/master/examples/logs_example.json]
 
 
-Reporting
-=====
+###Reporting
+
 
 - Serveur de mail: gmail par défaut (ajout d'un user and passw) 
     L'appel à un autre serveur SMTP est modifiable dans le code utils/mail.py
@@ -244,23 +238,23 @@ Reporting
 - Les statistiques de traitement sont exposés dans le module de gestion des bases de données développé en interne
     (database/database.py)
 
-Scheduler
-=====
+###Scheduler
 
 Le module de gestion de la des projest par jour/semaine/mois s'effectue à partir de la date de crawl
 Il nécessite la programmation du script scheduler.py en crontab qui sera lancé tous les jours, ce script appelle la base de données de tache et vérifie les dates de crawl. 
 Exemple de configuration de crontab pour un projet pesticides où le dossier github de crawtext serait stocké dans /srv/scripts
-
-# m h  dom mon dow   command
-0 1 * * * python /srv/scripts/crawtext/crawtext/crawtext.py RRI_0 start
-0 * * * 1 python /srv/scripts/crawtext/crawtext/crawtext.py RRI_0 report
+```
+    # m h  dom mon dow   command
+    0 1 * * * python /srv/scripts/crawtext/crawtext/crawtext.py RRI_0 start
+    0 * * * 1 python /srv/scripts/crawtext/crawtext/crawtext.py RRI_0 report
+```
 
 Pour optimiser les crawls lancé à date fixe, les urls déjà traitées et de nouveau identifiées
 ne sont pas retraitées dans leur intégralité mais la date de crawl est ajoutée.
 
 
-Evolutions et Features
-=====
+##Evolutions et Features
+
 
 *Interface web:
     * Authentification pour l'accès à l'interface web
