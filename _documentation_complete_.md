@@ -92,7 +92,8 @@ Pour lancer un crawl seules 3 paramêtres sont obligatoires:
 - un nom de projet
 - une requete (Cf Syntaxe de requete)
 - une ou plusieurs urls de départs: les sources du crawl
-=
+
+
 
 ###Interface web 
 
