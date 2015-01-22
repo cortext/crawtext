@@ -1,7 +1,9 @@
 CRAWTEXT
+=
 
 Crawtext est un module indépendant du Cortext manager qui permet la constitution de gros corpus web autour d'une thématique ou d'une expression de recherche donnée. La capitalisation de données web produites par Crawtext se fait sur une fréquence journalière, hebdomadaire ou mensuelle en fonction des besoins du projets et paramétrables par l'utilisateur. 
 Crawtext est un crawler web par cible. Il stocke les pages web qui correspondent à l'expression de recherche demandée.
+
 
 == Contexte ==
 
@@ -16,6 +18,7 @@ Ils sont peu robustes ou difficile d'accès pour les non initiés ou parfois sim
 
 
 == Usage ==
+
 Crawtext est un module d'extraction et d'archivage de pages Internet, il permet la constitution de corpus centrée autour d'un thème ou d'une expression.
 Il permet donc la constitution d'une base de données constituées de pages internet et consolidées par un archivage régulier et son interrogation en l'important dans le Cortext Manager
 
@@ -26,12 +29,14 @@ Crawtext est un crawler web ciblé: à partir d'une ou plusieurs urls, le crawle
 On obtient donc un ensemble de pages internet qui correspondent à une requete données et reliées entre elles par des urls communes.
 
 == Architecture ==
+
 Module indépendant du cortext manager, il est composé de plusieurs briques logicielles: 
 * un systeme de gestion de tâches (parametrages, crawl, export, reporting) extensible selon les besoins
 * une API de crawl (interrogeable en ligne de commande ou intégrable dans des scripts externes) 
 * une interface web de paramêtrage en accès restreint. 
 
 == Politique d'accès et limitations ==
+
 Le développement de ce module a été fait de manière indépendante du cortext manager et son utilisation controlée pour plusieurs raisons: le volume de données, l'utilisation de la bande passante et les éventuelles questions juridiques de stockage de données et de téléchargement de pages web. 
 
 L'interface web n'est disponible qu'aux utilisateur muni d'un compte et d'un mot de passe
@@ -47,6 +52,7 @@ ne sont pas retraitées dans leur intégralité mais mis à jour avec la date du
 
 
 == Aperçu des fonctionnalités ==
+
 Crawtext est un script développé en Python 2.7 avec une base de données Mongo.
 
 Le gestionnaire de tâches consiste en l'interrogation d'une base de données mongo 
@@ -74,12 +80,14 @@ L'API permet:
 L'appel à l'API peut se faire en ligne de commande ou utilisée comme script ad hoc.
 Le paramétrage et la création d'un crawl peuvent se faire via l'interface web.
 
+
 == Utilisation ==
 
 Pour lancer un crawl seules 3 paramêtres sont obligatoires:
 - un nom de projet
 - une requete (Cf Syntaxe de requete)
 - une ou plusieurs urls de départs: les sources du crawl
+
 
 === Interface web ===
 
@@ -210,9 +218,8 @@ Chaque projet dispose de sa propre base de données avec 3 "tables" ou "collecti
 - logs [https://github.com/cortext/crawtext/blob/master/examples/logs_example.json]
 
 
-
-
 === Reporting ===
+
 - Serveur de mail: gmail par défaut (ajout d'un user and passw) 
     L'appel à un autre serveur SMTP est modifiable dans le code utils/mail.py
 - Le moteur de templating est Jinja
