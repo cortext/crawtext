@@ -134,7 +134,7 @@ Pour les détails d'installation et d'utilisation voir la documentation techniqu
 
 
 
-##Implémentation technique
+##Implémentation et choix techniques
 
 Crawtext est développé en Python 2.7, les bases de données de gestion des tâches et de stocakges des résultats est MOngoDB
 Hormis l'installation de mongo, l'ajout du scheduler en crontab et l'éventuelle modification de l'adresse du serveur de mail
