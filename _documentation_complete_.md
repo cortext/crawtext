@@ -87,13 +87,12 @@ Le paramétrage et la création d'un crawl peuvent se faire via l'interface web.
 
 
 ##Utilisation
-=
 
 Pour lancer un crawl seules 3 paramêtres sont obligatoires:
 - un nom de projet
 - une requete (Cf Syntaxe de requete)
 - une ou plusieurs urls de départs: les sources du crawl
-
+=
 
 ###Interface web 
 
@@ -257,14 +256,14 @@ ne sont pas retraitées dans leur intégralité mais la date de crawl est ajout�
 
 
 *Interface web:
-    * Authentification pour l'accès à l'interface web
-    * Ajout d'une url pour le téléchargement des résultats
-    * Ajout d'une alerte avant suppression du projet
+    ** Authentification pour l'accès à l'interface web
+    ** Ajout d'une url pour le téléchargement des résultats
+    ** Ajout d'une alerte avant suppression du projet
 *API:
-    * Extension des formats acceptés: téléchargement de pdf (images, videos?)
-    * Prise en compte de la langue de la page
-    * Ajout d'une option de crawl centré sur un seul site
-    * Détection et extraction des articles
-    * Parallélisation des requetes HTTP
-    * Proxys tournants et anonymisation des requetes
+    ** Extension des formats acceptés: téléchargement de pdf (images, videos?)
+    ** Prise en compte de la langue de la page
+    ** Ajout d'une option de crawl centré sur un seul site
+    ** Détection et extraction des articles
+    ** Parallélisation des requetes HTTP
+    ** Proxys tournants et anonymisation des requetes
 
