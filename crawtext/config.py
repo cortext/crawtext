@@ -319,18 +319,20 @@ class Config(object):
 		import requests, time
 		start = 0
 		step = 50
-		if nb > 500:
+		if nb > 1000:
 			print "Maximum search results is 500 results."
-			nb = 500
+			nb = 1000
 		
 		
 		if nb%50 != 0:
 			print "Nb of results must be a multiple of 50:"
 			nb = nb - (nb%50)
-
 		web_results = []
+		new = []
+		inserted = []
+		
 		if self.debug: print "Searching %i results" %nb
-		for i in range(start,nb, step):	
+		for i in range(0,nb, 50):
 			r = requests.get(
 					'https://api.datamarket.azure.com/Bing/Search/v1/Web', 
 					params={
@@ -346,20 +348,15 @@ class Config(object):
 			if self.msg is None:
 				web_results.extend([e["Url"] for e in r.json()['d']['results']])
 				results = [(x,y) for x,y in enumerate(web_results)]
-				new = []
-				inserted = []
 				for i, url in results:
 					if self.add_url(url, origin="bing",depth=0, source_url = None, nb=i, nb_results=len(results)) is True:
 						new.append(url)
 					else:
 						inserted.append(url)
-				print "===="
-				print self.name, self.query
-				print "%i urls updated, %i added"%(len(inserted), len(new))
-				return results
 			else:
 				return False
-		
+		print "%i urls updated, %i added"%(len(inserted), len(new))
+		return web_results
 
 	def add_file(self):
 		''' Method to extract url list from text file'''
