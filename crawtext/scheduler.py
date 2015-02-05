@@ -19,12 +19,12 @@ def run():
             print date
             if day == date:
                 print "Start", n["project_name"]
-                #wk = Worker(str(n["project_name"]))
-                #wk.start({})
+                wk = Worker(str(n["project_name"]))
+                wk.start({})
             # print n["project_name"]
             # print n["date"][-1].day, n["date"][-1].month
             
         except KeyError:
             pass
-
-run()
+if __name__ == "__main__":
+    run()
