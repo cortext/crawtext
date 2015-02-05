@@ -68,7 +68,12 @@ def update_result(db,treated, item, debug):
             if len(next_urls) > 0:
                 db.queue.insert(next_urls)
                 print ">>inserted", len(next_urls)
-        db.update_result(item)
+        last = exists['date']
+        day = (last.day, last.month, last.year)
+        now = datetime.now()
+        n_day = (now.day, now.month, now.year)
+        if n_day != day:
+            db.update_result(item)
         return True
     return False
 
