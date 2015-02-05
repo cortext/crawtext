@@ -111,16 +111,23 @@ class Worker(object):
 						format = params['format']
 					except KeyError:
 						format = "email"
+				if generate_report(self.task, db):
+					self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"report: document", "status": True, "date": dt.now(), "msg": "Ok"}})
 					
+				else:
+					self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"report: document", "status": False, "date": dt.now(), "msg": "Unable to create report document"}})
+					
+
 				if format == "email":
 					try:
 						user = self.task['user']
 						if send_mail(user, db) is True:
 							print "A report email has been sent to %s\nCheck your mailbox!" %user
 							self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"report: mail", "status":True, "date": dt.now(), "msg": "Ok"}})
-								
+							return True	
 						else:
 							self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"report: mail", "status":False, "date": dt.now(), "msg": "Error while sending the mail"}})
+
 					except KeyError:
 						try:
 							user = params['user']
@@ -132,13 +139,9 @@ class Worker(object):
 						except KeyError:
 							print "No user has been set: \ndeclare a user email for your project to receive it by mail."
 							self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"report: mail", "status":False, "date": dt.now(), "msg": "User email unset, unable to send mail"}})
-						
-				if generate_report(self.task, db):
-					self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"report: document", "status": True, "date": dt.now(), "msg": "Ok"}})
-					return True
+					return False	
 				else:
-					self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"report: document", "status": False, "date": dt.now(), "msg": "Unable to create report document"}})
-					return False
+					return True
 		else:
 			print "No crawl job %s found" %self.name
 		return False
