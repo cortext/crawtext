@@ -136,8 +136,8 @@ class Article(object):
         self.text = clean_text(self.html)
         if self.doc is not None:
             try:
-                self.title = (self.doc.find("title").text).encode('utf-8')
-                self.text = (self.doc.find("body").text).encode('utf-8')
+                self.title = (self.doc.find("title").get_text()).encode('utf-8')
+                self.text = (self.doc.find("body").get_text()).encode('utf-8')
                 self.links, self.domains = self.fetch_links()
                 self.get_meta()
                 return True
@@ -179,11 +179,9 @@ class Article(object):
         self.domains = []
         self.links = []
         links = [n.get('href') for n in self.doc.find_all("a")]
-        links = [n for n in links if n is not None and n != ""]
+        links = [n for n in links if n is not None and n != "" and n != "/" and n[0] !="#"]
 
         for url in links:
-            if url == "/":
-                pass
             if url.startswith('mailto'):
                 pass
             if url.startswith('javascript'):
@@ -193,8 +191,7 @@ class Article(object):
                 if l.is_valid():
                     url, domain = l.clean_url(url, self.url)
                     self.domains.append(domain)
-                    self.links.append(url)
-                
+                    self.links.append(url)    
         return (self.links, self.domains)
         
 
