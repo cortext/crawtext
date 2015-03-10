@@ -4,7 +4,7 @@ import os, sys, subprocess
 def create_field(directory, format):
 	print directory
 	date = dt.now()
-	date = dt.strftime(date, "%d-%m-%y_%H:%M")
+	date = dt.strftime(date, "%d-%m-%y_%H_%M")
 	dict_values=dict()
 	dict_values["sources"] = {
 		"filename": os.path.join(directory, "sources_%s.%s") %(date, format),
