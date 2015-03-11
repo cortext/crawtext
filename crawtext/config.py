@@ -197,7 +197,8 @@ class Config(object):
 		if self.project_db.queue.count() > 0:
 			return True
 		else:
-			False
+			print "No url to put in queue"
+			return False
 
 	def check_query(self):
 		print "- Verifying query:"
@@ -359,9 +360,11 @@ class Config(object):
 				# 		inserted.append(url)
 			else:
 				return False
-		print "%i urls updated, %i added"%(len(inserted), len(new))
-		return web_results
+		print "%i urls added"%(len(results))
+		return True
+
 	def add_bing_results(self, results_list):
+		'''simple insert into sources db'''
 		self.sources = self.project_db.use_coll("sources")
 		for url in results_list:
 			exists = self.sources.find_one({"url": url})
@@ -369,7 +372,7 @@ class Config(object):
 			if exists is not None:
 				pass
 			else:
-				self.sources.insert({"url":url, "source_url":None, "origin": origin, "nb":[nb], "nb_results":[nb_results],"depth": 0, "date":[self.date], "step":["Added"], "status":[True], "msg":["Inserted"]})
+				self.sources.insert({"url":url, "source_url":"bing.com", "origin": "bing", "nb":[nb], "nb_results":[nb_results],"depth": 0, "date":[self.date], "step":["Added"], "status":[True], "msg":["Inserted"]})
 				return True
 
 	def add_file(self):
