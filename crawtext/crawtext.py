@@ -15,9 +15,10 @@ Usage:
     crawtext.py (<name>) report [-email] [--user=<email>] [--r=<repeat>]
     crawtext.py (<name>) export [--format=(csv|json)] [--data=(results|sources|logs|queue)][--r=<repeat>]
     crawtext.py (<name>) start [--maxdepth=<depth>] [--debug]
+    crawtext.py (<name>) start_simple [--maxdepth=<depth>] [--debug]
     crawtext.py (<name>) stop
     crawtext.py (<name>) toobig
-    crawtext.py (-h | --help)   
+    crawtext.py (-h | --help)
 '''
 
 import os, sys, re
@@ -45,15 +46,15 @@ class Worker(object):
             self.user_input = user_input
             self.name = self.user_input['<name>']
             del self.user_input['<name>']
-            
+
         self.debug = debug
         if self.debug:
             print "debug mode activated"
         self.db = TaskDB()
         self.coll = self.db.coll
         self.project_name = re.sub('[^0-9a-zA-Z]+', '_', self.name)
-        
-                
+
+
     def dispatch(self, params=None):
         if params is not None:
             self.user_input = params
@@ -77,7 +78,7 @@ class Worker(object):
                 print "dispatch", action, params
             job = getattr(self, str(action))
             return job(params)
-                
+
     def exists(self):
         self.task = self.coll.find_one({"name":self.name})
         if self.task is not None:
@@ -110,11 +111,11 @@ class Worker(object):
             print "------------"
             for k, v in self.task.items():
                 if k not in ['status', 'msg', 'action', 'date', '_id']:
-                    print k, ":", v 
+                    print k, ":", v
             print "\n* Last Status"
             print "------------"
             print self.task["action"][-1], self.task["status"][-1],self.task["msg"][-1], dt.strftime(self.task["date"][-1], "%d/%m/%y %H:%M:%S")
-                
+
     def report(self, params):
         if self.exists():
             db = Database(self.task['project_name'])
@@ -125,18 +126,18 @@ class Worker(object):
                 try:
                     format = self.task['format']
                 except KeyError:
-                    try: 
+                    try:
                         format = params['format']
                     except KeyError:
                         format = "email"
-                    
+
                 if format == "email":
                     try:
                         user = self.task['user']
                         if send_mail(user, db) is True:
                             print "A report email has been sent to %s\nCheck your mailbox!" %user
                             self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"report: mail", "status":True, "date": dt.now(), "msg": "Ok"}})
-                                
+
                         else:
                             self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"report: mail", "status":False, "date": dt.now(), "msg": "Error while sending the mail"}})
                     except KeyError:
@@ -150,7 +151,7 @@ class Worker(object):
                         except KeyError:
                             print "No user has been set: \ndeclare a user email for your project to receive it by mail."
                             self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"report: mail", "status":False, "date": dt.now(), "msg": "User email unset, unable to send mail"}})
-                        
+
                 if generate_report(self.task, db):
                     self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"report: document", "status": True, "date": dt.now(), "msg": "Ok"}})
                     return True
@@ -212,28 +213,28 @@ class Worker(object):
                 date = dt.now()
                 status = True
                 try:
-                    
+
                     self.add_url(params["url"], "manual", 0)
-                    self.coll.update({"_id": self.task['_id']}, {"$push": {"action":action, "status": status, "date": date, "msg":'Ok'}})   
+                    self.coll.update({"_id": self.task['_id']}, {"$push": {"action":action, "status": status, "date": date, "msg":'Ok'}})
                     return True
                 except Exception:
                     pass
 
                 try:
                     self.coll.update({"_id": self.task['_id']}, {"$set": params})
-                    self.coll.update({"_id": self.task['_id']}, {"$push": {"action":action, "status": status, "date": date, "msg":'Ok'}})   
+                    self.coll.update({"_id": self.task['_id']}, {"$push": {"action":action, "status": status, "date": date, "msg":'Ok'}})
                     print "Sucessfully added parameters %s from %s crawl job" %(",".join(params.keys()), self.name)
                     # self.update_sources(params)
                     # ret
                     return True
-                    
+
                 except Exception, e:
-                    self.coll.update({"_id": self.task['_id']}, {"$push": {"action":action, "status": False, "date": date, "msg": str(e)}}) 
+                    self.coll.update({"_id": self.task['_id']}, {"$push": {"action":action, "status": False, "date": date, "msg": str(e)}})
                     return False
             else:
                 print "Nothing to add to crawl job %s" %self.name
-                return self.show()  
-            
+                return self.show()
+
         else:
             print "No crawl job %s found" %self.name
             return False
@@ -242,7 +243,7 @@ class Worker(object):
         update = [n for n in params.keys() if n in ["file", "url", "key"]]
         cfg = Config(self.name, "crawl", debug=False)
         if len(update) != 0:
-            for n in update:        
+            for n in update:
                 if n == "file":
                     if cfg.check_file() is False:
                         print "Error no url from file %s has been added to sources" %params[n]
@@ -256,16 +257,16 @@ class Worker(object):
         return
 
     def delete(self, params):
-        if self.exists():   
+        if self.exists():
             if len(params) != 0:
                 params = self.clean_options(params)
                 values = ",".join(params.keys())
                 self.coll.update({"_id": self.task['_id']}, {"$unset": params})
                 try:
-                    self.coll.update({"_id": self.task['_id']}, {"$push": {"action":str("delete: "+ values), "status": True, "date": dt.now(), "msg": "Ok"}})   
+                    self.coll.update({"_id": self.task['_id']}, {"$push": {"action":str("delete: "+ values), "status": True, "date": dt.now(), "msg": "Ok"}})
                     print "Sucessfully deleted parameters %s from %s crawl job" %(values, self.name)
                 except Exception, e:
-                    self.coll.update({"_id": self.task['_id']}, {"$push": {"action":action, "status": False, "date": date, "msg": e}})  
+                    self.coll.update({"_id": self.task['_id']}, {"$push": {"action":action, "status": False, "date": date, "msg": e}})
                 return self.show()
             else:
                 self.delete_db()
@@ -275,15 +276,15 @@ class Worker(object):
                 return True
         else:
             print "No crawl job %s found" %self.name
-            return False    
-    
+            return False
+
     def delete_dir(self):
         import shutil
         directory = os.path.join(RESULT_PATH, self.project_name)
         if os.path.exists(directory):
 
             print "We will delete this directory now!"
-            
+
             shutil.rmtree(directory)
             print "Directory %s: %s sucessfully deleted"    %(self.name,directory)
             return True
@@ -296,7 +297,23 @@ class Worker(object):
         db.drop_db()
         print "Database %s: sucessfully deleted" %self.project_name
         return True
-            
+
+    def start_simple(self, params):
+        '''mathod to have a simple datsets from bing results'''
+        self.debug = True
+        if self.debug: print "start simple"
+        cfg = Config(self.name, "crawl", self.debug)
+        if cfg.setup():
+            if cfg.crawl_setup():
+                c = crawl(cfg.project_name, cfg.query, cfg.directory, cfg.max_depth, self.debug)
+                if c:
+                    print "Finished"
+                else:
+                    print c.msg
+                    sys.exit()
+        else:
+            print cfg.msg
+            sys.exit()
     def start(self, params):
         self.debug = True
         if self.debug: print "start"
@@ -309,15 +326,15 @@ class Worker(object):
                 try:
                     user = cfg.task['user']
                 except KeyError:
-                    params['user'] = "constance@cortext.net"
+                    params['user'] = "constance@cortext.fr"
                 self.report(params)
                 self.export({})
-                return self.coll.update({"_id": cfg.task['_id']}, {"$push": {"action":"crawl", "status": True, "date": dt.now(), "msg": cfg.msg}})  
+                return self.coll.update({"_id": cfg.task['_id']}, {"$push": {"action":"crawl", "status": True, "date": dt.now(), "msg": cfg.msg}})
             else:
-                return self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"setup crawl", "status": False, "date": dt.now(), "msg": cfg.msg}})       
+                return self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"setup crawl", "status": False, "date": dt.now(), "msg": cfg.msg}})
         else:
             #put_to_seeds
-            return self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"config", "status": False, "date": dt.now(), "msg": cfg.msg}})   
+            return self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"config", "status": False, "date": dt.now(), "msg": cfg.msg}})
 
     def stop(self, params):
         import subprocess, signal
@@ -337,14 +354,14 @@ class Worker(object):
 
                 os.kill(pid, signal.SIGKILL)
                 return True
-                
+
         if self.exists():
             self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"stop crawl", "status": False, "date": dt.now(), "msg": "No running project found"}})
             print "No running project %s found" %self.name
             return False
         else:
             print "No crawl job %s found" %self.name
-            return False    
+            return False
 
     def schedule(self, params):
         if self.exists():
@@ -361,8 +378,8 @@ class Worker(object):
             if self.debug: print"Next run", next
             self.coll.update({"_id": self.task['_id']}, {"next": next})
             return True
-        return False    
-    
+        return False
+
     def flush(self):
         cfg = Config(self.name, "crawl", self.debug)
         cfg.flush()
@@ -371,10 +388,10 @@ class Worker(object):
 
 if __name__== "crawtext":
     try:
-        #print docopt(__doc__)  
-        w = Worker(docopt(__doc__), debug=False)
+        #print docopt(__doc__)
+        w = Worker(docopt(__doc__), debug=True)
         w.dispatch()
-        sys.exit()  
+        sys.exit()
     except KeyboardInterrupt:
         w.flush()
         sys.exit()
