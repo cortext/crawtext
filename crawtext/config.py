@@ -366,13 +366,13 @@ class Config(object):
 	def add_bing_results(self, results_list):
 		'''simple insert into sources db'''
 		self.sources = self.project_db.use_coll("sources")
-		for url in results_list:
+		for i,url in enumerate(results_list):
 			exists = self.sources.find_one({"url": url})
 			#~ print exists
 			if exists is not None:
 				pass
 			else:
-				self.sources.insert({"url":url, "source_url":"bing.com", "origin": "bing", "nb":[nb], "nb_results":[nb_results],"depth": 0, "date":[self.date], "step":["Added"], "status":[True], "msg":["Inserted"]})
+				self.sources.insert({"url":url, "source_url":"bing.com", "origin": "bing", "nb":i, "nb_results":len(results_list),"depth": 0, "date":[self.date], "step":["Added"], "status":[True], "msg":["Inserted"]})
 				return True
 
 	def add_file(self):
