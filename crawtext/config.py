@@ -11,7 +11,13 @@ from database import TaskDB, Database
 from datetime import datetime as dt
 from link import Link
 
+import logging
+logger = logging.getLogger(__name__)
+FORMAT = "[%(filename)s:%(lineno)s - %(funcName)20s() ] %(message)s"
+logging.basicConfig(file="crawtext.log", format=FORMAT, level=logging.DEBUG)
+
 MAX_DEPTH = 100
+MAX_RESULTS = 1000
 
 class Config(object):
 	def __init__(self, name, job_type, debug=False):
@@ -32,33 +38,33 @@ class Config(object):
 			self.project_name = self.task["project_name"]
 			return True
 		else:
-			print "No %s job %s found" %(self.type, self.name)
+			logging.info("No %s job %s found" %(self.type, self.name))
 			return False
 
 	def setup(self):
-		if self.debug: print "\n=====Setup"
+		if self.debug: logging.info("Setup")
 		if self.exists():
-			if self.debug: print "Already exists"
+			if self.debug: logging.info("Already exists")
 			self.project_db = Database(self.task["project_name"])
 			if self.type == "crawl":
-				if self.debug: print "Setup Crawl"
+				if self.debug: logging.info("Setup Crawl")
 				return self.crawl_config()
 			elif self.type == "report":
-				if self.debug: print "Setup Report"
+				if self.debug: logging.info("Setup Report")
 				return self.report_config()
 			elif self.type == "export":
-				if self.debug: print "Setup Export"
+				if self.debug: logging.info("Setup Export")
 				return self.report_config()
 			else:
-				print "Not config"
+				logging.info("Not config")
 		else:
-			print "No project %s found." %self.name
+			logging.info("No project %s found." %self.name)
 			return False
 
 	def crawl_config(self):
 		'''verify if all required element are set query and key or file or url'''
 		if self.exists():
-			if self.debug : print "=====\nAdding parameters to configuration:"
+			if self.debug : logging.info("Adding parameters to configuration:")
 			self.query = self.task["query"]
 			if self.check_query() is False:
 				return False
@@ -91,20 +97,20 @@ class Config(object):
 			if len(error) < 3:
 				return True
 			else:
-				print "Error configuring sources"
+				logging.info("Error configuring sources")
 				return False
 		else:
-			print "No project %s found" %self.name
+			logging.info("No project %s found" %self.name)
 			return False
 
 	def crawl_setup(self):
-		if self.debug : print "=====\nCrawl configuration:"
+		if self.debug : logging.info("=====\nCrawl configuration:")
 		if self.exists():
 			try:
 				self.project_name = self.task["project_name"]
 				self.project_db = Database(self.task["project_name"])
 				self.project_db.set_colls()
-				print "=====\nChecking configuration:"
+				logging.info("=====\nChecking configuration:")
 				if self.check_sources() is False:
 					return False
 
@@ -116,16 +122,17 @@ class Config(object):
 					self.check_lang()
 					self.check_directory()
 					if self.put_to_queue():
-						if self.debug: print "Ok"
+						if self.debug: logging.info("Ok")
 						return True
 					else:
 						return False
 			except KeyError:
 				self.msg = "No crawl project %s found" %(self.name)
-				if self.debug: print self.msg
+				if self.debug: logging.info(self.msg)
 				return False
 		else:
 			self.msg = "No crawl project %s found" %(self.name)
+			if self.debug: logging.info(self.msg)
 			return False
 
 	def check_directory(self):
@@ -135,7 +142,7 @@ class Config(object):
 				os.makedirs(self.directory)
 				index = os.path.join(self.directory, 'index')
 				self.index_dir = os.makedirs('index')
-				if self.debug: print "A specific directory has been created to store your projects\n Location:%s"	%(self.directory)
+				if self.debug: logging.info("A specific directory has been created to store your projects\n Location:%s"%(self.directory))
 			return True
 		except KeyError:
 			try:
@@ -148,12 +155,12 @@ class Config(object):
 				os.makedirs(self.directory)
 				index = os.path.join(self.directory, 'index')
 				self.index_dir = os.makedirs('index')
-				print "A specific directory has been created to store your projects\n Location:%s"	%(self.directory)
+				logging.info("A specific directory has been created to store your projects\n Location:%s"	%(self.directory))
 				self.coll.update({"name": self.name, "type": self.type, "directory": self.directory})
 			return True
 
 	def update_sources(self):
-		if self.debug: print "updated sources"
+		if self.debug: logging.info("updated sources")
 		try:
 			self.file = self.task['file']
 			self.add_file()
@@ -172,51 +179,54 @@ class Config(object):
 			pass
 
 	def check_sources(self):
-		print "- Verifying sources:"
-		self.update_sources()
+		logging.info("- Verifying sources:")
+		#self.update_sources()
 		self.sources = self.project_db.use_coll("sources")
 		sources_nb = self.sources.count()
 
 		if sources_nb == 0:
 			self.msg = "No sources in database"
 			# self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"config", "status": "False", "date": dt.now(), "msg": self.msg}})
-			print "No sources found\nHelp: You need at least one url into sources database to start crawl."
+			logging.info("No sources found\nHelp: You need at least one url into sources database to start crawl.")
 			return False
 		else:
 			# self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"config crawl", "status": "True", "date": dt.now(), "msg": "Ok"}})
-			print "\tx sources nb:", sources_nb
+			logging.info("\tx sources nb:", sources_nb)
 			return True
 
 	def put_to_queue(self):
+		'''inserting sources to queue treatement'''
+		logging.info("putting to queue")
 		for item in self.project_db.sources.find():
-			if self.debug : print "Putting url to crawl", item["url"], item["status"][-1], item["depth"]
+			if self.debug : logging.info("Putting url to crawl", item["url"], item["status"][-1], item["depth"])
 			if item["url"] not in self.project_db.queue.distinct("url"):
+				#logging.info(item["url"])
 				self.project_db.queue.insert(item)
 			else:
 				pass
 		if self.project_db.queue.count() > 0:
 			return True
 		else:
-			print "No url to put in queue"
+			logging.info("No url to put in queue")
 			return False
 
 	def check_query(self):
-		print "- Verifying query:"
+		logging.info("- Verifying query:")
 		try:
 			self.query = self.task["query"]
 			self.check_directory()
-			print "\tx query: %s" %self.query
+			logging.info("\tx query: %s" %self.query)
 			return True
 		except KeyError:
 			self.msg = "No query has been set. Unable to start crawl."
-			print self.msg
+			logging.info(self.msg)
 			return False
 
 	def check_file(self):
 		try:
 			self.file = self.task['file']
-			print "-Verifying urls from file:"
-			print "\tx file: %s" %self.file
+			logging.info("-Verifying urls from file:")
+			logging.info("\tx file: %s" %self.file)
 			if self.add_file() is False:
 				self.msg = "Unable to add urls from file"
 				# self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"config crawl: add sources from file", "status": False, "date": dt.now(), "msg": "Filename incorrect"}})
@@ -229,8 +239,8 @@ class Config(object):
 	def check_bing(self):
 		try:
 			self.key = self.task['key']
-			print "-Verifying key for Bing"
-			if self.debug: print self.key
+			logging.info("-Verifying key for Bing")
+			if self.debug: logging.info(self.key)
 			if self.add_bing() is False:
 	 			self.msg = "Unable to add urls from search %s" %(self.resp)
 	 			return False
@@ -241,37 +251,37 @@ class Config(object):
 	def check_url(self):
 		try:
 			self.url = self.task['url']
-			print "-Verifying input url:"
+			logging.info("-Verifying input url:")
 
 			if self.add_url(self.url,'manual',0):
-		 		print "\tx",self.url, "added"
+		 		logging.info("\tx",self.url, "added")
 		 	else:
-		 		print "\tx",self.url, "updated"
+		 		logging.info("\tx",self.url, "updated")
 		 	return True
 		except KeyError:
 			return False
 
 	def check_depth(self):
-		print "- Verifying defaut depth for crawl:"
+		logging.info("- Verifying defaut depth for crawl:")
 		try:
 			self.max_depth = int(self.task['depth'])
-			print "\tx maximum depth is set to:  %d" %(self.max_depth)
+			logging.info("\tx maximum depth is set to:  %d" %(self.max_depth))
 
 		except KeyError:
 			self.max_depth = int(MAX_DEPTH)
-			print "\tx defaut maximum depth is set to:  %d" %(self.max_depth)
+			logging.info("\tx defaut maximum depth is set to:  %d" %(self.max_depth))
 			self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"config crawl", "status": "True", "date": self.date, "msg": "Setting up defaut max_depth to 100"}})
 
 	def check_lang(self):
 		try:
-			print "- Verifying language filter:"
+			logging.info("- Verifying language filter:")
 			self.lang = self.task['lang']
 			self.activ_lang = True
-			print "\tx language filter is set to:", self.lang
+			logging.info("\tx language filter is set to: %s" %sself.lang)
 		except KeyError:
 			self.lang = 'default'
 			self.activ_lang = False
-			print "\tx language filter is INACTIVE"
+			logging.info("\tx language filter is INACTIVE")
 
 	def reload_sources(self):
 		if self.check_file() is False:
@@ -285,7 +295,7 @@ class Config(object):
 			print "add url or key or file to you project:"
 			print "\tpython crawtext.py %s add --url=\"yoururl.com/examples\"" %(self.project_name)
 			print "\tpython crawtext.py %s add --file=\"seed_examples.txt\"" %(self.project_name)
-			print "python crawtext.py %s add --key=\"3X4MPL3\""	%(self.project_name)
+			print "\tpython crawtext.py %s add --key=\"3X4MPL3\"" %(self.project_name)
 			return False
 		return True
 
@@ -294,7 +304,7 @@ class Config(object):
 		self.sources = self.project_db.use_coll("sources")
 		if origin == "bing":
 			exists = self.sources.find_one({"url": url})
-			#~ print exists
+			#~ logging.info(exists
 			if exists is not None:
 				self.sources.update({"_id":exists['_id']}, {"$push": {"date":self.date,"status": True, "step": "Updated", "nb": nb,"nb_results": nb_results, "msg": "Ok"}}, upsert=False)
 				return False
@@ -306,35 +316,35 @@ class Config(object):
 			link = Link(url, source_url, depth, origin)
 			exists = self.sources.find_one({"url": link.url},timeout=False)
 			if exists is not None:
-			 	# print "\tx Url updated: %s \n\t\t>Status is set to %s" %(link.url, link.status)
+			 	# logging.info("\tx Url updated: %s \n\t\t>Status is set to %s" %(link.url, link.status)
 			 	self.sources.update({"_id":exists['_id']}, {"$push": {"date":self.date,"status": link.status, "step": link.step, "msg": link.msg}}, upsert=False)
 			 	return False
 			else:
-				#print "\tx Url added: %s \n\t\t>Status is set to %s" %(link.url, link.status)
+				#logging.info("\tx Url added: %s \n\t\t>Status is set to %s" %(link.url, link.status)
 				self.sources.insert({"url":link.url, "source_url":None, "origin": origin, "depth": 0, "date":[self.date], "step":["Added"], "status":[link.status], "msg":["inserted"]})
 				# exists = self.sources.find_one({"url": link.url})
 				# if exists is not None:
 				# 	self.sources.update({"_id":exists['_id']}, {"$push": {"date":dt.now(),"status": link.status,"step": link.step, "msg": link.msg}}, upsert=False)
 				return True
 
-	def add_bing(self, nb = 1000):
+	def add_bing(self, nb = MAX_RESULTS):
 		''' Method to extract results from BING API (Limited to 5000 req/month) automatically sent to sources DB '''
 		import requests, time
 		start = 0
 		step = 50
 		if nb > 1000:
-			print "Maximum search results is 500 results."
+			logging.info("Maximum search results is %d results." %MAX_RESULTS)
 			nb = 1000
 
 
 		if nb%50 != 0:
-			print "Nb of results must be a multiple of 50:"
+			logging.info("Nb of results must be a multiple of 50 not %d" %nb)
 			nb = nb - (nb%50)
 		web_results = []
 		new = []
 		inserted = []
 
-		if self.debug: print "Searching %i results" %nb
+		if self.debug: logging.info("Searching %i results" %nb)
 		for i in range(0,nb, 50):
 			r = requests.get(
 					'https://api.datamarket.azure.com/Bing/Search/v1/Web',
@@ -346,7 +356,7 @@ class Config(object):
 					},
 					auth=(self.key, self.key)
 					)
-			# print r.status_code
+			# logging.info(r.status_code
 			self.msg = r.raise_for_status()
 			if self.msg is None:
 				web_results.extend([e["Url"] for e in r.json()['d']['results']])
@@ -360,15 +370,16 @@ class Config(object):
 				# 		inserted.append(url)
 			else:
 				return False
-		print "%i urls added"%(len(results))
+		logging.info("%i urls added"%(len(results)))
 		return True
 
 	def add_bing_results(self, results_list):
 		'''simple insert into sources db'''
 		self.sources = self.project_db.use_coll("sources")
+		logging.info("adding bing results %d" %len(results_list))
 		for i,url in enumerate(results_list):
 			exists = self.sources.find_one({"url": url})
-			#~ print exists
+			#~ logging.info(exists
 			if exists is not None:
 				pass
 			else:
@@ -382,26 +393,26 @@ class Config(object):
 			url_list = [re.sub("\n", "", n) for n in open(self.file).readlines()]
 			i = 0
 			y = 0
-			print "-Adding urls from file"
+			logging.info("-Adding urls from file")
 			if len(url_list) == 0:
-				print "x File %s is empty" %self.file
+				logging.info("x File %s is empty" %self.file)
 				return False
 
 			results = [self.add_url(url, "file", 0) for url in url_list]
 			new = [n for n in results if n is True]
 
-			print "\t-%d new urls has been inserted\n\t-%d urls updated" %(len(new), len(results)-len(new))
+			logging.info("\t-%d new urls has been inserted\n\t-%d urls updated" %(len(new), len(results)-len(new)))
 			return True
 
 		except IOError, e:
-			print "-Adding urls from file"
-			print "x File does not exist"
-			print "**********HELP***********\n"
-		  	print "Please verify that your file is in the current directory."
-		 	print "To set up a correct filename and add contained urls to sources database:"
-		 	print "\t crawtext.py %s add --file =\"%s\"" %(self.name, self.file)
-			print "Debug msg: %s" %str(e)
-			print "*************************\n"
+			logging.info("-Adding urls from file")
+			logging.info("x File does not exist")
+			logging.info("**********HELP***********\n")
+		  	logging.info("Please verify that your file is in the current directory.")
+		 	logging.info("To set up a correct filename and add contained urls to sources database:")
+		 	logging.info("\t crawtext.py %s add --file =\"%s\"" %(self.name, self.file))
+			logging.info("Debug msg: %s" %str(e))
+			logging.info("*************************\n")
 			self.msg = "File doesn't exists"
 			return False
 
@@ -418,10 +429,10 @@ class Config(object):
 				self.project_name = self.task["project_name"]
 				self.project_db = Database(self.task["project_name"])
 			except Exception:
-				print "No project %s found", self.name
+				logging.info("No project %s found" %self.name)
 				return False
 		self.queue = self.project_db.use_coll("queue")
 		sources_nb = self.queue.count()
 		self.queue.drop()
-		print sources_nb, "deleted"
+		logging.info(sources_nb+" deleted")
 		return True
