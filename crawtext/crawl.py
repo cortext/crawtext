@@ -27,21 +27,21 @@ def crawl(db_name, query, directory, max_depth, debug=True):
             #     print "\nNB:", db.queue.count(), "pages \n"
             #     # print item["url"]
             #     print "\n"
-            if item["url"] in treated:
-                # update_result(db,treated, item, debug)
-                for n in db.queue.find({"url":item["url"]}):
-                    db.queue.remove(item)
-            else:
+            if item["url"] not in treated:
+            #     # update_result(db,treated, item, debug)
+            #     # for n in db.queue.find({"url":item["url"]}):
+            #     #     db.queue.remove(item)
+            # else:
                 resp, data = create_result(db, treated, item,query, directory, max_depth, debug)
                 if resp is False:
                     try:
                         db.insert_log(data)
                     except:
                         pass
-
+                treated.append(item["url"])
                 for n in db.queue.find({"url":item["url"]}):
                     db.queue.remove(n)
-                treated.append(item["url"])
+
             if db.queue.count() == 0:
                 break
             print "Results", db.results.count()
