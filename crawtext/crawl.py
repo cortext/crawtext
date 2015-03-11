@@ -2,12 +2,18 @@
 from database import Database
 from article import Article, Page
 from datetime import datetime
+import logging
+logger = logging.getLogger(__name__)
+FORMAT = "[%(filename)s:%(lineno)s - %(funcName)20s() ] %(message)s"
+logging.basicConfig(file="crawtext.log", format=FORMAT, level=logging.DEBUG)
 
 def uniq(seq):
+
     checked = []
     for e in seq:
         if e not in checked:
             checked.append(e)
+    logging.info("remove duplicate %d" %len(duplicate))
     return checked
 
 def crawl(db_name, query, directory, max_depth, debug=True):
@@ -18,7 +24,7 @@ def crawl(db_name, query, directory, max_depth, debug=True):
     db.logs = db.use_coll("logs")
     treated = uniq(db.results.distinct("url"))
 
-    if debug: print len(treated), "already in results"
+    if debug: logging.info(len(treated)+" already in results")
     while db.queue.count() > 0:
         if debug: print "\nCrawling ..."
         for item in db.queue.find(timeout=False):
@@ -28,6 +34,7 @@ def crawl(db_name, query, directory, max_depth, debug=True):
             #     # print item["url"]
             #     print "\n"
             if item["url"] not in treated:
+                print ">>>", item["url"]
             #     # update_result(db,treated, item, debug)
             #     # for n in db.queue.find({"url":item["url"]}):
             #     #     db.queue.remove(item)
@@ -56,6 +63,7 @@ def crawl(db_name, query, directory, max_depth, debug=True):
     return True
 
 def update_result(db,treated, item, debug):
+    #logging.info("remove duplicate %d" %len(duplicate))
     if debug:print "update", item["url"]
     exists = db.results.find_one({"url":item["url"]}, timeout=False)
     if exists is not None:
