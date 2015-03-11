@@ -12,7 +12,6 @@ Usage:
 	crawtext.py <name> --query=<query> --key=<key> [--nb=<nb>] [--lang=<lang>] [--user=<email>] [--depth=<depth>] [--debug]
 	crawtext.py (<name>) delete
 	crawtext.py (<name>) start
-	crawtext.py (<name>) report
 '''
 import os, sys, re
 import copy
@@ -26,7 +25,7 @@ from report import send_mail, generate_report
 import hashlib
 from article import Article, Page
 from config_qd import *
-
+from crawl import crawl
 
 
 ABSPATH = os.path.dirname(os.path.abspath(sys.argv[0]))
@@ -59,25 +58,16 @@ class Worker(object):
 			if self.start is True:
 				self.__run__()
 				sys.exit()
-				
+
 			if self.__exists__():
 				self.__show__(self.name)
 				sys.exit()
 			else:
 				logging.info("creating")
 				self.__create__()
-				logging.info("RUN!!!!!!!!!!!!!!!!!!!")
 				self.__run__()
-					
-			#
-			# self.project_name = re.sub('[^0-9a-zA-Z]+', '_', self.name)
-			# self.query = user_input['--query']
-			# self.key = user_input['--key']
-			#
-			# if self.__exists__(self.name):
-			#     self.__show__(self.name)
-			# else:
-			#     logging.info("create and run")
+
+
 	def __parse__(self, user_input):
 		for k, v in user_input.items():
 			if v is not False or v is not None:
@@ -102,27 +92,32 @@ class Worker(object):
 		if self.depth is False or self.depth is None:
 			self.depth = DEPTH
 		self.date = dt.now()
-	
+        try:
+            self.url = self.url
+        except KeyError:
+            self.url = None
+        try:
+            self.file = self.file
+        except KeyError:
+            self.file = None
+
 	def __create_directory__(self, project_name):
-			self.directory = os.path.join(ABSPATH, project_name)
-			if not os.path.exists(self.directory):
-				os.makedirs(self.directory)
-				index = os.path.join(self.directory, 'index')
-				try:
-					self.index_dir = os.makedirs('index')
-				except OSError, e:
-					if e.errno != 17:
-						raise   
-				logging.info("A specific directory has been created to store your projects\n Location:%s"	%(self.directory))
-				
-			return self.directory
-			
+		self.directory = os.path.join(ABSPATH, project_name)
+		if not os.path.exists(self.directory):
+			os.makedirs(self.directory)
+			index = os.path.join(self.directory, 'index')
+            try:
+			             self.index_dir = os.makedirs('index')
+			logging.info("A specific directory has been created to store your projects\n Location:%s"	%(self.directory))
+
+		return self.directory
+
 	def __create_db__(self, project_name=None):
 		if project_name is not None:
 			self.project_name = project_name
 		self.project_db = Database(self.project_name)
 		self.project_db.create_colls(["results", "logs", "sources", "queue"])
-		
+
 	def __create__(self):
 		logging.info("creating a new task")
 		new_task = self.__dict__.items()
@@ -143,42 +138,87 @@ class Worker(object):
 			self.__create_db__(self.project_name)
 			logging.info("Task successfully created")
 			return True
-			
+
 		except Exception as e:
 			logging.warning("Task not created")
 			logging.warning(e)
 			return False
 	def __config__(self):
 		pass
-		
+    def __update__(self):
+        self.__parse__(self, self.task)
+        if self.query is not False and self.key is not False:
+            self.update_sources()
+
 	def __run__(self):
 		if self.__exists__():
+            if (self.task["date"][-1].day,self.task["date"][-1].month, self.task["date"][-1].year)  == (self.date.day, self.date.month, self.date.year):
+                self.__update__()
+
 			if self.query is not False and self.key is not False:
 				#put bing to sources and nexts urls to crawl
-				if self.insert_into_sources():
+
+                if self.insert_into_sources():
 					treated = self.push_to_queue()
 					logging.info("%d urls put into queue" %len(treated))
 					self.crawl(treated)
-				
+
 			else:
 				logging.warning("Invalid parameter check your key and your query")
 				sys.exit()
 
 		else:
-			logging.info("Exit")
+			logging.info("Project doesn't exist yet. Create a new one!")
 			sys.exit()
+
+    def update_sources(self):
+        '''updating sources'''
+        check, bing_sources = self.get_bing_results(self.query, self.key, self.nb)
+		logging.info(check)
+		if check is True:
+			total_bing_sources = len(bing_sources)
+			logging.info("%d sources i n BING" %total_bing_sources)
+			logging.info("Inserting %d into sources" %total_bing_sources)
+			for i,url in enumerate(bing_sources):
+                exists = self.project_db.sources.find_one({"url":url})
+                if exists is None:
+    				self.project_db.sources.insert({"url":url,
+    												"source_url": "https://api.datamarket.azure.com",
+    												"depth": 0,
+    												"nb":[i],
+    												"total":[total_bing_sources],
+    												"msg":["inserted"],
+    												"code": [100],
+    												"status": [True]
+                                                    "date": [self.date]
+                                                    })
+				else:
+                    self.project_db.sources.udpate({"url":exists["url"]},
+    												{"$push":{"nb": i,
+                                                    "total":total_bing_sources,
+                                                    "msg":"udpated",
+                                                    "code": 100,
+                                                    "status": True,
+                                                    "date": self.date
+                                                    }}
+
+		else:
+			logging.info(bing_sources)
+			return False
+
 	def insert_into_sources(self):
+        '''Bing results insert'''
 		check, bing_sources = self.get_bing_results(self.query, self.key, self.nb)
 		logging.info(check)
 		if check is True:
-			
+
 			total_bing_sources = len(bing_sources)
 			logging.info("%d sources i n BING" %total_bing_sources)
 			logging.info("Inserting %d into sources" %total_bing_sources)
 			for i,url in enumerate(bing_sources):
 				self.project_db.sources.insert({"url":url,
 												"source_url": "https://api.datamarket.azure.com",
-												"depth": 0, 
+												"depth": 0,
 												"nb":i,
 												"total":total_bing_sources,
 												"msg":["inserted"],
@@ -188,10 +228,9 @@ class Worker(object):
 		else:
 			logging.info(bing_sources)
 			return False
-	
+
 	def crawl(self,treated):
 		logging.info("Starting Crawl")
-		print len(self.project_db.queue.distinct("url"))
 		while self.project_db.queue.count() > 0:
 			for item in self.project_db.queue.find(timeout=False):
 				if item["url"] not in treated and self.project_db.logs.find_one({"url":item["url"]}) is None and self.project_db.results.find_one({"url":item["url"]}) is None:
@@ -202,9 +241,9 @@ class Worker(object):
 							if a.check_depth(self.depth):
 								a.fetch_links()
 								if len(a.links) > 0:
-									for url, domain, domain_id in zip(a.links, a.domains, a.domain_ids):	
+									for url, domain in zip(a.links, a.domains):
 										print url, domain
-										self.project_db.queue.insert({"url": url, "source_url": item['url'], "depth": int(item['depth'])+1, "url_id": domain_id, "domain": domain, "date": a.date})
+										self.project_db.queue.insert({"url": url, "source_url": item['url'], "depth": int(item['depth'])+1, "domain": domain, "date": a.date})
 								if self.debug: logging.info("\t-inserted %d nexts url" %len(a.links))
 								self.project_db.insert_result(a.export())
 						else:
@@ -227,30 +266,24 @@ class Worker(object):
 
 	def push_to_queue(self):
 		treated = []
-		logging.info("Treated %d" %len(treated))
 		#put bing urls to crawl
 		for item in self.project_db.sources.find():
-			logging.info("in source "+item["url"])
+			logging.info(item["url"])
 			if item["url"] not in treated:
-				logging.info("Treating %s" %item["url"])
 				p = Page(item["url"], item["source_url"],item["depth"], self.date, self.debug)
-				logging.info("Page "+p.url)
 				if p.download():
 					a = Article(p.url,p.html, p.source_url, p.depth,p.date, self.debug)
 					if a.extract():
 						a.fetch_links()
-						logging.info("Treating next %d links" %len(a.links))
-						for url, domain, id_url in zip(a.links, a.domains, a.domain_ids):
-							
+						for url, domain in zip(a.links, a.domains):
 							if url not in treated:
-								logging.info("sending %s into queue" %url)
-								self.project_db.queue.insert({"url": url, "id_url":id_url, "source_url": item['url'], "depth": int(item['depth'])+1, "domain": domain, "date": self.date})
+								self.project_db.queue.insert({"url": url, "source_url": item['url'], "depth": int(item['depth'])+1, "domain": domain, "date": a.date})
+						print "\t-inserted %d nexts urls into queue" %len(a.links)
 						self.project_db.insert_result(a.export())
 						self.project_db.sources.update({"_id":item["_id"]}, {"$push":{"status": True, "msg":"Ok", "code": 100}})
 					else:
 						self.project_db.sources.update({"_id":item["_id"]}, {"$push":{"status": False, "msg":a.msg, "code": a.code}})
 				else:
-					logging.info("error downloading")
 					self.project_db.sources.update({"_id":item["_id"]}, {"$push":{"status": False, "msg":p.msg, "code": p.code}})
 				treated.append(item["url"])
 		return treated
@@ -268,7 +301,7 @@ class Worker(object):
 		print "* Parameters"
 		print "------------"
 		for k, v in self.task.items():
-			
+
 			print k, ":", v
 		project_db = Database(self.task["project_name"])
 		project_db.create_colls(["sources", "queue", "results"])
@@ -279,7 +312,7 @@ class Worker(object):
 		print "------------"
 		print self.task["action"][-1], self.task["status"][-1],self.task["msg"][-1], dt.strftime(self.task["date"][-1], "%d/%m/%y %H:%M:%S")
 		return
-		
+
 	def get_bing_results(self, query, key, nb):
 		''' Method to extract results from BING API (Limited to 5000 req/month) return a list of url'''
 		start = 0
@@ -294,7 +327,7 @@ class Worker(object):
 		new = []
 		inserted = []
 		for i in range(0,nb, 50):
-			
+
 			try:
 				r = requests.get('https://api.datamarket.azure.com/Bing/Search/v1/Web',
 					params={'$format' : 'json',
@@ -312,10 +345,10 @@ class Worker(object):
 					logging.warning("Req :"+msg)
 			except Exception as e:
 				logging.warning("Exception: "+str(e))
-				
+
 				return (False, str(e))
 		return (True, web_results)
-	
+
 	def delete_project(self):
 		if self.__exists__():
 			self.delete_db()
@@ -326,7 +359,7 @@ class Worker(object):
 		else:
 			print "No crawl job %s found" %self.name
 			return False
-			
+
 	def delete_dir(self):
 		import shutil
 		directory = os.path.join(RESULT_PATH, self.project_name)
