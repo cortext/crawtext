@@ -22,24 +22,26 @@ def crawl(db_name, query, directory, max_depth, debug=True):
     while db.queue.count() > 0:
         if debug: print "\nCrawling ..."
         for item in db.queue.find(timeout=False):
-            if debug:
-                print "----"
-                print "\nNB:", db.queue.count(), "pages \n"
-                # print item["url"]
-                print "\n"
+            # if debug:
+            #     print "----"
+            #     print "\nNB:", db.queue.count(), "pages \n"
+            #     # print item["url"]
+            #     print "\n"
             if item["url"] in treated:
-                update_result(db,treated, item, debug)
+                # update_result(db,treated, item, debug)
                 for n in db.queue.find({"url":item["url"]}):
-                    db.queue.remove(item) 
+                    db.queue.remove(item)
             else:
                 resp, data = create_result(db, treated, item,query, directory, max_depth, debug)
                 if resp is False:
-                    try:    
+                    try:
                         db.insert_log(data)
                     except:
                         pass
+
                 for n in db.queue.find({"url":item["url"]}):
                     db.queue.remove(n)
+                treated.append(item["url"])
             if db.queue.count() == 0:
                 break
             print "Results", db.results.count()
@@ -52,17 +54,17 @@ def crawl(db_name, query, directory, max_depth, debug=True):
         if db.queue.count() == 0:
             break
     return True
-       
+
 def update_result(db,treated, item, debug):
     if debug:print "update", item["url"]
     exists = db.results.find_one({"url":item["url"]}, timeout=False)
     if exists is not None:
         if debug: print "Already treated"
-        next_urls = []    
-        
+        next_urls = []
+
         next = [n for n in exists["cited_links"] if n not in treated]
         if len(next) > 0:
-            for url in exists["cited_links"]: 
+            for url in exists["cited_links"]:
                 if url not in db.queue.distinct("url"):
                     next_urls.append({"url": url, "source_url":item["url"], "depth": item["depth"]+1, "date": item["date"]})
             if len(next_urls) > 0:
@@ -107,7 +109,7 @@ def create_result(db, treated, item, query, directory,max_depth, debug):
                                 treated.append(item["url"])
                             return (True, "")
                         else:
-                            return (False, a.log())        
+                            return (False, a.log())
                     else:
                         if item["url"] not in treated:
                             treated.append(item["url"])
@@ -122,4 +124,3 @@ def create_result(db, treated, item, query, directory,max_depth, debug):
     else:
         print "item is None"
         return (False, '')
-    
