@@ -106,8 +106,10 @@ class Worker(object):
 		if not os.path.exists(self.directory):
 			os.makedirs(self.directory)
 			index = os.path.join(self.directory, 'index')
-			if not os.path.exists(index):
+			try:
 				self.index_dir = os.makedirs('index')
+			except:
+				pass
 			logging.info("A specific directory has been created to store your projects\n Location:%s"	%(self.directory))
 
 		return self.directory
@@ -135,12 +137,11 @@ class Worker(object):
 			task["msg"] = ["Sucessfully created"]
 			task["date"] = [self.date]
 			task["directory"] = self.__create_directory__(task["project_name"])
+			
 			self.coll.insert(task)
 			logging.info("Task successfully created")
-			self.project_db = self.__create_db__(self.project_name)
-			print self.project_db.sources.count()
-			logging.info("Prject db created ")
-			
+			self.__create_db__(self.project_name)
+			logging.info("Project db created ")
 			return True
 
 		except Exception as e:
@@ -331,10 +332,11 @@ class Worker(object):
 
 	def get_bing_results(self, query, key, nb):
 		''' Method to extract results from BING API (Limited to 5000 req/month) return a list of url'''
-		self.project_db = Database(self.task["project_name"])
-		
-		self.project_db.create_colls(["sources", "queue", "results"])
-		logging.info("Test databse")
+		try:
+			count_results = self.project_db.sources.find()
+		except AttributeError:
+			self.__create_db__(self.task["project_name"])
+		logging.info("Test database")
 		print "Sources nb:", self.project_db.sources.count()
 		print "Queue nb:", self.project_db.queue.count()
 		print "Results nb:", self.project_db.results.count()
@@ -394,7 +396,6 @@ class Worker(object):
 					logging.warning("Req :"+msg)
 			except Exception as e:
 				logging.warning("Exception: "+str(e))
-
 				return (False, str(e))
 		return (True, web_results)
 
