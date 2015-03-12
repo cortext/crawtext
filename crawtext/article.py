@@ -55,7 +55,6 @@ class Page(object):
 	def is_valid(self):
 		url = Link(self.url, self.source_url, self.debug)
 		if url.is_valid():
-			self.url = url.url
 			return True
 		else:
 			self.msg = url.msg

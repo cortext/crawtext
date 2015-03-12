@@ -64,8 +64,8 @@ class Worker(object):
 				sys.exit()
 			else:
 				logging.info("creating")
-				self.__create__()
-				self.__run__()
+				if self.__create__():
+					self.__run__()
 
 
 	def __parse__(self, user_input):
@@ -140,7 +140,7 @@ class Worker(object):
 			
 			self.coll.insert(task)
 			logging.info("Task successfully created")
-			self.__create_db__(self.project_name)
+			self.project_db = self.__create_db__(self.project_name)
 			logging.info("Project db created ")
 			return True
 
@@ -160,14 +160,20 @@ class Worker(object):
 		if self.__exists__():
 			self.key = self.task["key"]
 			self.query = self.task["query"]
+			self.project_name = self.task["project_name"]
+			try:
+				bool(self.project_db.sources.count() == 0)
+			except AttributeError:
+				self.__create_db__(self.task["project_name"])
+				print self.project_db.sources.count()
 			#update
 			#~ if (self.task["date"][-1].day,self.task["date"][-1].month, self.task["date"][-1].year)  == (self.date.day, self.date.month, self.date.year):
 				#~ self.__update__()
 
 			if self.query is not False and self.key is not False:
 				#put bing to sources and nexts urls to crawl
-				
-				if self.insert_into_sources():
+				check, results = self.get_bing_results( self.query, self.key, self.nb)
+				if check:
 					treated = self.push_to_queue()
 					logging.info("%d urls put into queue" %len(treated))
 					self.crawl(treated)
@@ -222,9 +228,8 @@ class Worker(object):
 
 	def insert_into_sources(self):
 		'''Bing results insert'''
-		
-		self.project_db = Database(self.project_name)
-		self.project_db.create_colls(["logs", "sources", "results"])
+		if self.project_db.sources.count() == 0:
+			self.__create_db__()
 		check, bing_sources = self.get_bing_results(self.query, self.key, self.nb)
 		logging.info(check)
 		if check is True:
@@ -266,7 +271,7 @@ class Worker(object):
 						else:
 							self.project_db.insert_log(a.log())
 					else:
-						self.project_db.insert_log(a.log())
+						self.project_db.insert_log(p.log())
 					treated.append(item["url"])
 				self.project_db.queue.remove({"url":item["url"]})
 				if self.project_db.queue.count() == 0:
@@ -288,7 +293,7 @@ class Worker(object):
 			logging.info(item["url"])
 			if item["url"] not in treated:
 				p = Page(item["url"], item["source_url"],item["depth"], self.date, self.debug)
-				if p.download():
+				if p.fetch():
 					a = Article(p.url,p.html, p.source_url, p.depth,p.date, self.debug)
 					if a.extract():
 						a.fetch_links()
@@ -336,6 +341,7 @@ class Worker(object):
 			count_results = self.project_db.sources.find()
 		except AttributeError:
 			self.__create_db__(self.task["project_name"])
+			logging.info(self.project_db.sources.count())
 		logging.info("Test database")
 		print "Sources nb:", self.project_db.sources.count()
 		print "Queue nb:", self.project_db.queue.count()
@@ -351,12 +357,6 @@ class Worker(object):
 		web_results = []
 		new = []
 		inserted = []
-		try:
-			web_results = self.project_db.sources.count()
-		except AttributeError:
-			
-			self.__create_db__()
-			web_results = self.project_db.sources.count()
 			
 		for i in range(0,nb, 50):
 
@@ -371,10 +371,12 @@ class Worker(object):
 				# logging.info(r.status_code)
 				msg = r.raise_for_status()
 				if msg is None:		
-					for url in r.json()['d']['results']:
-						exists = self.project_db.sources.find_one({"url": url})
+					for e in r.json()['d']['results']:
+						url = e["Url"]
+						exists = self.project_db.sources.find_one({"url": e["Url"]})
+						
 						if exists is None:
-							self.project_db.sources.insert({"url":url,
+							self.project_db.sources.insert({"url":e["Url"],
 													"source_url": "https://api.datamarket.azure.com",
 													"depth": 0,
 													"msg":["inserted"],
@@ -383,7 +385,7 @@ class Worker(object):
 													"date": [self.date]
 													})
 						else:
-							self.project_db.sources.udpate({"url":exists["url"]},
+							self.project_db.sources.update({"url":exists["url"]},
 													{"$push":{
 													"msg":"udpated",
 													"code": 100,
@@ -391,7 +393,7 @@ class Worker(object):
 													"date": self.date
 													}})
 							
-					logging.info(len(self.db.sources.count()))
+					logging.info(self.project_db.sources.count())
 				else:
 					logging.warning("Req :"+msg)
 			except Exception as e:
