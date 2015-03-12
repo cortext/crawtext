@@ -106,7 +106,8 @@ class Worker(object):
 		if not os.path.exists(self.directory):
 			os.makedirs(self.directory)
 			index = os.path.join(self.directory, 'index')
-			self.index_dir = os.makedirs('index')
+			if not os.path.exists(index):
+				self.index_dir = os.makedirs('index')
 			logging.info("A specific directory has been created to store your projects\n Location:%s"	%(self.directory))
 
 		return self.directory
@@ -135,8 +136,11 @@ class Worker(object):
 			task["date"] = [self.date]
 			task["directory"] = self.__create_directory__(task["project_name"])
 			self.coll.insert(task)
-			self.__create_db__(self.project_name)
 			logging.info("Task successfully created")
+			self.project_db = self.__create_db__(self.project_name)
+			print self.project_db.sources.count()
+			logging.info("Prject db created ")
+			
 			return True
 
 		except Exception as e:
