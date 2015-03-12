@@ -92,22 +92,21 @@ class Worker(object):
 		if self.depth is False or self.depth is None:
 			self.depth = DEPTH
 		self.date = dt.now()
-        try:
-            self.url = self.url
-        except KeyError:
-            self.url = None
-        try:
-            self.file = self.file
-        except KeyError:
-            self.file = None
+		try:
+			self.url = self.url
+		except AttributeError:
+			self.url = None
+		try:
+			self.file = self.file
+		except AttributeError:
+			self.file = None
 
 	def __create_directory__(self, project_name):
 		self.directory = os.path.join(ABSPATH, project_name)
 		if not os.path.exists(self.directory):
 			os.makedirs(self.directory)
 			index = os.path.join(self.directory, 'index')
-            try:
-			             self.index_dir = os.makedirs('index')
+			self.index_dir = os.makedirs('index')
 			logging.info("A specific directory has been created to store your projects\n Location:%s"	%(self.directory))
 
 		return self.directory
@@ -117,7 +116,8 @@ class Worker(object):
 			self.project_name = project_name
 		self.project_db = Database(self.project_name)
 		self.project_db.create_colls(["results", "logs", "sources", "queue"])
-
+		return self.project_db
+		
 	def __create__(self):
 		logging.info("creating a new task")
 		new_task = self.__dict__.items()
@@ -145,24 +145,30 @@ class Worker(object):
 			return False
 	def __config__(self):
 		pass
-    def __update__(self):
-        self.__parse__(self, self.task)
-        if self.query is not False and self.key is not False:
-            self.update_sources()
+	def __update__(self):
+		self.__parse__(self.task)
+		self
+		if self.query is not False and self.key is not False:
+			self.update_sources()
 
 	def __run__(self):
 		if self.__exists__():
-            if (self.task["date"][-1].day,self.task["date"][-1].month, self.task["date"][-1].year)  == (self.date.day, self.date.month, self.date.year):
-                self.__update__()
+			self.key = self.task["key"]
+			self.query = self.task["query"]
+			#update
+			#~ if (self.task["date"][-1].day,self.task["date"][-1].month, self.task["date"][-1].year)  == (self.date.day, self.date.month, self.date.year):
+				#~ self.__update__()
 
 			if self.query is not False and self.key is not False:
 				#put bing to sources and nexts urls to crawl
-
-                if self.insert_into_sources():
+				
+				if self.insert_into_sources():
 					treated = self.push_to_queue()
 					logging.info("%d urls put into queue" %len(treated))
 					self.crawl(treated)
-
+				else:
+					logging.warning("Invalid credential")
+					sys.exit()
 			else:
 				logging.warning("Invalid parameter check your key and your query")
 				sys.exit()
@@ -171,43 +177,49 @@ class Worker(object):
 			logging.info("Project doesn't exist yet. Create a new one!")
 			sys.exit()
 
-    def update_sources(self):
-        '''updating sources'''
-        check, bing_sources = self.get_bing_results(self.query, self.key, self.nb)
+	def update_sources(self):
+		'''updating sources'''
+		
+		self.__parse__(self.task)
+			
+		check, bing_sources = self.get_bing_results(self.query, self.key, self.nb)
 		logging.info(check)
 		if check is True:
 			total_bing_sources = len(bing_sources)
 			logging.info("%d sources i n BING" %total_bing_sources)
 			logging.info("Inserting %d into sources" %total_bing_sources)
 			for i,url in enumerate(bing_sources):
-                exists = self.project_db.sources.find_one({"url":url})
-                if exists is None:
-    				self.project_db.sources.insert({"url":url,
-    												"source_url": "https://api.datamarket.azure.com",
-    												"depth": 0,
-    												"nb":[i],
-    												"total":[total_bing_sources],
-    												"msg":["inserted"],
-    												"code": [100],
-    												"status": [True]
-                                                    "date": [self.date]
-                                                    })
+				exists = self.project_db.sources.find_one({"url":url})
+				if exists is None:
+					self.project_db.sources.insert({"url":url,
+													"source_url": "https://api.datamarket.azure.com",
+													"depth": 0,
+													"nb":[i],
+													"total":[total_bing_sources],
+													"msg":["inserted"],
+													"code": [100],
+													"status": [True],
+													"date": [self.date]
+													})
 				else:
-                    self.project_db.sources.udpate({"url":exists["url"]},
-    												{"$push":{"nb": i,
-                                                    "total":total_bing_sources,
-                                                    "msg":"udpated",
-                                                    "code": 100,
-                                                    "status": True,
-                                                    "date": self.date
-                                                    }}
+					self.project_db.sources.udpate({"url":exists["url"]},
+													{"$push":{"nb": i,
+													"total":total_bing_sources,
+													"msg":"udpated",
+													"code": 100,
+													"status": True,
+													"date": self.date
+													}})
 
 		else:
 			logging.info(bing_sources)
 			return False
 
 	def insert_into_sources(self):
-        '''Bing results insert'''
+		'''Bing results insert'''
+		
+		self.project_db = Database(self.project_name)
+		self.project_db.create_colls(["logs", "sources", "results"])
 		check, bing_sources = self.get_bing_results(self.query, self.key, self.nb)
 		logging.info(check)
 		if check is True:
@@ -315,6 +327,13 @@ class Worker(object):
 
 	def get_bing_results(self, query, key, nb):
 		''' Method to extract results from BING API (Limited to 5000 req/month) return a list of url'''
+		self.project_db = Database(self.task["project_name"])
+		
+		self.project_db.create_colls(["sources", "queue", "results"])
+		logging.info("Test databse")
+		print "Sources nb:", self.project_db.sources.count()
+		print "Queue nb:", self.project_db.queue.count()
+		print "Results nb:", self.project_db.results.count()
 		start = 0
 		step = 50
 		if nb > MAX_RESULTS:
@@ -326,6 +345,13 @@ class Worker(object):
 		web_results = []
 		new = []
 		inserted = []
+		try:
+			web_results = self.project_db.sources.count()
+		except AttributeError:
+			
+			self.__create_db__()
+			web_results = self.project_db.sources.count()
+			
 		for i in range(0,nb, 50):
 
 			try:
@@ -338,9 +364,28 @@ class Worker(object):
 						)
 				# logging.info(r.status_code)
 				msg = r.raise_for_status()
-				if msg is None:
-					web_results.extend([e["Url"] for e in r.json()['d']['results']])
-					logging.info(len(web_results))
+				if msg is None:		
+					for url in r.json()['d']['results']:
+						exists = self.project_db.sources.find_one({"url": url})
+						if exists is None:
+							self.project_db.sources.insert({"url":url,
+													"source_url": "https://api.datamarket.azure.com",
+													"depth": 0,
+													"msg":["inserted"],
+													"code": [100],
+													"status": [True],
+													"date": [self.date]
+													})
+						else:
+							self.project_db.sources.udpate({"url":exists["url"]},
+													{"$push":{
+													"msg":"udpated",
+													"code": 100,
+													"status": True,
+													"date": self.date
+													}})
+							
+					logging.info(len(self.db.sources.count()))
 				else:
 					logging.warning("Req :"+msg)
 			except Exception as e:
