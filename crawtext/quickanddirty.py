@@ -98,11 +98,15 @@ class Worker(object):
 				return self.__export()
 		else:
 			logging.info("\nProject %s shows" %self.name)
-			if self.__exists__():
+			if self.__exists__() is False:
+				self.__create__()
+				self.__run__()
+				self.__report()
+				return self.__export()
+			else:
 				if self.__parse_task__():
 					return self.__show__()
-			else:
-				return sys.exit("Project %s not found") %self.name
+			
 	def __parse__(self, user_input):
 		'''parsing user input for options and actions'''
 		logging.info(__doc__)
