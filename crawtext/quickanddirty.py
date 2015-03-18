@@ -10,8 +10,11 @@ A simple crawler in command line for targeted websearch.
 Usage:
 	crawtext.py (<name>)
 	crawtext.py <name> --query=<query> --key=<key> [--nb=<nb>] [--lang=<lang>] [--user=<email>] [--depth=<depth>] [--debug]
+	crawtext.py <name> (--url=<url>| --file=<file>) [--nb=<nb>] [--lang=<lang>] [--user=<email>] [--depth=<depth>] [--debug]
 	crawtext.py (<name>) delete
 	crawtext.py (<name>) start
+	crawtext.py (<name>) export
+	crawtext.py (<name>) report [--user=<email>]
 '''
 import os, sys, re
 import copy
@@ -30,6 +33,7 @@ from crawl import crawl
 
 ABSPATH = os.path.dirname(os.path.abspath(sys.argv[0]))
 RESULT_PATH = os.path.join(ABSPATH, "projects")
+
 import logging
 logger = logging.getLogger(__name__)
 FORMAT = "[%(filename)s:%(lineno)s - %(funcName)20s() ] %(message)s"
@@ -42,67 +46,117 @@ DEPTH = 100
 class Worker(object):
 	def __init__(self,user_input,debug=False):
 		'''Job main config'''
+		self.debug = debug
+		logging.info("Init worker")
 		if type(user_input) == str:
 			self.name = user_input
 			self.show()
-			sys.exit()
+			sys.exit(0)
 		else:
+			self.name = user_input["<name>"]
+			logging.info("Connecting to TaskDB")
 			self.db = TaskDB()
 			self.coll = self.db.coll
-			self.__parse__(user_input)
 			if self.debug:
 				logging.info("Debug activated")
-			if self.delete is True:
-				self.delete_project()
-				sys.exit()
-			if self.start is True:
-				self.__run__()
-				sys.exit()
 
-			if self.__exists__():
-				self.__show__(self.name)
-				sys.exit()
+			if self.__exists__() is False:
+				logging.info("Parsing user input")
+				self.__parse__(user_input)
 			else:
-				logging.info("creating")
-				if self.__create__():
-					self.__run__()
+				logging.info("Parsing existing task")
+				self.__parse_task__()
+			self.__activate__()
 
+	def __activate__(self):
+		'''multiple actions in option dispatched'''
+		logging.info("Activating")
+		if self.delete is True:
+			'''delete project'''
+			return self.delete_project()
 
+		elif self.export is True:
+			'''export projects'''
+			return self.__export__()
+
+		elif self.report is True:
+			''' report project'''
+			return self.__export__()
+
+		elif self.start is True:
+			'''starting project'''
+			if self.__exists__() is False:
+				logging.info("Starting a new project")
+				self.__create__()
+				self.__run__()
+				self.__report()
+				return self.__export()
+			else:
+				logging.info("Starting an existing project")
+				self.__run__()
+				self.__report()
+				return self.__export()
+		else:
+			logging.info("\nProject %s shows" %self.name)
+			if self.__exists__() is False:
+				self.__create__()
+				self.__run__()
+				self.__report()
+				return self.__export()
+			else:
+				if self.__parse_task__():
+					return self.__show__()
+			
 	def __parse__(self, user_input):
+		'''parsing user input for options and actions'''
+		logging.info(__doc__)
 		for k, v in user_input.items():
 			if v is not False or v is not None:
-			# if k in ["--nb","--lang", "--user", "--depth", "--debug", '<name>', '--query', '--key']:
-			#     if v is None:
-			#         setattr(self, re.sub("--", "", k), False)
-			#     else:
 				setattr(self, re.sub("--|<|>", "", k), v)
 			else:
 				setattr(self, re.sub("--", "", k), False)
 		if self.name is not False:
 			self.project_name = re.sub('[^0-9a-zA-Z]+', '_', self.name)
 		else:
-			logging.warning("Invalid parameters")
+			logging.warning("Invalid parameters Please provide a name to your project")
 			sys.exit()
-		if self.query is False or self.key is False:
-			logging.warning("Invalid parameters")
-			sys.exit()
+
+		if self.query is False:
+			logging.info("No query activate open crawl?")
+			#open crawl?
+			if self.file is False or self.url is False:
+				logging.warning("Invalid parameters: needs at leat a seed")
+				sys.exit()
+			else:
+				self.type = "open_crawl"
+				logging.info("Open crawl")
+		else:
+			if self.key is False or self.file is False or self.url is False:
+				logging.warning("Invalid parameters need at least a seed Please provide an (url, file or key)")
+				sys.exit()
+			else:
+				self.type = "crawl"
+				logging.info("Normal crawl")
 		self.report = bool(self.user is not None)
 		if self.nb is False or self.nb is None:
 			self.nb = MAX_RESULTS
 		if self.depth is False or self.depth is None:
 			self.depth = DEPTH
 		self.date = dt.now()
-		try:
-			self.url = self.url
-		except AttributeError:
-			self.url = None
-		try:
-			self.file = self.file
-		except AttributeError:
-			self.file = None
+
+
+	def __parse_task__(self):
+		'''mapping params from TASKDB'''
+		if self.task is not None:
+			for k, v in self.task.items():
+				setattr(self, k, v)
+			return self
+		else:
+			return False
+
 
 	def __create_directory__(self, project_name):
-		self.directory = os.path.join(ABSPATH, project_name)
+		self.directory = os.path.join(RESULT_PATH, project_name)
 		if not os.path.exists(self.directory):
 			os.makedirs(self.directory)
 			index = os.path.join(self.directory, 'index')
@@ -120,16 +174,13 @@ class Worker(object):
 		self.project_db = Database(self.project_name)
 		self.project_db.create_colls(["results", "logs", "sources", "queue"])
 		return self.project_db
-		
+
 	def __create__(self):
 		logging.info("creating a new task")
 		new_task = self.__dict__.items()
 		task = {}
-		task["type"] = "crawl"
-		task["action"] = ["Created"]
-
-
 		for k, v in new_task:
+			logging.info("Creating from dict %s:%s" %(k,v))
 			if k not in ["db", "coll"]:
 				task[k] = v
 		try:
@@ -137,24 +188,21 @@ class Worker(object):
 			task["msg"] = ["Sucessfully created"]
 			task["date"] = [self.date]
 			task["directory"] = self.__create_directory__(task["project_name"])
-			
 			self.coll.insert(task)
 			logging.info("Task successfully created")
 			self.project_db = self.__create_db__(self.project_name)
-			logging.info("Project db created ")
+			logging.info("Project db created")
 			return True
 
 		except Exception as e:
 			logging.warning("Task not created")
 			logging.warning(e)
 			return False
-	def __config__(self):
-		pass
+
 	def __update__(self):
-		self.__parse__(self.task)
-		self
-		if self.query is not False and self.key is not False:
-			self.update_sources()
+		if self.__parse_task__() is not False:
+			if self.query is not False and self.key is not False:
+				self.update_sources()
 
 	def __run__(self):
 		if self.__exists__():
@@ -190,9 +238,9 @@ class Worker(object):
 
 	def update_sources(self):
 		'''updating sources'''
-		
+
 		self.__parse__(self.task)
-			
+
 		check, bing_sources = self.get_bing_results(self.query, self.key, self.nb)
 		logging.info(check)
 		if check is True:
@@ -250,18 +298,34 @@ class Worker(object):
 		else:
 			logging.info(bing_sources)
 			return False
+	def wild_crawl(self, treated):
+		crawl(self, treated, option=None)
 
-	def crawl(self,treated):
+
+	def crawl(self,treated, option="filter"):
 		logging.info("Starting Crawl")
+		self.__create__()
 		while self.project_db.queue.count() > 0:
 			for item in self.project_db.queue.find(timeout=False):
 				if item["url"] not in treated and self.project_db.logs.find_one({"url":item["url"]}) is None and self.project_db.results.find_one({"url":item["url"]}) is None:
 					p = Page(item["url"], item["source_url"],item["depth"], item["date"], self.debug)
 					if p.download():
 						a = Article(p.url,p.html, p.source_url, p.depth,p.date, self.debug)
-						if a.extract() and a.filter(self.query, self.directory):
-							if a.check_depth(self.depth):
-								a.fetch_links()
+
+						if a.extract():
+							if option == "filter":
+								if a.filter(self.query, self.directory):
+									if a.check_depth(self.depth):
+										a.fetch_links()
+									if len(a.links) > 0:
+										for url, domain in zip(a.links, a.domains):
+											print url, domain
+											self.project_db.queue.insert({"url": url, "source_url": item['url'], "depth": int(item['depth'])+1, "domain": domain, "date": a.date})
+									if self.debug: logging.info("\t-inserted %d nexts url" %len(a.links))
+									self.project_db.insert_result(a.export())
+							else:
+								if a.check_depth(self.depth):
+									a.fetch_links()
 								if len(a.links) > 0:
 									for url, domain in zip(a.links, a.domains):
 										print url, domain
@@ -316,24 +380,29 @@ class Worker(object):
 			logging.info("\nProject %s exists" %self.name)
 			return True
 		else:
+			logging.info("\nProject %s doesn't exist" %self.name)
 			return False
 
-	def __show__(self,name):
-		print "\n===== Project : %s =====\n" %(self.name).capitalize()
-		print "* Parameters"
-		print "------------"
-		for k, v in self.task.items():
+	def __show__(self,name=None):
+		if name is not None:
+			self.name = name
+		if self.task is not None:
+			print "\n===== Project : %s =====\n" %(self.name).capitalize()
+			print "* Parameters"
+			print "------------"
+			for k, v in self.task.items():
 
-			print k, ":", v
-		project_db = Database(self.task["project_name"])
-		project_db.create_colls(["sources", "queue", "results"])
-		print "Sources nb:", project_db.sources.count()
-		print "Queue nb:", project_db.queue.count()
-		print "Results nb:", project_db.results.count()
-		print "\n* Last Status"
-		print "------------"
-		print self.task["action"][-1], self.task["status"][-1],self.task["msg"][-1], dt.strftime(self.task["date"][-1], "%d/%m/%y %H:%M:%S")
-		return
+				print k, ":", v
+			print "Sources nb:", project_db.sources.count()
+			print "Queue nb:", project_db.queue.count()
+			print "Results nb:", project_db.results.count()
+			print "\n* Last Status"
+			print "------------"
+			print self.task["action"][-1], self.task["status"][-1],self.task["msg"][-1], dt.strftime(self.task["date"][-1], "%d/%m/%y %H:%M:%S")
+			return
+		else:
+			logging.warning("No project found")
+			sys.exit("No project found dummy!")
 
 	def get_bing_results(self, query, key, nb):
 		''' Method to extract results from BING API (Limited to 5000 req/month) return a list of url'''
@@ -357,7 +426,7 @@ class Worker(object):
 		web_results = []
 		new = []
 		inserted = []
-			
+
 		for i in range(0,nb, 50):
 
 			try:
@@ -370,11 +439,11 @@ class Worker(object):
 						)
 				# logging.info(r.status_code)
 				msg = r.raise_for_status()
-				if msg is None:		
+				if msg is None:
 					for e in r.json()['d']['results']:
 						url = e["Url"]
 						exists = self.project_db.sources.find_one({"url": e["Url"]})
-						
+
 						if exists is None:
 							self.project_db.sources.insert({"url":e["Url"],
 													"source_url": "https://api.datamarket.azure.com",
@@ -392,7 +461,7 @@ class Worker(object):
 													"status": True,
 													"date": self.date
 													}})
-							
+
 					logging.info(self.project_db.sources.count())
 				else:
 					logging.warning("Req :"+msg)
