@@ -46,87 +46,108 @@ DEPTH = 100
 class Worker(object):
 	def __init__(self,user_input,debug=False):
 		'''Job main config'''
+		self.debug = debug
+		logging.info("Init worker")
 		if type(user_input) == str:
 			self.name = user_input
 			self.show()
 			sys.exit(0)
 		else:
+			self.name = user_input["<name>"]
+			logging.info("Connecting to TaskDB")
 			self.db = TaskDB()
 			self.coll = self.db.coll
-			self.__parse__(user_input)
 			if self.debug:
 				logging.info("Debug activated")
+
+			if self.__exists__() is False:
+				logging.info("Parsing user input")
+				self.__parse__(user_input)
+			else:
+				logging.info("Parsing existing task")
+				self.__parse_task__()
 			self.__activate__()
 
 	def __activate__(self):
+		'''multiple actions in option dispatched'''
+		logging.info("Activating")
 		if self.delete is True:
+			'''delete project'''
 			return self.delete_project()
+
 		elif self.export is True:
+			'''export projects'''
 			return self.__export__()
 
 		elif self.report is True:
+			''' report project'''
 			return self.__export__()
 
 		elif self.start is True:
-			self.__create__()
-			self.__run__()
-			self.__report()
-			return self.__export()
-
-		elif self.__exists__():
-			return self.__show__(self.name)
-
-		else:
-			logging.info("creating")
-			if self.__create__():
+			'''starting project'''
+			if self.__exists__() is False:
+				logging.info("Starting a new project")
+				self.__create__()
 				self.__run__()
 				self.__report()
 				return self.__export()
 			else:
-				logging.warning("Imposible to create a new project")
-				sys.exit("Error while creating project")
-
+				logging.info("Starting an existing project")
+				self.__run__()
+				self.__report()
+				return self.__export()
+		else:
+			logging.info("\nProject %s shows" %self.name)
+			if self.__exists__():
+				if self.__parse_task__():
+					return self.__show__()
+			else:
+				return sys.exit("Project %s not found") %self.name
 	def __parse__(self, user_input):
+		'''parsing user input for options and actions'''
+		logging.info(__doc__)
 		for k, v in user_input.items():
 			if v is not False or v is not None:
-			# if k in ["--nb","--lang", "--user", "--depth", "--debug", '<name>', '--query', '--key']:
-			#     if v is None:
-			#         setattr(self, re.sub("--", "", k), False)
-			#     else:
 				setattr(self, re.sub("--|<|>", "", k), v)
 			else:
 				setattr(self, re.sub("--", "", k), False)
 		if self.name is not False:
 			self.project_name = re.sub('[^0-9a-zA-Z]+', '_', self.name)
 		else:
-			logging.warning("Invalid parameters")
+			logging.warning("Invalid parameters Please provide a name to your project")
 			sys.exit()
 
-		if self.query is False or self.key is False:
-			logging.warning("Invalid parameters")
-			sys.exit()
+		if self.query is False:
+			logging.info("No query activate open crawl?")
+			#open crawl?
+			if self.file is False or self.url is False:
+				logging.warning("Invalid parameters: needs at leat a seed")
+				sys.exit()
+			else:
+				self.type = "open_crawl"
+				logging.info("Open crawl")
+		else:
+			if self.key is False or self.file is False or self.url is False:
+				logging.warning("Invalid parameters need at least a seed Please provide an (url, file or key)")
+				sys.exit()
+			else:
+				self.type = "crawl"
+				logging.info("Normal crawl")
 		self.report = bool(self.user is not None)
 		if self.nb is False or self.nb is None:
 			self.nb = MAX_RESULTS
 		if self.depth is False or self.depth is None:
 			self.depth = DEPTH
 		self.date = dt.now()
-		try:
-			self.url = self.url
-		except AttributeError:
-			self.url = None
-		try:
-			self.file = self.file
-		except AttributeError:
-			self.file = None
+
+
 	def __parse_task__(self):
-		if self.__exists():
+		'''mapping params from TASKDB'''
+		if self.task is not None:
 			for k, v in self.task.items():
 				setattr(self, k, v)
-			self.__create__()
 			return self
 		else:
-			logging.warning("No task found")
 			return False
 
 
@@ -154,24 +175,8 @@ class Worker(object):
 		logging.info("creating a new task")
 		new_task = self.__dict__.items()
 		task = {}
-		if self.url is not False or self.file is not False:
-			task["type"] = "open_crawl"
-			task["action"] = ["Created"]
-		elif self.key is not False and self.query is not False:
-			task["type"] = "crawl"
-			task["action"] = ["Created"]
-
-		elif self.export is not False:
-			task["type"] = "export"
-			task["action"] = ["Exported"]
-		elif self.report is not False:
-			task["type"] = "report"
-			task["action"] = ["Reported"]
-		else:
-			return False
-
-
 		for k, v in new_task:
+			logging.info("Creating from dict %s:%s" %(k,v))
 			if k not in ["db", "coll"]:
 				task[k] = v
 		try:
@@ -179,24 +184,21 @@ class Worker(object):
 			task["msg"] = ["Sucessfully created"]
 			task["date"] = [self.date]
 			task["directory"] = self.__create_directory__(task["project_name"])
-
 			self.coll.insert(task)
 			logging.info("Task successfully created")
 			self.project_db = self.__create_db__(self.project_name)
-			logging.info("Project db created ")
+			logging.info("Project db created")
 			return True
 
 		except Exception as e:
 			logging.warning("Task not created")
 			logging.warning(e)
 			return False
-	def __config__(self):
-		pass
+
 	def __update__(self):
-		self.__parse__(self.task)
-		self
-		if self.query is not False and self.key is not False:
-			self.update_sources()
+		if self.__parse_task__() is not False:
+			if self.query is not False and self.key is not False:
+				self.update_sources()
 
 	def __run__(self):
 		if self.__exists__():
@@ -296,7 +298,6 @@ class Worker(object):
 		crawl(self, treated, option=None)
 
 
-
 	def crawl(self,treated, option="filter"):
 		logging.info("Starting Crawl")
 		self.__create__()
@@ -375,24 +376,29 @@ class Worker(object):
 			logging.info("\nProject %s exists" %self.name)
 			return True
 		else:
+			logging.info("\nProject %s doesn't exist" %self.name)
 			return False
 
-	def __show__(self,name):
-		print "\n===== Project : %s =====\n" %(self.name).capitalize()
-		print "* Parameters"
-		print "------------"
-		for k, v in self.task.items():
+	def __show__(self,name=None):
+		if name is not None:
+			self.name = name
+		if self.task is not None:
+			print "\n===== Project : %s =====\n" %(self.name).capitalize()
+			print "* Parameters"
+			print "------------"
+			for k, v in self.task.items():
 
-			print k, ":", v
-		project_db = Database(self.task["project_name"])
-		project_db.create_colls(["sources", "queue", "results"])
-		print "Sources nb:", project_db.sources.count()
-		print "Queue nb:", project_db.queue.count()
-		print "Results nb:", project_db.results.count()
-		print "\n* Last Status"
-		print "------------"
-		print self.task["action"][-1], self.task["status"][-1],self.task["msg"][-1], dt.strftime(self.task["date"][-1], "%d/%m/%y %H:%M:%S")
-		return
+				print k, ":", v
+			print "Sources nb:", project_db.sources.count()
+			print "Queue nb:", project_db.queue.count()
+			print "Results nb:", project_db.results.count()
+			print "\n* Last Status"
+			print "------------"
+			print self.task["action"][-1], self.task["status"][-1],self.task["msg"][-1], dt.strftime(self.task["date"][-1], "%d/%m/%y %H:%M:%S")
+			return
+		else:
+			logging.warning("No project found")
+			sys.exit("No project found dummy!")
 
 	def get_bing_results(self, query, key, nb):
 		''' Method to extract results from BING API (Limited to 5000 req/month) return a list of url'''
