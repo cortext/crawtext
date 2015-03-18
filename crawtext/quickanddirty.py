@@ -120,7 +120,7 @@ class Worker(object):
 		self.project_db = Database(self.project_name)
 		self.project_db.create_colls(["results", "logs", "sources", "queue"])
 		return self.project_db
-		
+
 	def __create__(self):
 		logging.info("creating a new task")
 		new_task = self.__dict__.items()
@@ -137,7 +137,7 @@ class Worker(object):
 			task["msg"] = ["Sucessfully created"]
 			task["date"] = [self.date]
 			task["directory"] = self.__create_directory__(task["project_name"])
-			
+
 			self.coll.insert(task)
 			logging.info("Task successfully created")
 			self.project_db = self.__create_db__(self.project_name)
@@ -190,9 +190,9 @@ class Worker(object):
 
 	def update_sources(self):
 		'''updating sources'''
-		
+
 		self.__parse__(self.task)
-			
+
 		check, bing_sources = self.get_bing_results(self.query, self.key, self.nb)
 		logging.info(check)
 		if check is True:
@@ -253,6 +253,7 @@ class Worker(object):
 
 	def crawl(self,treated):
 		logging.info("Starting Crawl")
+		self.__create__()
 		while self.project_db.queue.count() > 0:
 			for item in self.project_db.queue.find(timeout=False):
 				if item["url"] not in treated and self.project_db.logs.find_one({"url":item["url"]}) is None and self.project_db.results.find_one({"url":item["url"]}) is None:
@@ -357,7 +358,7 @@ class Worker(object):
 		web_results = []
 		new = []
 		inserted = []
-			
+
 		for i in range(0,nb, 50):
 
 			try:
@@ -370,11 +371,11 @@ class Worker(object):
 						)
 				# logging.info(r.status_code)
 				msg = r.raise_for_status()
-				if msg is None:		
+				if msg is None:
 					for e in r.json()['d']['results']:
 						url = e["Url"]
 						exists = self.project_db.sources.find_one({"url": e["Url"]})
-						
+
 						if exists is None:
 							self.project_db.sources.insert({"url":e["Url"],
 													"source_url": "https://api.datamarket.azure.com",
@@ -392,7 +393,7 @@ class Worker(object):
 													"status": True,
 													"date": self.date
 													}})
-							
+
 					logging.info(self.project_db.sources.count())
 				else:
 					logging.warning("Req :"+msg)
