@@ -250,8 +250,12 @@ class Worker(object):
 		else:
 			logging.info(bing_sources)
 			return False
+	def wild_crawl(self, treated):
+		crawl(self, treated, option=None)
 
-	def crawl(self,treated):
+
+
+	def crawl(self,treated, option="filter"):
 		logging.info("Starting Crawl")
 		self.__create__()
 		while self.project_db.queue.count() > 0:
@@ -260,9 +264,21 @@ class Worker(object):
 					p = Page(item["url"], item["source_url"],item["depth"], item["date"], self.debug)
 					if p.download():
 						a = Article(p.url,p.html, p.source_url, p.depth,p.date, self.debug)
-						if a.extract() and a.filter(self.query, self.directory):
-							if a.check_depth(self.depth):
-								a.fetch_links()
+
+						if a.extract():
+							if option == "filter":
+								if a.filter(self.query, self.directory):
+									if a.check_depth(self.depth):
+										a.fetch_links()
+									if len(a.links) > 0:
+										for url, domain in zip(a.links, a.domains):
+											print url, domain
+											self.project_db.queue.insert({"url": url, "source_url": item['url'], "depth": int(item['depth'])+1, "domain": domain, "date": a.date})
+									if self.debug: logging.info("\t-inserted %d nexts url" %len(a.links))
+									self.project_db.insert_result(a.export())
+							else:
+								if a.check_depth(self.depth):
+									a.fetch_links()
 								if len(a.links) > 0:
 									for url, domain in zip(a.links, a.domains):
 										print url, domain
