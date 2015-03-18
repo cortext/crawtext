@@ -10,8 +10,11 @@ A simple crawler in command line for targeted websearch.
 Usage:
 	crawtext.py (<name>)
 	crawtext.py <name> --query=<query> --key=<key> [--nb=<nb>] [--lang=<lang>] [--user=<email>] [--depth=<depth>] [--debug]
+	crawtext.py <name> (--url=<url>| --file=<file>) [--nb=<nb>] [--lang=<lang>] [--user=<email>] [--depth=<depth>] [--debug]
 	crawtext.py (<name>) delete
 	crawtext.py (<name>) start
+	crawtext.py (<name>) export
+	crawtext.py (<name>) report [--user=<email>]
 '''
 import os, sys, re
 import copy
@@ -30,6 +33,7 @@ from crawl import crawl
 
 ABSPATH = os.path.dirname(os.path.abspath(sys.argv[0]))
 RESULT_PATH = os.path.join(ABSPATH, "projects")
+
 import logging
 logger = logging.getLogger(__name__)
 FORMAT = "[%(filename)s:%(lineno)s - %(funcName)20s() ] %(message)s"
@@ -45,28 +49,42 @@ class Worker(object):
 		if type(user_input) == str:
 			self.name = user_input
 			self.show()
-			sys.exit()
+			sys.exit(0)
 		else:
 			self.db = TaskDB()
 			self.coll = self.db.coll
 			self.__parse__(user_input)
 			if self.debug:
 				logging.info("Debug activated")
-			if self.delete is True:
-				self.delete_project()
-				sys.exit()
-			if self.start is True:
+			self.__activate__()
+
+	def __activate__(self):
+		if self.delete is True:
+			return self.delete_project()
+		elif self.export is True:
+			return self.__export__()
+
+		elif self.report is True:
+			return self.__export__()
+
+		elif self.start is True:
+			self.__create__()
+			self.__run__()
+			self.__report()
+			return self.__export()
+
+		elif self.__exists__():
+			return self.__show__(self.name)
+
+		else:
+			logging.info("creating")
+			if self.__create__():
 				self.__run__()
-				sys.exit()
-
-			if self.__exists__():
-				self.__show__(self.name)
-				sys.exit()
+				self.__report()
+				return self.__export()
 			else:
-				logging.info("creating")
-				if self.__create__():
-					self.__run__()
-
+				logging.warning("Imposible to create a new project")
+				sys.exit("Error while creating project")
 
 	def __parse__(self, user_input):
 		for k, v in user_input.items():
@@ -83,6 +101,7 @@ class Worker(object):
 		else:
 			logging.warning("Invalid parameters")
 			sys.exit()
+
 		if self.query is False or self.key is False:
 			logging.warning("Invalid parameters")
 			sys.exit()
@@ -100,9 +119,19 @@ class Worker(object):
 			self.file = self.file
 		except AttributeError:
 			self.file = None
+	def __parse_task__(self):
+		if self.__exists():
+			for k, v in self.task.items():
+				setattr(self, k, v)
+			self.__create__()
+			return self
+		else:
+			logging.warning("No task found")
+			return False
+
 
 	def __create_directory__(self, project_name):
-		self.directory = os.path.join(ABSPATH, project_name)
+		self.directory = os.path.join(RESULT_PATH, project_name)
 		if not os.path.exists(self.directory):
 			os.makedirs(self.directory)
 			index = os.path.join(self.directory, 'index')
@@ -125,8 +154,21 @@ class Worker(object):
 		logging.info("creating a new task")
 		new_task = self.__dict__.items()
 		task = {}
-		task["type"] = "crawl"
-		task["action"] = ["Created"]
+		if self.url is not False or self.file is not False:
+			task["type"] = "open_crawl"
+			task["action"] = ["Created"]
+		elif self.key is not False and self.query is not False:
+			task["type"] = "crawl"
+			task["action"] = ["Created"]
+
+		elif self.export is not False:
+			task["type"] = "export"
+			task["action"] = ["Exported"]
+		elif self.report is not False:
+			task["type"] = "report"
+			task["action"] = ["Reported"]
+		else:
+			return False
 
 
 		for k, v in new_task:
