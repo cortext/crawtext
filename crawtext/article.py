@@ -245,7 +245,7 @@ class Article(object):
 			if self.debug: print "depth for this page is %d and max is set to %d" %(self.depth,max_depth)
 			self.step = "Validating url"
 			self.code = "102"
-			self.msg = "Depth of this page is %d and > %d" %(depth, max_depth)
+			self.msg = "Depth of this page is %d and > %d" %(self.depth, max_depth)
 			self.status = False
 			return False
 		return True
