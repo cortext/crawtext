@@ -35,7 +35,6 @@ from crawl import crawl
 
 ABSPATH = os.path.dirname(os.path.abspath(sys.argv[0]))
 RESULT_PATH = os.path.join(ABSPATH, "projects")
-ADMIN = 
 import logging
 logger = logging.getLogger(__name__)
 FORMAT = "[%(filename)s:%(lineno)s - %(funcName)20s() ] %(message)s"
@@ -62,12 +61,12 @@ class Worker(object):
 			if self.__exists__():
 				logging.info("Updating?")
 				self.__parse_task__()
-				self.__activate__()
-			#action or show
+				
+			
 			else:
 				self.__parse__(user_input)
 				self.__create__()
-				self.__activate__()
+			self.__activate__()	
 				
 	def __activate__(self):
 		'''if action : activate the job else show the current project'''
@@ -96,7 +95,7 @@ class Worker(object):
 
 		elif self.start is True:
 			'''starting project'''
-				print "Start"
+			logging.info("Export... ")
 		else:
 			return self.__show__()
 
