@@ -64,17 +64,12 @@ def export_one(name,directory, collection, format):
 	subprocess.call(c.split(" "), stdout=open(os.devnull, 'wb'))
 	subprocess.call(["zip", dict_values['zip'], dict_values['filename']] )
 
-def generate(name, task, directory):
-	try:
-		collection = task["data"]
-	except KeyError, AttributeError:
-		collection = None
-	try:
-		format = task["format"]
-	except KeyError, AttributeError:
+def generate(name, data, format, directory):
+	if data is False:
+		data = None
+	if format is False:
 		format = "json"
-	
-	if collection is not None:
-		return export_one(name, directory,collection, format)
+	if data is not None:
+		return export_one(name, directory,data, format)
 	else:
 		return export_all(name, directory, format)
