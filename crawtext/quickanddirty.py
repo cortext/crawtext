@@ -15,8 +15,8 @@ Usage:
 	crawtext.py <name> (--url=<url>| --file=<file>) [--nb=<nb>] [--lang=<lang>] [--user=<email>] [--depth=<depth>] [--debug]
 	crawtext.py (<name>) delete
 	crawtext.py (<name>) start
-	crawtext.py (<name>) export
-	crawtext.py (<name>) report [--user=<email>]
+	crawtext.py (<name>) export [--data=<data>] [--format=<format>]
+	crawtext.py (<name>) report [--user=<email>] [--format=<format>]
 '''
 import os, sys, re
 import copy
@@ -59,8 +59,7 @@ class Worker(object):
 			logging.info("Updating?")
 			if self.__parse__(user_input):
 				logging.info("Yes")
-				if self.__activate__():
-					self.__show__()	
+				self.__activate__()
 				sys.exit()
 			else:
 				logging.info("Show")
@@ -90,16 +89,17 @@ class Worker(object):
 			'''export projects'''
 			#return self.__export__()
 			logging.info("Export... ")
-			return False
+			return self._export() 
 
 		elif self.report is True:
 			''' report project'''
 			logging.info("Report... ")
-			#~ if self.user is not False:
-				#~ return self.report(self.user)
-			#~ else:
-				#~ return self.report(__author__)
-			return False
+			if self.user is not False:
+				return self._report()
+			else:
+				self.user = __author__
+				return self._report()
+			
 
 		elif self.start is True:
 			'''starting project'''
@@ -512,12 +512,40 @@ class Worker(object):
 		
 	def _report(self):
 		logging.info("Report")
-		# raise NotImplementedError
-		return False
+		user = self.user
+		self.__parse_task__()
+		self.__exists__()
+		print self.directory
+		
+
+		if self.user is None or self.user is False:
+			self.user = user
+		if send_mail(self.user, self.project_db) is True:
+			logging.info("A report email has been sent to %s\nCheck your mailbox!" %self.user)
+			self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"report: mail", "status":True, "date": self.date, "msg": "Ok"}})
+		else:
+			logging.info("Impossible to send mail to %s\nCheck your email!" %self.user)
+			self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"report: mail", "status":False, "date": self.date, "msg": "Error while sending the mail"}})
+		if generate_report(self.task, self.project_db, self.directory):
+			self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"report: document", "status": True, "date": self.date, "msg": "Ok"}})
+			return True
+		else:
+			self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"report: document", "status": False, "date": self.date, "msg": "Unable to create report document"}})
+			return False
+		
+	
 	def _export(self):
+		self.__parse_task__()
+		self.__exists__()
 		logging.info("Export")
-		# raise NotImplementedError
-		return False
+		from export import generate
+		if generate(self.name, self.data, self.format, self.directory):
+			self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"export", "status": True, "date":self.date, "msg": "Exported"}})
+			return True
+		else:
+			self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"export", "status": False, "date": self.date, "msg": "Error while exporting"}})
+			return False
+		
 
 	def delete_project(self):
 		if self.__exists__():
