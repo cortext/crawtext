@@ -49,28 +49,34 @@ class Worker(object):
 		'''Job main config'''
 		self.debug = debug
 		logging.info("Init worker")
-		if type(user_input) == str:
-			self.name = user_input
-			self.__show__()
-			sys.exit(0)
-		else:
-			self.name = user_input["<name>"]
-			logging.info("Connecting to TaskDB")
-			self.db = TaskDB()
-			self.coll = self.db.coll
-			if self.__exists__():
-				logging.info("Updating?")
-				self.__parse_task__()
-				
-			
+		self.name = user_input["<name>"]
+		logging.info("Connecting to TaskDB")
+		self.db = TaskDB()
+		self.coll = self.db.coll
+		if self.__exists__():
+			logging.info("Updating?")
+			if self.__parse_task__() is False:
+				logging.info("Invalid parameters")
+				sys.exit(__doc__)
 			else:
 				self.__parse__(user_input)
+				self.__parse_task__()
+				self.__activate__()	
+		else:
+			if self.__parse__(user_input):
 				self.__create__()
-			self.__activate__()	
+				self.__exists__()
+				self.__activate__()	
+			else:
+				logging.info("Invalid parameters")
+				sys.exit(__doc__)			
+		
 				
 	def __activate__(self):
 		'''if action : activate the job else show the current project'''
-		
+		self.__create_directory__()
+		self.__create_db__()
+		print self.start
 		if self.delete is True:
 			'''delete project'''
 			self.delete_project()
@@ -90,12 +96,12 @@ class Worker(object):
 				return self.report(self.user)
 			else:
 				return self.report(__author__)
-			
-			return False
 
 		elif self.start is True:
 			'''starting project'''
-			logging.info("Export... ")
+			logging.info("Running... ")
+			sys.exit("Start")
+			return self.__run__()
 		else:
 			return self.__show__()
 
@@ -108,7 +114,7 @@ class Worker(object):
 			else:
 				setattr(self, re.sub("--|<|>", "", k), v)
 				#setting all empty attributes to False
-		return [v for v in user_input.values() if v is not None and v is not False]
+		return len([v for v in user_input.values() if v is not None and v is not False])
 
 	def __parse__(self, user_input):
 		'''parsing user input for options and actions'''
@@ -118,12 +124,11 @@ class Worker(object):
 			self.project_name = re.sub('[^0-9a-zA-Z]+', '_', self.name)
 		else:
 			logging.warning("Invalid parameters Please provide a name to your project")
-		if self.__mapp__(user_input) > 2:
+		if self.__mapp__(user_input) > 1:
+			return True
+			'''
 			if self.query is False:
 				logging.info("No query activate open crawl?")
-				#open crawl?
-				print self.file
-				print "Url", self.url
 				if self.file is False and self.url is False:
 					logging.warning("Invalid parameters: needs at leat a seed")
 					return sys.exit("Invalid parameters: needs at leat a seed")
@@ -138,8 +143,8 @@ class Worker(object):
 					self.type = "crawl"
 					logging.info("Normal crawl")
 			return self.__config_crawl__()
-		else:
-			return False
+			'''
+		return False
 
 	def __config_crawl__(self):
 		#~ print self.user
@@ -162,8 +167,8 @@ class Worker(object):
 			return False
 
 
-	def __create_directory__(self, project_name):
-		self.directory = os.path.join(RESULT_PATH, project_name)
+	def __create_directory__(self):
+		self.directory = os.path.join(RESULT_PATH, self.project_name)
 		if not os.path.exists(self.directory):
 			os.makedirs(self.directory)
 			index = os.path.join(self.directory, 'index')
@@ -175,9 +180,7 @@ class Worker(object):
 
 		return self.directory
 
-	def __create_db__(self, project_name=None):
-		if project_name is not None:
-			self.project_name = project_name
+	def __create_db__(self):
 		self.project_db = Database(self.project_name)
 		self.project_db.create_colls(["results", "logs", "sources", "queue"])
 		return self.project_db
@@ -197,10 +200,8 @@ class Worker(object):
 			task["directory"] = self.__create_directory__(task["project_name"])
 			self.coll.insert(task)
 			logging.info("Task successfully created")
-			self.project_db = self.__create_db__(self.project_name)
-			logging.info("Project db created")
 			self.task = self.coll.find_one({"name": self.name})
-			return self.task
+			return True
 
 		except Exception as e:
 			logging.warning("Task not created")
@@ -213,16 +214,18 @@ class Worker(object):
 				self.update_sources()
 
 	def __run__(self):
-		if self.type == "crawl":
-			logging.info("Hihi")
-			# crawl()
-		elif self.type =="open_crawl":
-			logging.info("Into the wild")
-			# wild_crawl()
-
-		else:
-			logging.info("No idea")
-		# self.report()
+		print "Run!"
+		#~ 
+		#~ if self.type == "crawl":
+			#~ logging.info("Hihi")
+			#~ # crawl()
+		#~ elif self.type =="open_crawl":
+			#~ logging.info("Into the wild")
+			#~ # wild_crawl()
+#~ 
+		#~ else:
+			#~ logging.info("No idea")
+		# self._report()
 		# self.export()
 		return
 		''''
@@ -407,7 +410,7 @@ class Worker(object):
 	def __show__(self,name=None):
 		if name is not None:
 			self.name = name
-
+		self.task = self.coll.find_one({"name":self.name})
 		if self.task is not None:
 			print "\n===== Project : %s =====\n" %(self.name).capitalize()
 			print "* Parameters"
@@ -415,16 +418,22 @@ class Worker(object):
 			for k, v in self.task.items():
 
 				print k, ":", v
-			print "Sources nb:", project_db.sources.count()
-			print "Queue nb:", project_db.queue.count()
-			print "Results nb:", project_db.results.count()
-			print "\n* Last Status"
-			print "------------"
-			print self.task["action"][-1], self.task["status"][-1],self.task["msg"][-1], dt.strftime(self.task["date"][-1], "%d/%m/%y %H:%M:%S")
+			print "\nProject database stats:"
+			print "-Sources nb:", self.project_db.sources.count()
+			print "-Queue nb:", self.project_db.queue.count()
+			print "-Results nb:", self.project_db.results.count()
+			if (self.project_db.sources.count(), self.project_db.queue.count(), self.project_db.results.count()) == (0,0,0):
+				logging.info("Project has never been started up.\n Please launch start option")
+				print "\n* Last Status"
+				print "------------"
+				print "- created but not started"
+			#print "\n* Last Status"
+			#print "------------"
+			#print self.task["action"][-1], self.task["status"][-1],self.task["msg"][-1], dt.strftime(self.task["date"][-1], "%d/%m/%y %H:%M:%S")
 			return
 		else:
 			logging.warning("No project found")
-			sys.exit("No project found dummy!")
+			sys.exit("No project found!")
 
 	def get_bing_results(self, query, key, nb):
 		''' Method to extract results from BING API (Limited to 5000 req/month) return a list of url'''
@@ -491,11 +500,12 @@ class Worker(object):
 				logging.warning("Exception: "+str(e))
 				return (False, str(e))
 		return (True, web_results)
-	def report(self):
+	
+	def _report(self):
 		logging.info("Report")
 		# raise NotImplementedError
 		return False
-	def export(self):
+	def _export(self):
 		logging.info("Export")
 		# raise NotImplementedError
 		return False
