@@ -22,10 +22,10 @@ def send_mail(user, db):
 	server.quit()
 	return True
 
-def generate_report(task, db):
+def generate_report(task, db, directory):
 	date = dt.now()
 	date = date.strftime('%d-%m-%Y_%H-%M')
-	directory = os.path.join(task['directory'], 'reports')
+	directory = os.path.join(directory, 'reports')
 	if not os.path.exists(directory):
 		os.makedirs(directory)
 	filename = "%s/%s.txt" %(directory, date)
