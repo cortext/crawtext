@@ -3,7 +3,9 @@
 
 __name__ = "crawtext"
 __version__ = "4.3.1"
+__author__= "constance@cortext.net"
 __doc__ = '''Crawtext.
+
 Description:
 A simple crawler in command line for targeted websearch.
 
@@ -33,7 +35,7 @@ from crawl import crawl
 
 ABSPATH = os.path.dirname(os.path.abspath(sys.argv[0]))
 RESULT_PATH = os.path.join(ABSPATH, "projects")
-
+ADMIN = 
 import logging
 logger = logging.getLogger(__name__)
 FORMAT = "[%(filename)s:%(lineno)s - %(funcName)20s() ] %(message)s"
@@ -50,100 +52,106 @@ class Worker(object):
 		logging.info("Init worker")
 		if type(user_input) == str:
 			self.name = user_input
-			self.show()
+			self.__show__()
 			sys.exit(0)
 		else:
 			self.name = user_input["<name>"]
 			logging.info("Connecting to TaskDB")
 			self.db = TaskDB()
 			self.coll = self.db.coll
-			if self.debug:
-				logging.info("Debug activated")
-
-			if self.__exists__() is False:
-				logging.info("Parsing user input")
-				self.__parse__(user_input)
-			else:
-				logging.info("Parsing existing task")
+			if self.__exists__():
+				logging.info("Updating?")
 				self.__parse_task__()
-			self.__activate__()
-
+				self.__activate__()
+			#action or show
+			else:
+				self.__parse__(user_input)
+				self.__create__()
+				self.__activate__()
+				
 	def __activate__(self):
-		'''multiple actions in option dispatched'''
-		logging.info("Activating")
+		'''if action : activate the job else show the current project'''
+		
 		if self.delete is True:
 			'''delete project'''
-			return self.delete_project()
+			self.delete_project()
+			return False
 
 		elif self.export is True:
 			'''export projects'''
-			return self.__export__()
+			#return self.__export__()
+			logging.info("Export... ")
+			
+			return False
 
 		elif self.report is True:
 			''' report project'''
-			return self.__export__()
+			logging.info("Report... ")
+			if self.user is not False:
+				return self.report(self.user)
+			else:
+				return self.report(__author__)
+			
+			return False
 
 		elif self.start is True:
 			'''starting project'''
-			if self.__exists__() is False:
-				logging.info("Starting a new project")
-				self.__create__()
-				self.__run__()
-				self.__report()
-				return self.__export()
-			else:
-				logging.info("Starting an existing project")
-				self.__run__()
-				self.__report()
-				return self.__export()
+				print "Start"
 		else:
-			logging.info("\nProject %s shows" %self.name)
-			if self.__exists__() is False:
-				self.__create__()
-				self.__run__()
-				self.__report()
-				return self.__export()
+			return self.__show__()
+
+	def __mapp__(self,user_input):
+		''' mapping user_input into Object and returns the number of false XOR empty parameters'''
+		for k, v in user_input.items():
+			if v is None or v is False:
+				setattr(self, re.sub("--|<|>", "", k), False)
+
 			else:
-				if self.__parse_task__():
-					return self.__show__()
-			
+				setattr(self, re.sub("--|<|>", "", k), v)
+				#setting all empty attributes to False
+		return [v for v in user_input.values() if v is not None and v is not False]
+
 	def __parse__(self, user_input):
 		'''parsing user input for options and actions'''
-		logging.info(__doc__)
-		for k, v in user_input.items():
-			if v is not False or v is not None:
-				setattr(self, re.sub("--|<|>", "", k), v)
-			else:
-				setattr(self, re.sub("--", "", k), False)
+		# logging.info(__doc__)
+		print self.__mapp__(user_input)
 		if self.name is not False:
 			self.project_name = re.sub('[^0-9a-zA-Z]+', '_', self.name)
 		else:
 			logging.warning("Invalid parameters Please provide a name to your project")
-			sys.exit()
-
-		if self.query is False:
-			logging.info("No query activate open crawl?")
-			#open crawl?
-			if self.file is False or self.url is False:
-				logging.warning("Invalid parameters: needs at leat a seed")
-				sys.exit()
+		if self.__mapp__(user_input) > 2:
+			if self.query is False:
+				logging.info("No query activate open crawl?")
+				#open crawl?
+				print self.file
+				print "Url", self.url
+				if self.file is False and self.url is False:
+					logging.warning("Invalid parameters: needs at leat a seed")
+					return sys.exit("Invalid parameters: needs at leat a seed")
+				else:
+					self.type = "open_crawl"
+					logging.info("Open crawl")
 			else:
-				self.type = "open_crawl"
-				logging.info("Open crawl")
+				if self.key is False or self.file is False or self.url is False:
+					logging.warning("Invalid parameters need at least a seed .Please provide an (url, file or key)")
+					sys.exit("Invalid parameters need at least a seed .Please provide an (url, file or key)")
+				else:
+					self.type = "crawl"
+					logging.info("Normal crawl")
+			return self.__config_crawl__()
 		else:
-			if self.key is False or self.file is False or self.url is False:
-				logging.warning("Invalid parameters need at least a seed Please provide an (url, file or key)")
-				sys.exit()
-			else:
-				self.type = "crawl"
-				logging.info("Normal crawl")
-		self.report = bool(self.user is not None)
+			return False
+
+	def __config_crawl__(self):
+		#~ print self.user
+		#~ self.report = bool(self.user)
+
 		if self.nb is False or self.nb is None:
 			self.nb = MAX_RESULTS
 		if self.depth is False or self.depth is None:
 			self.depth = DEPTH
 		self.date = dt.now()
-
+		return True
 
 	def __parse_task__(self):
 		'''mapping params from TASKDB'''
@@ -192,7 +200,8 @@ class Worker(object):
 			logging.info("Task successfully created")
 			self.project_db = self.__create_db__(self.project_name)
 			logging.info("Project db created")
-			return True
+			self.task = self.coll.find_one({"name": self.name})
+			return self.task
 
 		except Exception as e:
 			logging.warning("Task not created")
@@ -205,6 +214,19 @@ class Worker(object):
 				self.update_sources()
 
 	def __run__(self):
+		if self.type == "crawl":
+			logging.info("Hihi")
+			# crawl()
+		elif self.type =="open_crawl":
+			logging.info("Into the wild")
+			# wild_crawl()
+
+		else:
+			logging.info("No idea")
+		# self.report()
+		# self.export()
+		return
+		''''
 		if self.__exists__():
 			self.key = self.task["key"]
 			self.query = self.task["query"]
@@ -217,7 +239,8 @@ class Worker(object):
 			#update
 			#~ if (self.task["date"][-1].day,self.task["date"][-1].month, self.task["date"][-1].year)  == (self.date.day, self.date.month, self.date.year):
 				#~ self.__update__()
-
+			print self.key
+			print self.query
 			if self.query is not False and self.key is not False:
 				#put bing to sources and nexts urls to crawl
 				check, results = self.get_bing_results( self.query, self.key, self.nb)
@@ -235,12 +258,11 @@ class Worker(object):
 		else:
 			logging.info("Project doesn't exist yet. Create a new one!")
 			sys.exit()
+		'''
 
 	def update_sources(self):
 		'''updating sources'''
-
 		self.__parse__(self.task)
-
 		check, bing_sources = self.get_bing_results(self.query, self.key, self.nb)
 		logging.info(check)
 		if check is True:
@@ -386,6 +408,7 @@ class Worker(object):
 	def __show__(self,name=None):
 		if name is not None:
 			self.name = name
+
 		if self.task is not None:
 			print "\n===== Project : %s =====\n" %(self.name).capitalize()
 			print "* Parameters"
@@ -469,6 +492,14 @@ class Worker(object):
 				logging.warning("Exception: "+str(e))
 				return (False, str(e))
 		return (True, web_results)
+	def report(self):
+		logging.info("Report")
+		# raise NotImplementedError
+		return False
+	def export(self):
+		logging.info("Export")
+		# raise NotImplementedError
+		return False
 
 	def delete_project(self):
 		if self.__exists__():
