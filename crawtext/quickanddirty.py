@@ -248,7 +248,8 @@ class Worker(object):
 			self.upsert_url(self.url, "manual")
 			logging.info("inserting one url %s to seeds" %(self.url))
 		if self.file is not False:
-			logging.info("inserting %d url to seeds from file") %self.insert_file(self.file)
+			self.insert_file(self.file)
+			logging.info("inserting url to seeds from file")
 			
 		if self.key is not False and self.query is not False:
 			bing_urls = self.get_bing_results()
