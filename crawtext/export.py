@@ -50,7 +50,8 @@ def export_all(name, directory, format):
 			filenames.append(filename)
 		subprocess.call(c.split(" "), stdout=open(os.devnull, 'wb'))	
 		subprocess.call(["zip", fzip,filename], shell=False)
-
+	return True
+	
 def export_one(name,directory, collection, format):
 	print "export one"
 	dict_values = create_field(directory,format)
@@ -60,9 +61,10 @@ def export_one(name,directory, collection, format):
 		c = "mongoexport -d %s -c %s --csv -f %s -o %s"%(name,collection,dict_values['fields'], dict_values['filename'])
 	else:
 		print ("Exporting into json")
-		c = "mongoexport -d %s -c %s --jsonArray -o %s"%(name,colection,dict_values['filename'])				
+		c = "mongoexport -d %s -c %s --jsonArray -o %s"%(name,collection,dict_values['filename'])				
 	subprocess.call(c.split(" "), stdout=open(os.devnull, 'wb'))
 	subprocess.call(["zip", dict_values['zip'], dict_values['filename']] )
+	return True
 
 def generate(name, data, format, directory):
 	if data is False:
