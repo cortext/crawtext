@@ -307,7 +307,7 @@ class Worker(object):
 			return False
 	
 		
-	def insert_file(self, file_path):
+	def insert_file(self, filepath):
 		'''insert multiple url from a file to sources'''
 		file_path = "./"+self.file
 		nb = []
