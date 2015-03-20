@@ -12,7 +12,7 @@ A simple crawler in command line for targeted websearch.
 Usage:
 	crawtext.py (<name>)
 	crawtext.py <name> --query=<query> --key=<key> [--nb=<nb>] [--lang=<lang>] [--user=<email>] [--depth=<depth>] [--debug]
-	crawtext.py <name> (--url=<url>| --file=<file>) [--nb=<nb>] [--lang=<lang>] [--user=<email>] [--depth=<depth>] [--debug]
+	crawtext.py <name> (--url=<url>| --file=<file>) [--query=<query>] [--nb=<nb>] [--lang=<lang>] [--user=<email>] [--depth=<depth>] [--debug]
 	crawtext.py (<name>) delete
 	crawtext.py (<name>) start
 	crawtext.py (<name>) export [--data=<data>] [--format=<format>]
@@ -251,11 +251,11 @@ class Worker(object):
 			logging.info("inserting %d url to seeds from file") %self.insert_file(self.file)
 			
 		if self.key is not False and self.query is not False:
-			bing_urls = self.get_bing_results(self.query, self.key, self.nb)
-			
-			for i, url in enumerate(bing_urls):
-				self.upsert_bing_source(self, url, i, len(bing_urls))
-			logging.info("inserting %d url to seeds from search") %len(bing_urls)
+			bing_urls = self.get_bing_results()
+			if bing_urls is not False:
+				for i, url in enumerate(bing_urls):
+					self.upsert_bing_source(url, i, len(bing_urls))
+				logging.info("inserting url to seeds from search")
 		return self.project_db.sources.count()
 		
 	def upsert_bing_source(self, url, i, total_bing_sources):
@@ -470,44 +470,48 @@ class Worker(object):
 			logging.warning("No project found")
 			sys.exit("No project found!")
 
-	def get_bing_results(self, query, key, nb):
+	def get_bing_results(self):
 		''' Method to extract results from BING API (Limited to 5000 req/month) return a list of url'''
-		try:
-			count_results = self.project_db.sources.find()
-		except AttributeError:
-			self.__create_db__(self.task["project_name"])
-			logging.info(self.project_db.sources.count())
-		logging.info("Test database")
+		logging.info("BING?")
 		print "Sources nb:", self.project_db.sources.count()
 		print "Queue nb:", self.project_db.queue.count()
 		print "Results nb:", self.project_db.results.count()
 		start = 0
 		step = 50
-		if nb > MAX_RESULTS:
+		if self.nb is False:
+			self.nb = MAX_RESULTS
+			
+		if self.nb > MAX_RESULTS:
 			logging.warning("Maximum search results is %d results." %MAX_RESULTS)
-			nb = MAX_RESULTS
-
-		if nb%50 != 0:
-			nb = nb - (nb%50)
+			self.nb = MAX_RESULTS
+			
+		if self.nb%50 != 0:
+			self.nb = self.nb - (self.nb%50)
 		web_results = []
-		
-		for i in range(0,nb, 50):
-			try:
-				r = requests.get('https://api.datamarket.azure.com/Bing/Search/v1/Web',
-					params={'$format' : 'json',
-						'$skip' : i,
-						'$top': step,
-						'Query' : '\'%s\'' %query,
-						},auth=(key, key)
-						)
-				# logging.info(r.status_code)
-				msg = r.raise_for_status()
-				if msg is None:
-					for e in r.json()['d']['results']:
-						web_results.append(e["Url"])
-						
-			except Exception as e:
-				sys.exit(e)			
+		logging.info("BING?")
+		print "NB", self.nb
+		for i in range(0,self.nb, 50):
+			print i
+			#~ try:
+			r = requests.get('https://api.datamarket.azure.com/Bing/Search/v1/Web',
+				params={'$format' : 'json',
+					'$skip' : i,
+					'$top': step,
+					'Query' : '\'%s\'' %self.query,
+					},auth=(self.key, self.key)
+					)		
+			print r
+			logging.info(r.status_code)
+			
+			msg = r.raise_for_status()
+			if msg is None:	
+				for e in r.json()['d']['results']:
+					print e["Url"]
+					web_results.append(e["Url"])
+				
+		if len(web_results) == 0:
+			return False
+			
 		return web_results
 		
 	def _report(self):
