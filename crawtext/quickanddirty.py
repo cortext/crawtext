@@ -309,6 +309,7 @@ class Worker(object):
 		
 	def insert_file(self, file_path):
 		'''insert multiple url from a file to sources'''
+		file_path = "./"+self.file
 		nb = []
 		with open(filepath, 'r') as f:
 			for url in f.readlines():
