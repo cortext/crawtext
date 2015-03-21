@@ -3,7 +3,7 @@
 
 __name__ = "crawtext"
 __version__ = "4.3.1"
-__author__= "constance@cortext.net"
+__author__= "4barbes@gmail.com"
 __doc__ = '''Crawtext.
 
 Description:
