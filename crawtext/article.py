@@ -21,6 +21,12 @@ from link import Link
 from datetime import datetime as dt
 #results for bing
 MAX = 1000
+DEPTH = 100
+import logging
+logger = logging.getLogger(__name__)
+FORMAT = "[%(filename)s:%(lineno)s - %(funcName)20s() ] %(message)s"
+logging.basicConfig(file="quickanddirty.log", format=FORMAT, level=logging.INFO)
+
 
 class Page(object):
 	"""Article objects abstract an online news article page
@@ -29,7 +35,7 @@ class Page(object):
 		"""The **kwargs argument may be filled with config values, which
 		is added into the config object
 		"""
-
+		logging.info("Page Init")
 		self.debug = debug
 		self.depth = depth
 		self.date = date
@@ -39,11 +45,15 @@ class Page(object):
 		self.status = True
 
 	def check_depth(self, depth, max_depth):
-		if depth == "":
+		logging.info("Page check depth")
+		if max_depth == "" or max_depth is None or max_depth is False:
+			max_depth = DEPTH
+		try:
+			depth = int(depth)		
+		except TypeError:
+			logging.warning(e)
 			depth = 0
-		depth = int(depth)
-		max_depth = int(max_depth)
-		if depth > max_depth :
+		if depth > max_depth:
 			if self.debug: print "depth for this page is %d and max is set to %d" %(depth,max_depth)
 			self.step = "Validating url"
 			self.code = "102"
@@ -51,22 +61,29 @@ class Page(object):
 			self.status = False
 			return False
 		return True
+		
+		
 
 	def is_valid(self):
+		logging.info("Valid url?")
 		url = Link(self.url, self.source_url, self.debug)
 		if url.is_valid():
+			logging.info("Yes")
 			return True
 		else:
 			self.msg = url.msg
 			self.code = "100"
 			self.step = "Validating page"
 			self.status = False
+			logging.info("No")
 			return False
 
 	def fetch(self):
 		try:
+			
 			# req = requests.get((self.url), headers = headers ,allow_redirects=True, proxies=None, timeout=5)
 			req = requests.get(self.url, allow_redirects=True, timeout=5)
+			logging.info("GET")
 			req.raise_for_status()
 			try:
 				self.html = req.text
@@ -92,11 +109,13 @@ class Page(object):
 				self.code = 400
 				self.status = False
 				return False
+				
 		except Exception as e:
+				logging.warning(e)
 				self.msg = str(e)
 				try:
 					self.code = req.status_code
-				except Exception:
+				except Exception as e:
 					self.code = 400
 				self.status = False
 				return False
@@ -131,23 +150,27 @@ class Article(object):
 		self.crawl_nb = 0
 		self.msg = ""
 		self.code = 100
-
+		logging.info("Article init")
 	def extract(self):
 		self.doc = BeautifulSoup(self.html)
 		self.text = clean_text(self.html)
+		logging.info("Extract")
 		if self.doc is not None:
 			try:
 				self.title = (self.doc.find("title").get_text()).encode('utf-8')
 				self.text = (self.doc.find("body").get_text()).encode('utf-8')
 				self.links, self.domains, self.domains_ids = self.fetch_links()
 				self.get_meta()
+				logging.info("Extracted!")
 				return True
 			except Exception as ex:
+				logging.info(ex)
 				self.status = False
 				self.msg = str(ex)
 				self.code = 700
 				return False
 		else:
+			logging.info("Error in loading html")
 			self.status = False
 			self.msg = "No html loaded"
 			self.code = 700
@@ -245,7 +268,7 @@ class Article(object):
 			if self.debug: print "depth for this page is %d and max is set to %d" %(self.depth,max_depth)
 			self.step = "Validating url"
 			self.code = "102"
-			self.msg = "Depth of this page is %d and > %d" %(self.depth, max_depth)
+			self.msg = "Depth is %s" %str(self.depth)
 			self.status = False
 			return False
 		return True
