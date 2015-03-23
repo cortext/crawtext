@@ -13,7 +13,7 @@ class Query(object):
 		self.debug = debug
 		if self.debug: print "query"
 		if directory != "":
-			if self.debug: print "no directory"
+			#if self.debug: print "no directory"
 			dir_index = os.path.join(directory, "index")
 			
 			if not os.path.exists(dir_index):
