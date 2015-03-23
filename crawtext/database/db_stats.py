@@ -28,14 +28,16 @@ def list_projects():
 			db.drop_db()
 			print "Deleted"
 		except TypeError:
-			print "Invalid structure for date", taskdb.coll.remove({"project_name": n["project_name"]})
-			db = Database(n["project_name"])
-			db.drop_db()
+			print "Invalid structure for date"
+			#taskdb.coll.remove({"project_name": n["project_name"]})
+			#~ db = Database(n["project_name"])
+			#~ db.drop_db()
 			print "Deleted"
 		except AttributeError:
-			print "Invalid structure for date", taskdb.coll.remove({"project_name": n["project_name"]})
-			db = Database(n["project_name"])
-			db.drop_db()
+			print "Invalid structure for date", 
+			#taskdb.coll.remove({"project_name": n["project_name"]})
+			#~ db = Database(n["project_name"])
+			#~ db.drop_db()
 			print "Deleted"	
 	return
 		
@@ -45,8 +47,25 @@ def check_project(name):
 	try:
 		project = taskdb.coll.find_one({"name": name})
 		print "The project has been run %d times for:" %len(project["date"])
+		print "Params"
+		print project["name"]
+		print project["depth"]
 		
-			
+		try: 
+			print project["url"]
+		except: 
+			pass
+		try: 
+			print project["file"]
+		except: 
+			pass
+		try:	
+			print project["query"]
+			print project["key"]
+		except: 
+			pass
+		
+		print "Activity"
 		if project is not None:
 			for a,s in zip(project["action"], project["status"]):
 				print "-", a, s
@@ -74,7 +93,7 @@ def check_sources(project_name):
 
 	forbidden_error = len([n["code"][-1] for n in project_db.sources.find() if n["code"][-1] == 403])
 	extraction_error = len([n["code"][-1] for n in project_db.sources.find() if n["code"][-1] == 700])
-	others = len([n["code"][-1] for n in project_db.sources.find() if n["code"][-1] not in [700, 400, 403, 404]])
+	others = len([n["code"][-1] for n in project_db.sources.find() if n["code"][-1] not in [100, 700, 400, 403, 404]])
 	print "Error nb: %d sources on %d total" %(error_nb, sources_nb)
 	print "Error type:"
 	print "- %d network errors (impossible to acess to the website)" %(http_error+forbidden_error)
@@ -94,6 +113,8 @@ def check_results(project_name):
 	nb_results = project_db.results.count()
 	results = project_db.results.find()
 	print nb_results, "results"
+	max_depth = project_db.results.distinct("depth")
+	print "MAx depth is ", max(max_depth)
 	#~ for n in results:
 		#~ print "url", n["url"]
 		#~ print "outlinks", len(set(n["cited_links_ids"]))
@@ -111,6 +132,12 @@ def check_logs(project_name):
 	content_error = len([n["code"] for n in project_db.logs.find() if n["code"] == 404])
 	extraction_error = len([n["code"] for n in project_db.logs.find() if n["code"] == 700])
 	others = len([n["code"] for n in project_db.logs.find() if n["code"] not in [700, 400, 403, 404]])
+	print "Errors type"
+	print "Network", http_error
+	print "Content type", content_error
+	print "extraction error", extraction_error
+	print "Other", others
+	print ("In détails for wired errors")
 	for n in logs:
 		if n["code"] not in [700,401, 400, 403, 404]:
 			print n["code"], n["msg"]
