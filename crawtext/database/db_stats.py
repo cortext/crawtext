@@ -9,6 +9,7 @@ Description:
 A simple tool to check integrity of the crawl. Provides Simple stats.
 
 Usage:
+	db_stats.py
     db_stats.py (<name>)
 '''
 
@@ -16,7 +17,28 @@ Usage:
 import sys
 from docopt import docopt
 from database import TaskDB, Database
-
+def list_projects():
+	taskdb = TaskDB()
+	for n in taskdb.coll.find():
+		try:
+			print n["name"], n["project_name"], (n["date"][-1]).strftime("%d/%B @ %H:%M")
+		except KeyError:
+			print "Invalid structure, element date doesn't exist", taskdb.coll.remove({"project_name": n["project_name"]})
+			db = Database(n["project_name"])
+			db.drop_db()
+			print "Deleted"
+		except TypeError:
+			print "Invalid structure for date", taskdb.coll.remove({"project_name": n["project_name"]})
+			db = Database(n["project_name"])
+			db.drop_db()
+			print "Deleted"
+		except AttributeError:
+			print "Invalid structure for date", taskdb.coll.remove({"project_name": n["project_name"]})
+			db = Database(n["project_name"])
+			db.drop_db()
+			print "Deleted"	
+	return
+		
 def check_project(name):
 	'''check the parameters of the project'''
 	taskdb = TaskDB()
@@ -96,6 +118,7 @@ def check_logs(project_name):
 		#n["status"], n["msg"]
 	
 def main(project_name):
+	
 	check_project(project_name)
 	check_sources(project_name)
 	check_results(project_name)
@@ -103,5 +126,8 @@ def main(project_name):
 	sys.exit()
 
 if __name__ == "db_stats":
-	print docopt(__doc__)
-	main(docopt(__doc__)['<name>'])
+	
+	if docopt(__doc__)['<name>'] is not None:
+		main(docopt(__doc__)['<name>'])
+	else:
+		list_projects()
