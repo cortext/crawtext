@@ -1,32 +1,44 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 __name__="db_stats"
-__doc__= "A tool to chekc integrity of the crawl"
+__description__= "A tool to chekc integrity of the crawl"
 __author__="Constance de Quatrebarbes"
+__version__ = "0.0.1"
+__doc__ = __doc__ = '''Crawtext.
+Description:
+A simple tool to check integrity of the crawl. Provides Simple stats.
+
+Usage:
+    db_stats.py (<name>)
+'''
+
 
 import sys
+from docopt import docopt
 from database import TaskDB, Database
 
 def check_project(name):
 	'''check the parameters of the project'''
 	taskdb = TaskDB()
-	project = taskdb.coll.find_one({"name": name})
-	print "The project has been run %d times for:" %len(project["date"])
-	
+	try:
+		project = taskdb.coll.find_one({"name": name})
+		print "The project has been run %d times for:" %len(project["date"])
 		
-	if project is not None:
-		for a,s in zip(project["action"], project["status"]):
-			print "-", a, s
-		#~ for k, v  in project.items():
-			#~ if v is not False:
-				#~ print "_______________________________________"
-				#~ print "|",k,"|", v,"|"
-				#~ 
-		#~ print "_______________________________________"
-		return project
-	else:
-		sys.exit("No project found")
-	
+			
+		if project is not None:
+			for a,s in zip(project["action"], project["status"]):
+				print "-", a, s
+			#~ for k, v  in project.items():
+				#~ if v is not False:
+					#~ print "_______________________________________"
+					#~ print "|",k,"|", v,"|"
+					#~ 
+			#~ print "_______________________________________"
+			return project
+		else:
+			sys.exit("No project found")
+	except Exception:
+		sys.exit("No project found")	
 	
 def check_sources(project_name):
 	'''check the sources status'''
@@ -37,6 +49,7 @@ def check_sources(project_name):
 	ok_nb = len([n["status"][-1] for n in project_db.sources.find() if n["status"][-1] is True])
 	http_error = len([n["code"][-1] for n in project_db.sources.find() if n["code"][-1] == 400])
 	content_error = len([n["code"][-1] for n in project_db.sources.find() if n["code"][-1] == 404])
+
 	forbidden_error = len([n["code"][-1] for n in project_db.sources.find() if n["code"][-1] == 403])
 	extraction_error = len([n["code"][-1] for n in project_db.sources.find() if n["code"][-1] == 700])
 	others = len([n["code"][-1] for n in project_db.sources.find() if n["code"][-1] not in [700, 400, 403, 404]])
@@ -65,6 +78,7 @@ def check_results(project_name):
 		#~ print "depth", n["depth"]
 
 def check_logs(project_name):
+	
 	project_db = Database(project_name)
 	project_db.create_colls()
 	nb_logs = project_db.logs.count()
@@ -88,4 +102,6 @@ def main(project_name):
 	check_logs(project_name)
 	sys.exit()
 
-main("RRI_ET_4")
+if __name__ == "db_stats":
+	print docopt(__doc__)
+	main(docopt(__doc__)['<name>'])
