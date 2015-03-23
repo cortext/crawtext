@@ -29,7 +29,6 @@ import datetime
 from report import send_mail, generate_report
 import hashlib
 from article import Article, Page
-from config_qd import *
 from crawl import crawl
 
 
