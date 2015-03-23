@@ -102,6 +102,8 @@ class Worker(object):
 
 		elif self.start is True:
 			'''starting project'''
+			
+			self.__config_crawl__()
 			logging.info("Running... ")
 			return self.__run__()
 		else:
@@ -112,6 +114,9 @@ class Worker(object):
 		for k, v in user_input.items():
 			if k == "<name>":
 				pass
+			elif k == "--depth":
+				print k,v
+				setattr(self, re.sub("--|<|>", "", k), v)
 			elif v is None or v is False:
 				setattr(self, re.sub("--|<|>", "", k), False)
 			
@@ -153,11 +158,12 @@ class Worker(object):
 
 	def __config_crawl__(self):
 		#~ print self.user
-		#~ self.report = bool(self.user)
-
-		if self.nb is False or self.nb is None:
+		#self.report = bool(self.user is not None)
+		
+		self.__mapp__(self.task)
+		if self.nb is False:
 			self.nb = MAX_RESULTS
-		if self.depth is False or self.depth is None:
+		if self.depth is False:
 			self.depth = DEPTH
 		self.date = dt.now()
 		return True
