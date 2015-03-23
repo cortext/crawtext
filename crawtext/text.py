@@ -61,7 +61,7 @@ def _attr_name_whitelisted(attr_name):
 
 def safe_css(attr, css):
     if attr == "style":
-        return re.sub("(width|height):[^;]+;", "", css)
+        return re.sub("(width|height):[^;];", "", css)
     return css
 
 def plaintext(input):
@@ -87,11 +87,10 @@ def _unescape(text):
             except KeyError:
                 pass
         return text # leave as is
-    return re.sub("&#?\w+;", fixup, text)
+    return re.sub("&#?\w;", fixup, text)
 
 def clean_text(html):
     input = safe_html(html) # basic sanitation first
     text = "".join(BeautifulSoup("<body>%s</body>" % input).body(text=True))
     text = text.replace("xml version='1.0' encoding='%SOUP-ENCODING%'", "") # strip BS meta-data
     return _unescape(text)
-
