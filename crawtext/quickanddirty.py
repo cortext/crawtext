@@ -30,7 +30,7 @@ from report import send_mail, generate_report
 import hashlib
 from article import Article, Page
 from crawl import crawl
-
+import requests
 
 ABSPATH = os.path.dirname(os.path.abspath(sys.argv[0]))
 RESULT_PATH = os.path.join(ABSPATH, "projects")
