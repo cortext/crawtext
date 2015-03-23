@@ -323,6 +323,7 @@ class Worker(object):
 		nb = []
 		with open(filepath, 'r') as f:
 			for url in f.readlines():
+				print url
 				self.upsert_url(url, "file")
 				nb.append(url)
 		return len(nb)
