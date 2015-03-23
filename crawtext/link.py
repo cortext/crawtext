@@ -81,11 +81,11 @@ class Link(object):
 		self.subdomain = tld_dat.subdomain
 		self.domain = tld_dat.domain.lower()
 		self.domain_id = re.sub("www\.|http\.", "", self.netloc)
-		#~ if self.subdomain in ["www", "", " "]:
-			#~ self.domain_id = self.domain
-		#~ else:
-			#~ self.domain_id = self.subdomain+"."+self.domain
-		#~ print self.domain_id
+		if self.subdomain in ["www", "", " "]:
+			self.domain_id = self.domain
+		else:
+			self.domain_id = self.subdomain+"."+self.domain
+		print "Parse url domain id", self.domain_id
 		self.extension =  tld_dat.suffix
 		#info on page
 		self.path_chunk = [x for x in self.path.split('/') if len(x) > 0]
@@ -187,9 +187,9 @@ def parse_url(url):
 	info['domain'] = tld_dat.domain.lower()
 	info['extension'] =  tld_dat.suffix
 	if info['subdomain'] in ["www", "", " "]:
-		info['domain_id']= info['domain_id']
+		info['domain_id']= info['domain_id']+"."+info['extension']
 	else:
-		info['domain_id']= info['subdomain']+"."+info["domain"]
+		info['domain_id']= info['subdomain']+"."+info["domain"]+"."+info['extension']
 	print info['domain_id']
 	#info on page
 	info['path_chunk'] = [x for x in info['path'].split('/') if len(x) > 0]

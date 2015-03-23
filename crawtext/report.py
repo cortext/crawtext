@@ -37,6 +37,7 @@ def generate_report(task, db, directory):
 				if k == "creation_date":
 					v = task[k].strftime('%d-%m-%Y %H-%M-%S')
 					f.write(str(k)+": "+str(v)+"\n")
+				
 				try:
 					f.write(str(k)+": "+str(v)+"\n")
 				except Exception:
@@ -46,8 +47,9 @@ def generate_report(task, db, directory):
 		
 		f.write("\n\n======HISTORY OF THE PROJECT======\n")
 		
-		date_list = [n.strftime('%d-%m-%Y %H-%M-%S') for n in task["date"]]
-		status_list = list(zip(task["action"], task["status"],task["msg"], date_list))
+		#date_list = [n.strftime('%d-%m-%Y %H-%M-%S') for n in task["date"]]
+		
+		status_list = list(zip(task["status"],task["msg"]))
 		for msg in status_list:
 			f.write("\n-"+str(msg))
 	print "Your report is ready!\nCheck here: %s" %(filename)

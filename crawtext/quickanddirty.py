@@ -37,7 +37,7 @@ RESULT_PATH = os.path.join(ABSPATH, "projects")
 import logging
 logger = logging.getLogger(__name__)
 FORMAT = "[%(filename)s:%(lineno)s - %(funcName)20s() ] %(message)s"
-logging.basicConfig(file="crawtext.log", format=FORMAT, level=logging.DEBUG)
+logging.basicConfig(file="quickanddirty.log", format=FORMAT, level=logging.INFO)
 #search result nb from BING
 MAX_RESULTS = 1000
 #max depth
@@ -170,11 +170,15 @@ class Worker(object):
 
 	def __parse_task__(self):
 		'''mapping params from TASKDB'''
-		if self.task is not None:
+		print self.task
+		print self.__exists__()
+		print self.task
+		if self.task is not None or self.task is not False:
 			for k, v in self.task.items():
 				setattr(self, k, v)
 			return self
 		else:
+			print "No task?"
 			return False
 
 

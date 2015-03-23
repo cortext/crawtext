@@ -28,6 +28,11 @@ class Database(object):
 
 	def use_db(self, database_name):
 		return self.client[str(database_name)]
+	
+	def create_db(self, database_name):
+		self.db = self.client[str(database_name)]
+		self.create_colls()
+		return self
 
 	def use_coll(self, coll_name):
 		return self.db[coll_name]
@@ -236,5 +241,14 @@ class TaskDB(Database):
 	def get(self):
 		return self.coll
 
-if __name__== "__main":
-	print "Database"
+def main():
+	import sys
+	print "MAINNNN"
+	db = Database('test10')
+	db.drop_all_dbs()
+	print "Hop Foututualapoubelle"
+	sys.exit()
+	
+if __name__== "__main__":
+	main()
+	
