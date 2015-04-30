@@ -11,14 +11,14 @@ TASK_MANAGER_NAME = "crawtext_jobs"
 TASK_COLL = "job"
 
 class Database(object):
-	'''Database creation''' 
+	'''Database creation'''
 	def __init__(self, database_name, debug=False):
-		self.debug = debug		
+		self.debug = debug
 		self.client = MongoClient('mongodb://localhost,localhost:27017')
 		self.db_name = database_name
 		self.db = getattr(self.client,database_name)
 		self.date = datetime.now()
-		
+
 	def set_colls(self):
 		self.sources = self.db["sources"]
 		self.logs = self.db["logs"]
@@ -28,7 +28,7 @@ class Database(object):
 
 	def use_db(self, database_name):
 		return self.client[str(database_name)]
-	
+
 	def create_db(self, database_name):
 		self.db = self.client[str(database_name)]
 		self.create_colls()
@@ -49,21 +49,21 @@ class Database(object):
 	def create_colls(self, coll_names=["results","sources", "logs", "queue"]):
 		for n in coll_names:
 			setattr(self, n, self.db[str(n)])
-		# self.queue = self.db['queue'] 
+		# self.queue = self.db['queue']
 		# self.log = self.db['log']
 		# self.sources = self.db['sources']
 		# #print ("Creating coll",  [n for n in self.db.collection_names()])
 		return [n for n in self.db.collection_names()]
-			
+
 	def show_coll(self):
 		try:
 			print ("using collection %s in DB : %s") %(self.coll_name, self.db_name)
 			return self.coll_name
 		except AttributeError:
 			return False
-		
+
 	def show_coll_items(self, coll_name):
-		return [n for n in self.db[str(coll_name)].find(timeout=False)]	
+		return [n for n in self.db[str(coll_name)].find()]
 
 	def drop(self, type, name):
 		if type == "collection":
@@ -73,7 +73,7 @@ class Database(object):
 		else:
 			print ("Unknown Type")
 			return False
-	
+
 	def drop_db(self):
 		return self.client.drop_database(str(self.db_name))
 
@@ -82,7 +82,7 @@ class Database(object):
 		for n in self.show_dbs():
 			#if n not in ["projects", "tasks"]:
 			self.use_db(n)
-	
+
 	def insert_logs(self, log_list):
 		for log in log_list:
 			self.insert_log(self, log)
@@ -96,7 +96,7 @@ class Database(object):
 			pass
 		if url in self.db.sources.distinct("url"):
 			if self.debug: print "Source updated"
-			exists = self.db.sources.find_one({"url":url},timeout=False)	
+			exists = self.db.sources.find_one({"url":url})
 			if exists is not None:
 				del log["url"]
 				try:
@@ -106,11 +106,11 @@ class Database(object):
 					self.db.sources.update({"url":url}, {"$push": log})
 					return True
 		else:
-			if url not in self.db.logs.distinct("url"):	
+			if url not in self.db.logs.distinct("url"):
 				self.db.logs.insert({"url":url,"msg":log["msg"], "status":log["status"], "code": log["code"], "date": [datetime.now()]})
 				return True
 			else:
-				exists = self.db.logs.find_one({"url": url},timeout=False)
+				exists = self.db.logs.find_one({"url": url})
 				self.db.sources.update({"_id":exists["_id"]}, {"$push": log})
 				return True
 	def insert_results(self,results):
@@ -120,8 +120,8 @@ class Database(object):
 
 	def insert_result(self, log):
 		self.debug = True
-		result = self.db.results.find_one({"url":log['url']},timeout=False)
-		source = self.db.sources.find_one({"url":log['url']},timeout=False)
+		result = self.db.results.find_one({"url":log['url']})
+		source = self.db.sources.find_one({"url":log['url']})
 		if source is not None:
 			if self.debug: print "\t- sources udpated"			
 			self.db.sources.update({"_id":source["_id"]}, {"$push": {"date": log["date"], "status": True, "msg": "Result stored"}})
@@ -132,12 +132,12 @@ class Database(object):
 			if self.debug: print "\t-page inserted"
 			self.db.results.insert(log)
 			return True
-		
+
 
 	def update_result(self, log):
 		"\t-result updated"
 		try:
-			result = self.db.results.find_one({"url":log['url']},timeout=False)
+			result = self.db.results.find_one({"url":log['url']})
 			updated = self.db.results.update({"_id":result["_id"]},{"$push": {"date": log["date"], "status": True, "msg": "Result stored"}})
 			# print updated
 			try:
@@ -170,7 +170,7 @@ class Database(object):
 
 	def results_stats(self):
 		self.show_stats()
-		return self.template[2]	
+		return self.template[2]
 
 	def show_stats(self):
 		'''Output the current stats of database in Terminal'''
@@ -185,19 +185,19 @@ class Database(object):
 		other = "#Other:\n\tName of the database: %s\n\tSize of the database: %d MB" %(self.db_name, (self.db.command('dbStats', 1024)['storageSize'])/1024/1024.)
 		self.template = [title, results, errors, sources, process, other]
 		return "\n".join(self.template)
-	
+
 	def stats(self):
 		#sources
 		self.sources_nb = self.db.sources.count()
 		self.uniq_sources_nb = len(self.db.sources.distinct("url"))
-		
+
 		#self.active_sources_nb = self.db.sources.find({"status":True}, { "status": {"$slice": -1 } } ).count()
 		self.inactive_sources_nb = self.db.sources.find({"status":False}, { "status": {"$slice": -1 } },timeout=False ).count()
 		self.active_sources_nb = self.sources_nb - self.inactive_sources_nb
-		self.bing_sources = self.db.sources.find({"origin":"bing"},timeout=False).count()
-		self.file_sources = self.db.sources.find({"origin":"file"},timeout=False).count()
-		self.manual_sources = self.db.sources.find({"origin":"manual"},timeout=False).count()
-		self.expanded_sources = self.db.sources.find({"origin":"automatic"},timeout=False).count()
+		self.bing_sources = self.db.sources.find({"origin":"bing"}).count()
+		self.file_sources = self.db.sources.find({"origin":"file"}).count()
+		self.manual_sources = self.db.sources.find({"origin":"manual"}).count()
+		self.expanded_sources = self.db.sources.find({"origin":"automatic"}).count()
 
 		#results
 		self.results_nb = self.db.results.count()
@@ -213,11 +213,11 @@ class Database(object):
 		return self
 
 	def mail_report(self):
-		self.show_stats()	
+		self.show_stats()
 		title = "Report for project %s" %(str(self.db_name))
-		
+
 		template = [title]
-		
+
 		template.append("<ul>")
 		for n in self.template:
 			chunk = n.split("\n")
@@ -230,14 +230,14 @@ class Database(object):
 				else:
 					c = "<li>%s</li>"%str(c)
 				template.append(c)
-		
+
 		template.append("</ul>")
 		return "".join(template)
 class TaskDB(Database):
 	def __init__(self):
 		Database.__init__(self, TASK_MANAGER_NAME)
 		self.coll = self.db[str(TASK_COLL)]
-	
+
 	def get(self):
 		return self.coll
 
@@ -248,7 +248,6 @@ def main():
 	db.drop_all_dbs()
 	print "Hop Foututualapoubelle"
 	sys.exit()
-	
+
 if __name__== "__main__":
 	main()
-	
