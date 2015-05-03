@@ -436,10 +436,8 @@ class Worker(object):
 							logging.info("extracted")
 							a.fetch_links()
 							for url, domain, url_id in zip(a.links, a.domains, a.domain_ids):
-								print url, domain
 								logging.info("links:")
-								if url not in treated:
-									print url
+								if url not in self.treated:
 									self.project_db.queue.insert({"url": url, "source_url": item['url'], "depth": int(item['depth'])+1, "domain": domain, "date": a.date})
 							logging.info("\t-inserted %d nexts urls into queue" %len(a.links))
 							self.project_db.insert_result(a.export())
