@@ -44,12 +44,12 @@ class Page(object):
 		self.html = u''
 		self.status = True
 
-	def check_depth(self, depth, max_depth):
+	def check_depth(self, depth, max_depth=None):
 		logging.info("Page check depth")
 		if max_depth == "" or max_depth is None or max_depth is False:
 			max_depth = DEPTH
 		try:
-			depth = int(depth)		
+			depth = int(depth)
 		except TypeError:
 			logging.warning(e)
 			depth = 0
@@ -61,8 +61,8 @@ class Page(object):
 			self.status = False
 			return False
 		return True
-		
-		
+
+
 
 	def is_valid(self):
 		logging.info("Valid url?")
@@ -80,7 +80,7 @@ class Page(object):
 
 	def fetch(self):
 		try:
-			
+
 			# req = requests.get((self.url), headers = headers ,allow_redirects=True, proxies=None, timeout=5)
 			req = requests.get(self.url, allow_redirects=True, timeout=5)
 			logging.info("GET")
@@ -109,7 +109,7 @@ class Page(object):
 				self.code = 400
 				self.status = False
 				return False
-				
+
 		except Exception as e:
 				logging.warning(e)
 				self.msg = str(e)
