@@ -96,10 +96,10 @@ class Worker(object):
 				logging.warning("Invalid parameters Please provide a name to your project")
 				return False
 		return False
-		
+
 
 	def __mapp__(self,user_input):
-		''' mapping user_input into Object and returns the number of false XOR empty parameters'''
+		''' mapping user_input or task_db into current Worker Object'''
 		for k, v in user_input.items():
 			if k == "<name>":
 				pass
@@ -113,49 +113,43 @@ class Worker(object):
 		return len([v for v in user_input.values() if v is not None and v is not False and k != "<name>"])
 
 	def __activate__(self):
-		'''if action : activate the job else show the current project'''
-		logging.info("Activate the specific action")
-
+		'''dispath action fro user_input'''
+		logging.info("Activating the specific job")
 		if self.delete is True:
 			'''delete project'''
+			logging.info("delete job")
 			self.delete_project()
 			return False
 
 		elif self.export is True:
 			'''export projects'''
-			#return self.__export__()
-			logging.info("Export... ")
+			logging.info("export job process")
 			return self._export()
 
 		elif self.report is True:
 			''' report project'''
-			logging.info("Report... ")
-			if self.user is not False:
-				return self._report()
-			else:
+			logging.info("Report job process ")
+			if self.user is False:
 				self.user = __author__
-				return self._report()
+			return self._report()
+
 		elif self.restart is True:
 			'''restart project with no update of sources'''
 			self.__config_crawl__()
+			raise NotImplementedError
 
 		elif self.start is True:
 			'''starting project'''
 			self.__config_crawl__()
-			logging.info("Running... ")
+			logging.info("Running crawl job")
 			return self.__run__()
 		else:
 			return self.__show__()
 
-
-
-
-
 	def __config_crawl__(self):
-		#~ print self.user
-		#self.report = bool(self.user is not None)
-
-		self.__mapp__(self.task)
+		'''mapp task params from TASKDB'''
+		#self.__mapp__(self.task)
+		self.__parse_task()
 		if self.nb is False:
 			self.nb = MAX_RESULTS
 		if self.depth is False:
@@ -165,15 +159,15 @@ class Worker(object):
 
 	def __parse_task__(self):
 		'''mapping params from TASKDB'''
-		print self.task
-		print self.__exists__()
-		print self.task
 		if self.task is not None or self.task is not False:
 			for k, v in self.task.items():
-				setattr(self, k, v)
-			return self
+				try:
+					if getattr(self,k) is not None or getattr(self,k) is not False:
+						setattr(self, k, v)
+				except AttributeError:
+					setattr(self, k, v)
+			return True
 		else:
-			print "No task?"
 			return False
 
 
