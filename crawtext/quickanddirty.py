@@ -107,6 +107,8 @@ class Worker(object):
 		for k, v in user_input.items():
 			if k == "<name>":
 				pass
+			if k == "task":
+				pass
 			elif k == "--depth":
 				setattr(self, re.sub("--|<|>", "", k), v)
 			elif v is None or v is False:
