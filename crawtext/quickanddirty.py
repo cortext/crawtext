@@ -153,7 +153,7 @@ class Worker(object):
 	def __config_crawl__(self):
 		'''mapp task params from TASKDB'''
 		#self.__mapp__(self.task)
-		self.__parse_task()
+		self.__parse_task__()
 		self.__create_directory__()
 		if self.nb is False:
 			self.nb = MAX_RESULTS
