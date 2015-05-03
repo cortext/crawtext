@@ -129,7 +129,7 @@ if __name__ == "crawtext":
 		for item in an.queue.list:
 			print item
 			if item["url"] in an.results.urls:
-				an.queue.drop(item)
+				an.queue.remove(item)
 			elif item["url"] in an.logs.urls:
 				an.queue.remove(item)
 			else:
