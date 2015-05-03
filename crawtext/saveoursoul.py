@@ -150,7 +150,10 @@ if __name__ == "crawtext":
 											an.queue.insert({"url": url, "source_url": item['url'], "depth": int(item['depth'])+1, "domain": domain, "date": a.date})
 											if an.debug: logging.info("\t-inserted %d nexts url" %len(a.links))
 										an.results.insert(a.export())
-
+							else:
+								a.msg = "Depth exceed"
+								an.logs.insert(a.log())
+						else:
 					else:
 						print "Error Extracting"
 						an.logs.insert(a.log())
