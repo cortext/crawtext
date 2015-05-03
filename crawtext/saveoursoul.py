@@ -118,7 +118,7 @@ class Analyzor(object):
 
 if __name__ == "crawtext":
 	print "Running"
-	an = Analyzor("RRI_10_ET_05", True)
+	an = Analyzor(docopt(__doc__)["<name>"], True)
 	if an.active:
 		an.show_task()
 		an.show_project()
