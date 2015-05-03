@@ -15,6 +15,7 @@ Usage:
 	crawtext.py <name> (--url=<url>| --file=<file>) [--query=<query>] [--nb=<nb>] [--lang=<lang>] [--user=<email>] [--depth=<depth>] [--debug]
 	crawtext.py (<name>) delete
 	crawtext.py (<name>) start
+	crawtext.py (<name>) restart
 	crawtext.py (<name>) export [--data=<data>] [--format=<format>]
 	crawtext.py (<name>) report [--user=<email>] [--format=<format>]
 '''
@@ -32,7 +33,7 @@ from article import Article, Page
 from crawl import crawl
 import requests
 from logger import *
- 
+
 ABSPATH = os.path.dirname(os.path.abspath(sys.argv[0]))
 RESULT_PATH = os.path.join(ABSPATH, "projects")
 
@@ -44,22 +45,22 @@ DEPTH = 100
 class Worker(object):
 	def __init__(self,user_input,debug=False):
 		'''Job main config'''
-		self.date = datetime.datetime.today()
-
-		self.debug = debug
 		logging.info("Init worker")
 		self.name = user_input["<name>"]
-		logging.info("Connecting to TaskDB")
+		self.date = datetime.datetime.today()
+		self.debug = debug
+		#Database Connection
 		self.db = TaskDB()
 		self.coll = self.db.coll
+		logging.info("Connected to TASKDB")
 		if self.__exists__():
-			logging.info("Updating?")
+			logging.info("Task exists in TaskDB")
 			if self.__parse__(user_input):
-				logging.info("Yes")
+				logging.info("Update project")
 				self.__activate__()
 				sys.exit()
 			else:
-				logging.info("Show")
+				logging.info("Show project")
 				self.__show__()
 				sys.exit()
 		else:
@@ -72,10 +73,48 @@ class Worker(object):
 				logging.info("Invalid parameters")
 				sys.exit(__doc__)
 
+	def __exists__(self):
+		'''check if project already exists (Bool)'''
+		self.task = self.coll.find_one({"name":self.name})
+		if self.task is not None:
+			self.project_db = Database(self.task['project_name'])
+			self.project_db.create_colls()
+			logging.info("\nProject %s exists" %self.name)
+			return True
+		else:
+			logging.info("\nProject %s doesn't exist" %self.name)
+			return False
+
+	def __parse__(self, user_input):
+		'''parsing user input for options and actions'''
+		# logging.info(__doc__)
+		if self.__mapp__(user_input) >1:
+			if self.name is not False:
+				self.project_name = re.sub('[^0-9a-zA-Z]+', '_', self.name)
+				return True
+			else:
+				logging.warning("Invalid parameters Please provide a name to your project")
+				return False
+		return False
+		
+
+	def __mapp__(self,user_input):
+		''' mapping user_input into Object and returns the number of false XOR empty parameters'''
+		for k, v in user_input.items():
+			if k == "<name>":
+				pass
+			elif k == "--depth":
+				setattr(self, re.sub("--|<|>", "", k), v)
+			elif v is None or v is False:
+				setattr(self, re.sub("--|<|>", "", k), False)
+			else:
+				setattr(self, re.sub("--|<|>", "", k), v)
+				#setting all empty attributes to False
+		return len([v for v in user_input.values() if v is not None and v is not False and k != "<name>"])
 
 	def __activate__(self):
 		'''if action : activate the job else show the current project'''
-		logging.info("Activate")
+		logging.info("Activate the specific action")
 
 		if self.delete is True:
 			'''delete project'''
@@ -96,63 +135,21 @@ class Worker(object):
 			else:
 				self.user = __author__
 				return self._report()
-
+		elif self.restart is True:
+			'''restart project with no update of sources'''
+			self.__config_crawl__()
 
 		elif self.start is True:
 			'''starting project'''
-
 			self.__config_crawl__()
 			logging.info("Running... ")
 			return self.__run__()
 		else:
 			return self.__show__()
 
-	def __mapp__(self,user_input):
-		''' mapping user_input into Object and returns the number of false XOR empty parameters'''
-		for k, v in user_input.items():
-			if k == "<name>":
-				pass
-			elif k == "--depth":
-				print k,v
-				setattr(self, re.sub("--|<|>", "", k), v)
-			elif v is None or v is False:
-				setattr(self, re.sub("--|<|>", "", k), False)
 
-			else:
-				setattr(self, re.sub("--|<|>", "", k), v)
-				#setting all empty attributes to False
-		return len([v for v in user_input.values() if v is not None and v is not False and k != "<name>"])
 
-	def __parse__(self, user_input):
-		'''parsing user input for options and actions'''
-		# logging.info(__doc__)
-		self.__mapp__(user_input)
 
-		if self.name is not False:
-			self.project_name = re.sub('[^0-9a-zA-Z]+', '_', self.name)
-		else:
-			logging.warning("Invalid parameters Please provide a name to your project")
-		if self.__mapp__(user_input) > 1:
-			return True
-			'''
-			if self.query is False:
-				logging.info("No query activate open crawl?")
-				if self.file is False and self.url is False:
-					logging.warning("Invalid parameters: needs at leat a seed")
-					return sys.exit("Invalid parameters: needs at leat a seed")
-				else:
-					self.type = "open_crawl"
-					logging.info("Open crawl")
-			else:
-				if self.key is False or self.file is False or self.url is False:
-					logging.warning("Invalid parameters need at least a seed .Please provide an (url, file or key)")
-					sys.exit("Invalid parameters need at least a seed .Please provide an (url, file or key)")
-				else:
-					self.type = "crawl"
-					logging.info("Normal crawl")
-			return self.__config_crawl__()
-			'''
-		return False
 
 	def __config_crawl__(self):
 		#~ print self.user
@@ -439,16 +436,7 @@ class Worker(object):
 				print "treated"
 		return treated
 
-	def __exists__(self):
-		self.task = self.coll.find_one({"name":self.name})
-		if self.task is not None:
-			self.project_db = Database(self.task['project_name'])
-			self.project_db.create_colls()
-			logging.info("\nProject %s exists" %self.name)
-			return True
-		else:
-			logging.info("\nProject %s doesn't exist" %self.name)
-			return False
+
 
 	def __show__(self,name=None):
 		if name is not None:
