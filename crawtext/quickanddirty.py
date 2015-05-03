@@ -461,7 +461,7 @@ class Worker(object):
 			print "* Parameters"
 			print "------------"
 			for k, v in self.task.items():
-				if k !== "date":
+				if not k.startswith("date"):
 					print k, ":", v
 			print "------------"
 			print "\nProject database stats:"
