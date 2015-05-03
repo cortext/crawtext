@@ -150,11 +150,13 @@ class Worker(object):
 		'''mapp task params from TASKDB'''
 		#self.__mapp__(self.task)
 		self.__parse_task()
+		self.__create_directory__()
 		if self.nb is False:
 			self.nb = MAX_RESULTS
 		if self.depth is False:
 			self.depth = DEPTH
 		self.date = dt.now()
+
 		return True
 
 	def __parse_task__(self):
@@ -170,19 +172,20 @@ class Worker(object):
 		else:
 			return False
 
-
 	def __create_directory__(self):
-		self.directory = os.path.join(RESULT_PATH, self.project_name)
-		if not os.path.exists(self.directory):
-			os.makedirs(self.directory)
-			index = os.path.join(self.directory, 'index')
-			try:
-				self.index_dir = os.makedirs('index')
-			except:
-				pass
-			logging.info("A specific directory has been created to store your projects\n Location:%s"	%(self.directory))
-
-		return self.directory
+		try:
+			self.directory = getattr(self,directory)
+		except AttributeError:
+			self.directory = os.path.join(RESULT_PATH, self.project_name)
+			if not os.path.exists(self.directory):
+				os.makedirs(self.directory)
+				index = os.path.join(self.directory, 'index')
+				try:
+					self.index_dir = os.makedirs('index')
+				except:
+					pass
+				logging.info("A specific directory has been created to store your projects\n Location:%s"	%(self.directory))
+			return self.directory
 
 	def __create_db__(self):
 		self.project_db = Database(self.project_name)
@@ -213,9 +216,20 @@ class Worker(object):
 			return False
 
 	def __update__(self):
-		if self.__parse_task__() is not False:
+		self.__parse_task__()
+		if self.restart is False:
+			logging.info("Update sources")
 			if self.query is not False and self.key is not False:
 				self.update_sources()
+			elif self.url is not None:
+				self.update_sources()
+			elif self.file is not None:
+				self.update_sources()
+			return True
+		else:
+			logging.info("Sources will not be udpated the crawl will restart from current queue")
+			return False
+			
 	def crawl_type(self):
 		self.__parse_task__()
 		if self.key is not False and self.query is not False:
