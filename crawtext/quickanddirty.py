@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 __name__ = "crawtext"
+__script_name__ = "quickanddirty"
 __version__ = "4.3.1"
 __author__= "4barbes@gmail.com"
 __doc__ = '''Crawtext.
@@ -49,6 +50,7 @@ class Worker(object):
 		self.name = user_input["<name>"]
 		self.date = datetime.datetime.today()
 		self.debug = debug
+
 		#Database Connection
 		self.db = TaskDB()
 		self.coll = self.db.coll
@@ -66,15 +68,17 @@ class Worker(object):
 		else:
 			if self.__parse__(user_input):
 				self.__create__()
-				self.__exists__()
-				self.__activate__()
+				if self.__exists__():
+					self.__activate__()
 				sys.exit()
 			else:
-				logging.info("Invalid parameters")
-				sys.exit(__doc__)
+				self.__create__()
+				logging.info("Show project")
+				self.__show__()
+				sys.exit()
 
 	def __exists__(self):
-		'''check if project already exists (Bool)'''
+		'''check if project already exists in TASKDB (Bool)'''
 		self.task = self.coll.find_one({"name":self.name})
 		if self.task is not None:
 			self.project_db = Database(self.task['project_name'])
@@ -193,6 +197,7 @@ class Worker(object):
 		return self.project_db
 
 	def __create__(self):
+		'''create a new task from the populated current object'''
 		logging.info("creating a new task")
 		new_task = self.__dict__.items()
 		task = {}
@@ -229,7 +234,7 @@ class Worker(object):
 		else:
 			logging.info("Sources will not be udpated the crawl will restart from current queue")
 			return False
-			
+
 	def crawl_type(self):
 		self.__parse_task__()
 		if self.key is not False and self.query is not False:
@@ -244,13 +249,14 @@ class Worker(object):
 
 	def __run__(self):
 		self.type = self.crawl_type()
-		print "Run!"
 		if self.type == "crawl":
-			print self.create_seeds()
+			if self.restart is False:
+				self.create_seeds()
 			self.crawl()
 		else:
-			print self.create_seeds()
-			self.wild_crawl()
+			if self.restart is False:
+				print self.create_seeds()
+				self.wild_crawl()
 		self._report()
 		self._export()
 		return sys.exit()
@@ -319,7 +325,6 @@ class Worker(object):
 
 			return False
 
-
 	def insert_file(self, filepath):
 		'''insert multiple url from a file to sources'''
 		file_path = "./"+self.file
@@ -330,8 +335,6 @@ class Worker(object):
 				self.upsert_url(url, "file")
 				nb.append(url)
 		return len(nb)
-
-
 
 	def insert_bing(self):
 		'''insert url from bing search tp sources'''
@@ -361,8 +364,8 @@ class Worker(object):
 		self.crawl(option=None)
 
 	def crawl(self, option="filter"):
-		treated = self.push_to_queue()
-		print self.project_db.queue.count()
+		treated = self.push_to_queue(reload = self.restart)
+		logging.info("%i urls in process" %(self.project_db.queue.distinct('url')))
 		logging.info("Starting Crawl")
 		while self.project_db.queue.count() > 0:
 			for item in self.project_db.queue.find(timeout=False):
@@ -410,39 +413,39 @@ class Worker(object):
 				break
 		return True
 
-	def push_to_queue(self):
+	def push_to_queue(self, reload=False):
 		'''putting sources to queue'''
-		treated = []
-		for item in self.project_db.sources.find():
-			logging.info(item["url"])
-			if item["url"] not in treated:
-
-				p = Page(item["url"], item["source_url"],item["depth"], self.date, self.debug)
-				if p.fetch():
-
-					logging.info("fetched")
-					a = Article(p.url,p.html, p.source_url, p.depth,p.date, self.debug)
-					if a.extract():
-						logging.info("extracted")
-						a.fetch_links()
-						for url, domain, url_id in zip(a.links, a.domains, a.domain_ids):
-							print url, domain
-							logging.info("links:")
-							if url not in treated:
-								print url
-								self.project_db.queue.insert({"url": url, "source_url": item['url'], "depth": int(item['depth'])+1, "domain": domain, "date": a.date})
-						print "\t-inserted %d nexts urls into queue" %len(a.links)
-						self.project_db.insert_result(a.export())
-						self.project_db.sources.update({"_id":item["_id"]}, {"$push":{"status": True, "msg":"Ok", "code": 100}})
+		self.treated = []
+		if reload is False:
+			self.treated = self.project_db.sources.distinct("url")+self.project_db.logs.distinct("url")+self.project_db.results.distinct("url")
+			return self.treated
+		else:
+			for item in self.project_db.sources.find():
+				#logging.info("%s in process" %item["url"])
+				if item["url"] not in treated:
+					p = Page(item["url"], item["source_url"],item["depth"], self.date, self.debug)
+					if p.fetch():
+						logging.info("fetched")
+						a = Article(p.url,p.html, p.source_url, p.depth,p.date, self.debug)
+						if a.extract():
+							logging.info("extracted")
+							a.fetch_links()
+							for url, domain, url_id in zip(a.links, a.domains, a.domain_ids):
+								print url, domain
+								logging.info("links:")
+								if url not in treated:
+									print url
+									self.project_db.queue.insert({"url": url, "source_url": item['url'], "depth": int(item['depth'])+1, "domain": domain, "date": a.date})
+							logging.info("\t-inserted %d nexts urls into queue" %len(a.links))
+							self.project_db.insert_result(a.export())
+							self.project_db.sources.update({"_id":item["_id"]}, {"$push":{"status": True, "msg":"Ok", "code": 100}})
+						else:
+							self.project_db.sources.update({"_id":item["_id"]}, {"$push":{"status": False, "msg":a.msg, "code": a.code}})
 					else:
-						self.project_db.sources.update({"_id":item["_id"]}, {"$push":{"status": False, "msg":a.msg, "code": a.code}})
-				else:
-					print  p.msg
-					self.project_db.sources.update({"_id":item["_id"]}, {"$push":{"status": False, "msg":p.msg, "code": p.code}})
-				treated.append(item["url"])
-			else:
-				print "treated"
-		return treated
+						logging.info(p.msg)
+						self.project_db.sources.update({"_id":item["_id"]}, {"$push":{"status": False, "msg":p.msg, "code": p.code}})
+					self.treated.append(item["url"])
+			return self.treated
 
 
 
