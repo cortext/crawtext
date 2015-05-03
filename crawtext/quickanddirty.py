@@ -369,7 +369,7 @@ class Worker(object):
 		logging.info("Starting Crawl")
 		while self.project_db.queue.count() > 0:
 			for item in self.project_db.queue.find(timeout=False):
-				if item["url"] not in self.treated || self.project_db.logs.find_one({"url":item["url"]}) is None || self.project_db.results.find_one({"url":item["url"]}) is None:
+				if item["url"] not in self.treated || if self.project_db.logs.find_one({"url":item["url"]}) is None || if self.project_db.results.find_one({"url":item["url"]}) is None:
 					p = Page(item["url"], item["source_url"],item["depth"], item["date"], self.debug)
 					if p.download():
 						a = Article(p.url,p.html, p.source_url, p.depth,p.date, self.debug)
