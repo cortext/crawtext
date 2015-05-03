@@ -58,7 +58,9 @@ class Analyzor(object):
 
 	def show_task(self):
 		for k, v in self.task.items():
-			if type(v) == list:
+			if k == "date":
+				pass
+			elif type(v) == list:
 				print "*", k,":"
 				for item in v:
 					if type(item) == list:
