@@ -178,7 +178,7 @@ class Worker(object):
 
 	def __create_directory__(self):
 		try:
-			self.directory = getattr(self,directory)
+			self.directory = getattr(self,"directory")
 		except AttributeError:
 			self.directory = os.path.join(RESULT_PATH, self.project_name)
 			if not os.path.exists(self.directory):
