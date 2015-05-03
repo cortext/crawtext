@@ -131,7 +131,7 @@ if __name__ == "crawtext":
 			if item["url"] in an.results.urls:
 				an.queue.drop(item)
 			elif item["url"] in an.logs.urls:
-				an.queue.drop(item)
+				an.queue.remove(item)
 			else:
 				print "Treating", item["url"]
 				p = Page(item["url"], item["source_url"],item["depth"], item["date"], True)
