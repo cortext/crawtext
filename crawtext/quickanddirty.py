@@ -427,7 +427,7 @@ class Worker(object):
 		else:
 			for item in self.project_db.sources.find():
 				#logging.info("%s in process" %item["url"])
-				if item["url"] not in treated:
+				if item["url"] not in self.treated:
 					p = Page(item["url"], item["source_url"],item["depth"], self.date, self.debug)
 					if p.fetch():
 						logging.info("fetched")
