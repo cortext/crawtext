@@ -31,13 +31,11 @@ import hashlib
 from article import Article, Page
 from crawl import crawl
 import requests
-
+from logger import *
+ 
 ABSPATH = os.path.dirname(os.path.abspath(sys.argv[0]))
 RESULT_PATH = os.path.join(ABSPATH, "projects")
-import logging
-logger = logging.getLogger(__name__)
-FORMAT = "[%(filename)s:%(lineno)s - %(funcName)20s() ] %(message)s"
-logging.basicConfig(file="quickanddirty.log", format=FORMAT, level=logging.INFO)
+
 #search result nb from BING
 MAX_RESULTS = 1000
 #max depth
@@ -47,7 +45,7 @@ class Worker(object):
 	def __init__(self,user_input,debug=False):
 		'''Job main config'''
 		self.date = datetime.datetime.today()
-		
+
 		self.debug = debug
 		logging.info("Init worker")
 		self.name = user_input["<name>"]
@@ -72,13 +70,13 @@ class Worker(object):
 				sys.exit()
 			else:
 				logging.info("Invalid parameters")
-				sys.exit(__doc__)			
-		
-				
+				sys.exit(__doc__)
+
+
 	def __activate__(self):
 		'''if action : activate the job else show the current project'''
 		logging.info("Activate")
-		
+
 		if self.delete is True:
 			'''delete project'''
 			self.delete_project()
@@ -88,7 +86,7 @@ class Worker(object):
 			'''export projects'''
 			#return self.__export__()
 			logging.info("Export... ")
-			return self._export() 
+			return self._export()
 
 		elif self.report is True:
 			''' report project'''
@@ -98,11 +96,11 @@ class Worker(object):
 			else:
 				self.user = __author__
 				return self._report()
-			
+
 
 		elif self.start is True:
 			'''starting project'''
-			
+
 			self.__config_crawl__()
 			logging.info("Running... ")
 			return self.__run__()
@@ -119,7 +117,7 @@ class Worker(object):
 				setattr(self, re.sub("--|<|>", "", k), v)
 			elif v is None or v is False:
 				setattr(self, re.sub("--|<|>", "", k), False)
-			
+
 			else:
 				setattr(self, re.sub("--|<|>", "", k), v)
 				#setting all empty attributes to False
@@ -129,7 +127,7 @@ class Worker(object):
 		'''parsing user input for options and actions'''
 		# logging.info(__doc__)
 		self.__mapp__(user_input)
-		
+
 		if self.name is not False:
 			self.project_name = re.sub('[^0-9a-zA-Z]+', '_', self.name)
 		else:
@@ -159,7 +157,7 @@ class Worker(object):
 	def __config_crawl__(self):
 		#~ print self.user
 		#self.report = bool(self.user is not None)
-		
+
 		self.__mapp__(self.task)
 		if self.nb is False:
 			self.nb = MAX_RESULTS
@@ -235,10 +233,10 @@ class Worker(object):
 			if self.query is not False:
 				return "crawl"
 			else:
-				return "open_crawl"	
+				return "open_crawl"
 		else:
 			sys.exit("Invalid parameters please provide a query, an url or a file at least!")
-		
+
 	def __run__(self):
 		self.type = self.crawl_type()
 		print "Run!"
@@ -259,7 +257,7 @@ class Worker(object):
 		if self.file is not False:
 			self.insert_file(self.file)
 			logging.info("inserting url to seeds from file")
-			
+
 		if self.key is not False and self.query is not False:
 			bing_urls = self.get_bing_results()
 			if bing_urls is not False:
@@ -267,7 +265,7 @@ class Worker(object):
 					self.upsert_bing_source(url, i, len(bing_urls))
 				logging.info("inserting url to seeds from search")
 		return self.project_db.sources.count()
-		
+
 	def upsert_bing_source(self, url, i, total_bing_sources):
 		exists = self.project_db.sources.find_one({"url":url})
 		if exists is None:
@@ -292,7 +290,7 @@ class Worker(object):
 													"date": self.date
 													}})
 			return
-		
+
 	def upsert_url(self, url, source_url):
 		'''updating sources'''
 		exists = self.project_db.sources.find_one({"url":url})
@@ -315,8 +313,8 @@ class Worker(object):
 													}})
 
 			return False
-	
-		
+
+
 	def insert_file(self, filepath):
 		'''insert multiple url from a file to sources'''
 		file_path = "./"+self.file
@@ -327,9 +325,9 @@ class Worker(object):
 				self.upsert_url(url, "file")
 				nb.append(url)
 		return len(nb)
-				
-			
-			
+
+
+
 	def insert_bing(self):
 		'''insert url from bing search tp sources'''
 		if self.project_db.sources.count() == 0:
@@ -353,7 +351,7 @@ class Worker(object):
 		else:
 			logging.info(bing_sources)
 			return False
-	
+
 	def wild_crawl(self):
 		self.crawl(option=None)
 
@@ -413,10 +411,10 @@ class Worker(object):
 		for item in self.project_db.sources.find():
 			logging.info(item["url"])
 			if item["url"] not in treated:
-				
+
 				p = Page(item["url"], item["source_url"],item["depth"], self.date, self.debug)
 				if p.fetch():
-					
+
 					logging.info("fetched")
 					a = Article(p.url,p.html, p.source_url, p.depth,p.date, self.debug)
 					if a.extract():
@@ -492,11 +490,11 @@ class Worker(object):
 		step = 50
 		if self.nb is False:
 			self.nb = MAX_RESULTS
-			
+
 		if self.nb > MAX_RESULTS:
 			logging.warning("Maximum search results is %d results." %MAX_RESULTS)
 			self.nb = MAX_RESULTS
-			
+
 		if self.nb%50 != 0:
 			self.nb = self.nb - (self.nb%50)
 		web_results = []
@@ -511,28 +509,28 @@ class Worker(object):
 					'$top': step,
 					'Query' : '\'%s\'' %self.query,
 					},auth=(self.key, self.key)
-					)		
+					)
 			print r
 			logging.info(r.status_code)
-			
+
 			msg = r.raise_for_status()
-			if msg is None:	
+			if msg is None:
 				for e in r.json()['d']['results']:
 					print e["Url"]
 					web_results.append(e["Url"])
-				
+
 		if len(web_results) == 0:
 			return False
-			
+
 		return web_results
-		
+
 	def _report(self):
 		logging.info("Report")
 		user = self.user
 		self.__parse_task__()
 		self.__exists__()
 		print self.directory
-		
+
 
 		if self.user is None or self.user is False:
 			self.user = user
@@ -548,8 +546,8 @@ class Worker(object):
 		else:
 			self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"report: document", "status": False, "date": self.date, "msg": "Unable to create report document"}})
 			return False
-		
-	
+
+
 	def _export(self):
 		self.__parse_task__()
 		self.__exists__()
@@ -561,7 +559,7 @@ class Worker(object):
 		else:
 			self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"export", "status": False, "date": self.date, "msg": "Error while exporting"}})
 			return False
-		
+
 
 	def delete_project(self):
 		if self.__exists__():
