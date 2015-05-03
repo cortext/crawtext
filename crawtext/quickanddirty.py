@@ -369,37 +369,39 @@ class Worker(object):
 		logging.info("Starting Crawl")
 		while self.project_db.queue.count() > 0:
 			for item in self.project_db.queue.find(timeout=False):
-				if item["url"] not in self.treated || if self.project_db.logs.find_one({"url":item["url"]}) is None || if self.project_db.results.find_one({"url":item["url"]}) is None:
-					p = Page(item["url"], item["source_url"],item["depth"], item["date"], self.debug)
-					if p.download():
-						a = Article(p.url,p.html, p.source_url, p.depth,p.date, self.debug)
+				if item["url"] not in self.treated:
+					if self.project_db.logs.find_one({"url":item["url"]}) is None:
+						if self.project_db.results.find_one({"url":item["url"]}) is None:
+							p = Page(item["url"], item["source_url"],item["depth"], item["date"], self.debug)
+							if p.download():
+								a = Article(p.url,p.html, p.source_url, p.depth,p.date, self.debug)
 
-						if a.extract():
-							if option == "filter":
-								if a.filter(self.query, self.directory):
-									if a.check_depth(self.depth):
-										a.fetch_links()
-									if len(a.links) > 0:
-										for url, domain in zip(a.links, a.domains):
-											print url, domain
-											self.project_db.queue.insert({"url": url, "source_url": item['url'], "depth": int(item['depth'])+1, "domain": domain, "date": a.date})
-									if self.debug: logging.info("\t-inserted %d nexts url" %len(a.links))
-									self.project_db.insert_result(a.export())
-									print "Ok"
+								if a.extract():
+									if option == "filter":
+										if a.filter(self.query, self.directory):
+											if a.check_depth(self.depth):
+												a.fetch_links()
+											if len(a.links) > 0:
+												for url, domain in zip(a.links, a.domains):
+													print url, domain
+													self.project_db.queue.insert({"url": url, "source_url": item['url'], "depth": int(item['depth'])+1, "domain": domain, "date": a.date})
+											if self.debug: logging.info("\t-inserted %d nexts url" %len(a.links))
+											self.project_db.insert_result(a.export())
+											print "Ok"
+									else:
+										if a.check_depth(self.depth):
+											a.fetch_links()
+										if len(a.links) > 0:
+											for url, domain in zip(a.links, a.domains):
+												print url, domain
+												self.project_db.queue.insert({"url": url, "source_url": item['url'], "depth": int(item['depth'])+1, "domain": domain, "date": a.date})
+										if self.debug: logging.info("\t-inserted %d nexts url" %len(a.links))
+										self.project_db.insert_result(a.export())
+								else:
+									self.project_db.insert_log(a.log())
 							else:
-								if a.check_depth(self.depth):
-									a.fetch_links()
-								if len(a.links) > 0:
-									for url, domain in zip(a.links, a.domains):
-										print url, domain
-										self.project_db.queue.insert({"url": url, "source_url": item['url'], "depth": int(item['depth'])+1, "domain": domain, "date": a.date})
-								if self.debug: logging.info("\t-inserted %d nexts url" %len(a.links))
-								self.project_db.insert_result(a.export())
-						else:
-							self.project_db.insert_log(a.log())
-					else:
-						self.project_db.insert_log(p.log())
-					treated.append(item["url"])
+								self.project_db.insert_log(p.log())
+						self.treated.append(item["url"])
 				self.project_db.queue.remove({"url":item["url"]})
 				if self.project_db.queue.count() == 0:
 					break
