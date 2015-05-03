@@ -423,6 +423,7 @@ class Worker(object):
 		self.treated = []
 		if reload is False:
 			self.treated = self.project_db.sources.distinct("url")+self.project_db.logs.distinct("url")+self.project_db.results.distinct("url")
+			print len(self.treated)
 			return self.treated
 		else:
 			for item in self.project_db.sources.find():
@@ -557,10 +558,10 @@ class Worker(object):
 		logging.info("Export")
 		from export import generate
 		if generate(self.name, self.data, self.format, self.directory):
-			self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"export", "status": True, "date":self.date, "msg": "Exported"}})
+			self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"export", "status": True, "date":dt.now(), "msg": "Exported"}})
 			return True
 		else:
-			self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"export", "status": False, "date": self.date, "msg": "Error while exporting"}})
+			self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"export", "status": False, "date": dt.now(), "msg": "Error while exporting"}})
 			return False
 
 
