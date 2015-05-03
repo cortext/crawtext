@@ -140,7 +140,8 @@ class Worker(object):
 		elif self.restart is True:
 			'''restart project with no update of sources'''
 			self.__config_crawl__()
-			raise NotImplementedError
+			logging.info("Restart crawl job")
+			return self.__run__()
 
 		elif self.start is True:
 			'''starting project'''
