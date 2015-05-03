@@ -154,6 +154,7 @@ if __name__ == "crawtext":
 								a.msg = "Depth exceed"
 								an.logs.insert(a.log())
 						else:
+							an.logs.insert(a.log())
 					else:
 						print "Error Extracting"
 						an.logs.insert(a.log())
