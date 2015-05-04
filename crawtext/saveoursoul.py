@@ -76,9 +76,6 @@ class Analyzor(object):
 
 	def show_project(self):
 		self.project_db = Database(self.name)
-		self.results1 = self.project_db.use_coll('results_depth1')
-
-		self.results2 = self.project_db.use_coll('results_depth2')
 		self.results = self.project_db.use_coll('results')
 		self.sources = self.project_db.use_coll('sources')
 		self.logs = self.project_db.use_coll('logs')
@@ -103,7 +100,7 @@ class Analyzor(object):
 
 		#LOGS
 		#self.logs.nb = self.logs.count()
-		#self.logs.urls = self.logs.distinct("url")
+		self.logs.urls = self.logs.distinct("url")
 		#self.logs.unique = len(self.logs.urls)
 
 		#self.logs.errors = [self.logs.find_one({"url":url}) for url in self.logs.urls]
@@ -141,6 +138,64 @@ class Analyzor(object):
 		elif (self.query, self.key) == (True, True):
 			self.crawl_type = "targeted_crawl"
 			return self
+	def bing_search(self):
+		web_results = []
+		for i in range(0,self.nb, 50):
+
+			#~ try:
+			r = requests.get('https://api.datamarket.azure.com/Bing/Search/v1/Web',
+				params={'$format' : 'json',
+					'$skip' : i,
+					'$top': step,
+					'Query' : '\'%s\'' %self.query,
+					},auth=(self.key, self.key)
+					)
+
+			#logging.info(r.status_code)
+
+			msg = r.raise_for_status()
+			if msg is None:
+				for e in r.json()['d']['results']:
+					print e["Url"]
+					web_results.append(e["Url"])
+
+		if len(web_results) == 0:
+			return False
+		return web_results
+	def get_seeds(self):
+		if self.query is False:
+			logging.info("No query provided")
+			sys.exit(1)
+		elif self.key is False:
+			logging.info("No key provided")
+			sys.exit(1)
+
+		elif self.query is not False and self.key is not False:
+			if self.nb is False:
+				self.nb = MAX_RESULTS
+
+			if self.nb > MAX_RESULTS:
+				logging.warning("Maximum search results is %d results." %MAX_RESULTS)
+				self.nb = MAX_RESULTS
+
+			if self.nb%50 != 0:
+				self.nb = self.nb - (self.nb%50)
+
+			bing_sources =  self.bing_search()
+			if bing_sources is not False:
+				total_bing_sources = len(bing_sources)
+				for i,url in enumerate(bing_sources):
+					self.sources.insert({"url":url,
+													"source_url": "search",
+													"depth": 0,
+													"nb":i,
+													"total":total_bing_sources,
+													"msg":["inserted"],
+													"code": [100],
+													"status": [True]})
+				logging.info("%i urls from BING search inserted")
+
+
 	def crawler(self):
 		self.queue.list = self.sources.list
 		while self.queue.nb > 0:
