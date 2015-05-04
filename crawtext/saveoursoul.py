@@ -108,7 +108,10 @@ class Analyzor(object):
 		#self.queue.nb = self.queue.count()
 		self.queue.urls = self.queue.distinct("url")
 		#self.queue.unique = len(self.queue.urls)
-		self.queue.max_depth = max([self.queue.find_one({"url":url})["depth"] for url in self.queue.urls])
+		# try:
+		# 	self.queue.max_depth = max([self.queue.find_one({"url":url})["depth"] for url in self.queue.urls])
+		# except ValueError:
+		# 	pass
 		#self.queue.list = [self.queue.find_one({"url":url}) for url in self.queue.urls]
 		#CRAWL INFOS
 		self.crawl = self.project_db.use_coll('info')
