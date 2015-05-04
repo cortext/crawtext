@@ -76,98 +76,125 @@ class Analyzor(object):
 
 	def show_project(self):
 		self.project_db = Database(self.name)
+		self.results1 = self.project_db.use_coll('results_depth1')
+
+		self.results2 = self.project_db.use_coll('results_depth2')
 		self.results = self.project_db.use_coll('results')
 		self.sources = self.project_db.use_coll('sources')
 		self.logs = self.project_db.use_coll('logs')
 		self.queue = self.project_db.use_coll('queue')
-
+		print "Mapping project DB"
 		#RESULTS
 		self.results.nb = self.results.count()
 		self.results.urls = self.results.distinct("url")
+
 		# self.results.unique = len(self.results.urls)
-		self.results.list = [self.results.find_one({"url":url}) for url in self.results.urls]
+		#self.results.list = [self.results.find_one({"url":url}) for url in self.results.urls]
 
 		#SOURCES
-		self.sources.nb = self.sources.count()
+		#self.sources.nb = self.sources.count()
 		self.sources.urls = self.sources.distinct("url")
-		self.sources.unique = len(self.sources.urls)
-		self.sources.active_urls = [url for url in self.sources.urls if self.sources.find_one({"url":url})["status"][-1] is True]
-		self.sources.inactive_urls = [url for url in self.sources.urls if self.sources.find_one({"url":url})["status"][-1] is False]
-		self.sources.errors = [self.sources.find_one({"url":url})["msg"][-1] for url in self.sources.inactive_urls]
-		self.sources.list = [self.sources.find_one({"url":url}) for url in self.sources.urls]
+		#self.sources.unique = len(self.sources.urls)
+		#self.sources.active_urls = [url for url in self.sources.urls if self.sources.find_one({"url":url})["status"][-1] is True]
+		#self.sources.inactive_urls = [url for url in self.sources.urls if self.sources.find_one({"url":url})["status"][-1] is False]
+		#self.sources.errors = [self.sources.find_one({"url":url})["msg"][-1] for url in self.sources.inactive_urls]
+		self.sources.list = [self.sources.find_one({"url":url}) for url in self.sources.active_urls]
 
 
 		#LOGS
-		self.logs.nb = self.logs.count()
-		self.logs.urls = self.logs.distinct("url")
-		self.logs.unique = len(self.logs.urls)
+		#self.logs.nb = self.logs.count()
+		#self.logs.urls = self.logs.distinct("url")
+		#self.logs.unique = len(self.logs.urls)
 
-		self.logs.errors = [self.logs.find_one({"url":url}) for url in self.logs.urls]
+		#self.logs.errors = [self.logs.find_one({"url":url}) for url in self.logs.urls]
 		#QUEUE
-		self.queue.nb = self.queue.count()
+		#self.queue.nb = self.queue.count()
 		self.queue.urls = self.queue.distinct("url")
 		#self.queue.unique = len(self.queue.urls)
-		#self.queue.max_depth = max([self.queue.find_one({"url":url})["depth"] for url in self.queue.urls])
-		self.queue.list = [self.queue.find_one({"url":url}) for url in self.queue.urls]
+		self.queue.max_depth = max([self.queue.find_one({"url":url})["depth"] for url in self.queue.urls])
+		#self.queue.list = [self.queue.find_one({"url":url}) for url in self.queue.urls]
 		#CRAWL INFOS
 		self.crawl = self.project_db.use_coll('info')
-		self.crawl.nb = len(self.sources.find_one({"url":self.sources.urls[-1]})["status"])
-		# self.crawl.dates = [date[0].strftime("%d-%m-%Y@%H:%M:%S") for date in self.sources.find_one({"url":self.sources.urls[-1]})["date"]]
-		# self.crawl.last_date = self.crawl.dates[-1]
-		# self.crawl.first_date = self.crawl.dates[0]
-		#self.crawl.max_depth = max([self.results.find_one({"url":url})["depth"] for url in self.results.urls])
+		#self.crawl.nb = len(self.sources.find_one({"url":self.sources.urls[-1]})["status"])
+		#self.crawl.dates = [date[0].strftime("%d-%m-%Y@%H:%M:%S") for date in self.sources.find_one({"url":self.sources.urls[-1]})["date"]]
+		#self.crawl.last_date = self.crawl.dates[-1]
+		#self.crawl.first_date = self.crawl.dates[0]
+		self.crawl.max_depth = max([self.results.find_one({"url":url})["depth"] for url in self.results.urls])
+
+		for url in self.results.urls:
+			item = self.results.find_one({"url":url})
+			if item["depth"] <=2:
+				self.results_max_depth2.append(item["depth"])
+
 		return self
-	def crawl(self):
+
+	def set_crawler(self):
+		if (self.query, self.key, self.url, self.file) == (False, False, False, False):
+			logging.info("Invalid parameters task should have at least one seed (file, url or API key for search)")
+			return sys.exit(1)
+		elif (self.query, self.key, self.url) == (False, False, True):
+			self.crawl_type = "open_crawl"
+			return self
+		elif (self.query, self.key, self.file) == (False, False, True):
+			self.crawl_type = "open_crawl"
+			return self
+		elif (self.query, self.key) == (True, True):
+			self.crawl_type = "targeted_crawl"
+			return self
+	def crawler(self):
+		self.queue.list = self.sources.list
+		while self.queue.nb > 0:
+			for item in self.queue.list:
+				print item
+				if item["url"] in self.results.urls:
+					self.queue.remove(item)
+				elif item["url"] in self.logs.urls:
+					self.queue.remove(item)
+				else:
+					print "Treating", item["url"], item["depth"]
+					p = Page(item["url"], item["source_url"],item["depth"], item["date"], True)
+					if p.download():
+						a = Article(p.url,p.html, p.source_url, p.depth,p.date, True)
+						if a.extract():
+							#if option == "filter":
+							if a.filter(self.query, self.directory):
+								if a.check_depth(a.depth):
+									a.fetch_links()
+									if len(a.links) > 0:
+										for url, domain in zip(a.links, a.domains):
+											if url not in self.queue.urls:
+												self.queue.insert({"url": url, "source_url": item['url'], "depth": int(item['depth'])+1, "domain": domain, "date": a.date})
+												if self.debug: logging.info("\t-inserted %d nexts url" %len(a.links))
+											self.results.insert(a.export())
+								else:
+									a.msg = "Depth exceed"
+									self.logs.insert(a.log())
+							else:
+								self.logs.insert(a.log())
+						else:
+							print "Error Extracting"
+							self.logs.insert(a.log())
+					else:
+						print "Error Downloading"
+						self.logs.insert(p.log())
+				print "Removing"
+				self.queue.remove(item)
+				print self.queue.nb
+			if self.queue.nb == 0:
+				break
+			if self.results.count() > 200000:
+				self.queue.drop()
+				break
 
 
 if __name__ == "crawtext":
-	print "Running"
 	an = Analyzor(docopt(__doc__)["<name>"], True)
-	if an.active:
-		an.show_task()
-		an.show_project()
+	print docopt(__doc__)["<name>"]
+	# if an.active:
+	# 	an.show_project()
+	an.show_project()
+	an.crawl()
 
-	else:
-		sys.exit()
-	while an.queue.nb > 0:
-		for item in an.queue.list:
-			print item
-			if item["url"] in an.results.urls:
-				an.queue.remove(item)
-			elif item["url"] in an.logs.urls:
-				an.queue.remove(item)
-			else:
-				print "Treating", item["url"]
-				p = Page(item["url"], item["source_url"],item["depth"], item["date"], True)
-				if p.download():
-					a = Article(p.url,p.html, p.source_url, p.depth,p.date, True)
-					if a.extract():
-						#if option == "filter":
-						if a.filter(an.query, an.directory):
-							if a.check_depth(a.depth):
-								a.fetch_links()
-								if len(a.links) > 0:
-									for url, domain in zip(a.links, a.domains):
-										if url not in an.queue.urls:
-											an.queue.insert({"url": url, "source_url": item['url'], "depth": int(item['depth'])+1, "domain": domain, "date": a.date})
-											if an.debug: logging.info("\t-inserted %d nexts url" %len(a.links))
-										an.results.insert(a.export())
-							else:
-								a.msg = "Depth exceed"
-								an.logs.insert(a.log())
-						else:
-							an.logs.insert(a.log())
-					else:
-						print "Error Extracting"
-						an.logs.insert(a.log())
-				else:
-					print "Error Downloading"
-					an.logs.insert(p.log())
-			print "Removing"
-			an.queue.remove(item)
-			print an.queue.nb
-		if an.queue.nb == 0:
-			break
-		if an.results.count() > 200000:
-			an.queue.drop()
-			break
+	# print an.crawl.max_depth
+	# print an.queue.max_depth
+	sys.exit()
