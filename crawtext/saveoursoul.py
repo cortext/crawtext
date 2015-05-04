@@ -119,7 +119,7 @@ class Analyzor(object):
 		#self.crawl.dates = [date[0].strftime("%d-%m-%Y@%H:%M:%S") for date in self.sources.find_one({"url":self.sources.urls[-1]})["date"]]
 		#self.crawl.last_date = self.crawl.dates[-1]
 		#self.crawl.first_date = self.crawl.dates[0]
-		self.crawl.max_depth = max([self.results.find_one({"url":url})["depth"] for url in self.results.urls])
+		#self.crawl.max_depth = max([self.results.find_one({"url":url})["depth"] for url in self.results.urls])
 
 		for url in self.results.urls:
 			item = self.results.find_one({"url":url})
