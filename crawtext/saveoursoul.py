@@ -58,9 +58,9 @@ class Crawtext(object):
 		else:
 			self.active = True
 			self.load_ui(user_input)
+
 			delattr(self, "task_db")
 			delattr(self, "coll")
-			self.load_config()
 			self.dispatch()
 
 
@@ -92,7 +92,6 @@ class Crawtext(object):
 	def load_ui(self, ui):
 		for k, v in ui.items():
 			k = re.sub("--|<|>", "", k)
-			print k
 			if k == "debug" and self.debug is True:
 				#forcing to consider first the debug of the program
 				pass
@@ -170,18 +169,26 @@ class Crawtext(object):
 		return self
 
 	def show_stats(self):
-		print "********\n"
-		print "SOURCES:"
-		print "- Nb Sources indexées: %i" %self.sources.unique
-		print "\t- pertinentes: %i" %self.sources.active_urls.nb
-		print "\t- non-pertinentes: %i" %self.sources.inactive_urls.nb
-		print "RESULTS:"
-		print "- Nb Pages indexées: %i" %self.results.unique
-		print "ERRORS:"
-		print "- Nb Pages non-indexées: %i" %self.logs.unique
-		print "PROCESSING"
-		print "- Nb Pages en cours de traitement: %i" %self.queue.unique
-		return self
+		try:
+			print self.sources
+			print "********\n"
+			print "SOURCES:"
+			print "- Nb Sources indexées: %i" %self.sources.unique
+			print "\t- pertinentes: %i" %self.sources.active_urls.nb
+			print "\t- non-pertinentes: %i" %self.sources.inactive_urls.nb
+			print "RESULTS:"
+			print "- Nb Pages indexées: %i" %self.results.unique
+			print "ERRORS:"
+			print "- Nb Pages non-indexées: %i" %self.logs.unique
+			print "PROCESSING"
+			print "- Nb Pages en cours de traitement: %i" %self.queue.unique
+			print "********\n"
+			return self
+		except AttributeError:
+			print "********\n"
+			print "No data loaded into project"
+			print "********\n"
+			return self
 
 	def show_project(self):
 		self.project_db = Database(self.name)
