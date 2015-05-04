@@ -46,20 +46,23 @@ class Crawtext(object):
 	def __init__(self, name, user_input, debug):
 		self.name = name
 		self.debug = debug
+
+		self.project_path = os.path.join(RESULT_PATH, name)
+
 		self.task_db = TaskDB()
 		self.coll = self.task_db.coll
 		self.task = self.coll.find_one({"name":name})
-		self.project_path = os.path.join(RESULT_PATH, name)
 		if self.task is None:
 			self.active = False
 			sys.exit("No configuration found for project %s" %self.name)
 		else:
 			self.active = True
-
+			self.load_ui(user_input)
 			delattr(self, "task_db")
 			delattr(self, "coll")
-			self.load_ui(user_input)
+			self.load_config()
 			self.dispatch()
+
 
 
 	def dispatch(self):
@@ -76,7 +79,7 @@ class Crawtext(object):
 			print "report"
 			raise NotImplementedError
 		else:
-
+			self.load_config()
 			if (self.url ^ self.file ^ self.key) is False:
 				self.show_task()
 				self.show_stats()
@@ -416,7 +419,7 @@ class Crawtext(object):
 		return self.show_stats()
 
 if __name__ == "crawtext":
-	c = Crawtext(docopt(__doc__)["<name>"], True)
+	c = Crawtext(docopt(__doc__)["<name>"],docopt(__doc__), True)
 
 	# if c.active:
 	# 	c.show_task()
