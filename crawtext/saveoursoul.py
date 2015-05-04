@@ -3,7 +3,7 @@
 
 __name__ = "crawtext"
 __script_name__ = "saveoursoul"
-__version__ = "4.3.1"
+__version__ = "4.3.2"
 __author__= "4barbes@gmail.com"
 __doc__ = '''Crawtext.
 
@@ -90,19 +90,19 @@ class Analyzor(object):
 		#SOURCES
 		self.sources.nb = self.sources.count()
 		self.sources.urls = self.sources.distinct("url")
-		# self.sources.unique = len(self.sources.urls)
-		# self.sources.active_urls = [url for url in self.sources.urls if self.sources.find_one({"url":url})["status"][-1] is True]
-		# self.sources.inactive_urls = [url for url in self.sources.urls if self.sources.find_one({"url":url})["status"][-1] is False]
-		# self.sources.errors = [self.sources.find_one({"url":url})["msg"][-1] for url in self.sources.inactive_urls]
+		self.sources.unique = len(self.sources.urls)
+		self.sources.active_urls = [url for url in self.sources.urls if self.sources.find_one({"url":url})["status"][-1] is True]
+		self.sources.inactive_urls = [url for url in self.sources.urls if self.sources.find_one({"url":url})["status"][-1] is False]
+		self.sources.errors = [self.sources.find_one({"url":url})["msg"][-1] for url in self.sources.inactive_urls]
 		self.sources.list = [self.sources.find_one({"url":url}) for url in self.sources.urls]
 
 
 		#LOGS
 		self.logs.nb = self.logs.count()
 		self.logs.urls = self.logs.distinct("url")
-		#self.logs.unique = len(self.logs.urls)
+		self.logs.unique = len(self.logs.urls)
 
-		# self.logs.errors = [self.logs.find_one({"url":url}) for url in self.logs.unique]
+		self.logs.errors = [self.logs.find_one({"url":url}) for url in self.logs.urls]
 		#QUEUE
 		self.queue.nb = self.queue.count()
 		self.queue.urls = self.queue.distinct("url")
@@ -117,6 +117,8 @@ class Analyzor(object):
 		# self.crawl.first_date = self.crawl.dates[0]
 		#self.crawl.max_depth = max([self.results.find_one({"url":url})["depth"] for url in self.results.urls])
 		return self
+	def crawl(self):
+
 
 if __name__ == "crawtext":
 	print "Running"
@@ -124,7 +126,7 @@ if __name__ == "crawtext":
 	if an.active:
 		an.show_task()
 		an.show_project()
-		print "RRI_11"
+
 	else:
 		sys.exit()
 	while an.queue.nb > 0:
