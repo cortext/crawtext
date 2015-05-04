@@ -95,7 +95,7 @@ class Analyzor(object):
 		#self.sources.nb = self.sources.count()
 		self.sources.urls = self.sources.distinct("url")
 		#self.sources.unique = len(self.sources.urls)
-		#self.sources.active_urls = [url for url in self.sources.urls if self.sources.find_one({"url":url})["status"][-1] is True]
+		self.sources.active_urls = [url for url in self.sources.urls if self.sources.find_one({"url":url})["status"][-1] is True]
 		#self.sources.inactive_urls = [url for url in self.sources.urls if self.sources.find_one({"url":url})["status"][-1] is False]
 		#self.sources.errors = [self.sources.find_one({"url":url})["msg"][-1] for url in self.sources.inactive_urls]
 		self.sources.list = [self.sources.find_one({"url":url}) for url in self.sources.active_urls]
