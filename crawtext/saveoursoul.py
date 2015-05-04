@@ -251,7 +251,7 @@ if __name__ == "crawtext":
 	# if an.active:
 	# 	an.show_project()
 	an.show_project()
-	an.crawl()
+	an.crawler()
 
 	# print an.crawl.max_depth
 	# print an.queue.max_depth
