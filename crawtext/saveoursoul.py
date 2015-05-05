@@ -190,16 +190,16 @@ class Crawtext(object):
 
 	def filter_last_items(self, field="status", filter="True"):
 		filter_active = [
-		  {"$unwind": "$+status"},
+		  {"$unwind": "$"+filter},
 		  {"$group": {
 		    "_id": '$_id',
 		    "url" : { "$first": '$url' },
 		    "source_url" : { "$first": '$source_url' },
 		    "depth" : { "$first": '$depth' },
-		   	"status" :  { "$last": '$status' },
+		   	field :  { "$last": "$"+field },
 		    "date" :  { "$last": '$date' },
 		    }},
-		  {"$match": { 'status': "True" }},
+		  {"$match": { field: filter }},
 		  ]
 
 		return filter_active
@@ -222,46 +222,13 @@ class Crawtext(object):
 		self.sources.nb = self.sources.count()
 		self.sources.urls = self.sources.distinct("url")
 		self.sources.unique = len(self.sources.urls)
-		#self.sources.list = filter_last_items(self, field="status", filter="True")
+		self.sources.list = [self.sources.find_one({"url":url}) for url in self.sources.urls]
 
-		#filter_active = self.filter_last_items(field="status", filter="True")
-		'''
-		filter = [	{"$unwind": "$status"},
-		  			{"$group": {
-						    "_id": '$_id',
-						    "url" : { "$first": '$url' },
-						    "source_url" : { "$first": '$source_url' },
-						    "depth" : { "$first": '$depth' },
-						    "status" :  { "$last": '$status' },
-						    "date" :  { "$last": '$date' },
-						    }},
-					{"$match": { "status": "False" }},
-					{"$sort": SON([("_id", -1)])}
-		'''
-		filter = [
-		  {"$unwind": "$status"},
-		  {"$group": {
-		    "_id": '$_id',
-		    "url" : { "$first": '$url' },
-		    "source_url" : { "$first": '$source_url' },
-		    "depth" : { "$first": '$depth' },
-		    "status" :  { "$last": '$status' },
-		    "date" :  { "$last": '$date' },
-		    }},
-		  {"$match": { "status": "False" }},
-		  ]
-
-		self.sources.list = self.sources.aggregate(filter)
-		print self.sources.list['result']
-		#print self.sources.list
-
-		self.sources.active_nb = len(self.sources.list)
-		filter_inactive = self.filter_last_items(field="status", filter="False")
-		self.sources.inactive = list(self.sources.aggregate(filter_inactive))
+		self.sources.active = [n for n in self.sources.list if n["status"][-1] is True]
+		self.sources.inactive = [n for n in self.sources.list if n["status"][-1] is False]
+		self.sources.active_nb = len(self.sources.active)
 		self.sources.inactive_nb = len(self.sources.inactive)
-
-
-
+		
 		#LOGS
 		self.logs.nb = self.logs.count()
 		self.logs.urls = self.logs.distinct("url")
