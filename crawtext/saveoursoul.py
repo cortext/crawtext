@@ -223,12 +223,15 @@ class Crawtext(object):
 		self.sources.urls = self.sources.distinct("url")
 		self.sources.unique = len(self.sources.urls)
 		self.sources.list = [self.sources.find_one({"url":url}) for url in self.sources.urls]
+		self.sources.active = self.project_db.use_coll('info')
+		self.sources.active.list = [n for n in self.sources.list if n["status"][-1] is True]
 
-		self.sources.active = [n for n in self.sources.list if n["status"][-1] is True]
-		self.sources.inactive = [n for n in self.sources.list if n["status"][-1] is False]
-		self.sources.active_nb = len(self.sources.active)
-		self.sources.inactive_nb = len(self.sources.inactive)
-		
+		self.sources.active.nb = len(self.sources.active.list)
+		self.sources.inactive = self.project_db.use_coll('info')
+		self.sources.inactive.list = [n for n in self.sources.list if n["status"][-1] is False]
+		self.sources.inactive.nb = len(self.sources.inactive.list)
+
+		# self.sources.list = self.sources.active.list
 		#LOGS
 		self.logs.nb = self.logs.count()
 		self.logs.urls = self.logs.distinct("url")
@@ -244,7 +247,7 @@ class Crawtext(object):
 		#print self.queue.dates
 		#CRAWL INFOS
 		self.crawl = self.project_db.use_coll('info')
-		self.crawl.nb = self.queue.unique+self.logs.unique+self.sources.active_nb
+		self.crawl.nb = self.queue.unique+self.logs.unique+self.sources.active.nb
 		return self
 
 	def set_crawler(self):
@@ -376,7 +379,7 @@ class Crawtext(object):
 		return self
 
 	def crawler(self, filter="off"):
-		self.queue.list = self.sources.list
+		self.queue.list = self.sources.active.list
 		while self.queue.nb > 0:
 			for item in self.queue.list:
 				print item
