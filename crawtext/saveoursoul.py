@@ -12,7 +12,7 @@ A simple crawler in command line for targeted websearch.
 
 Usage:
 	crawtext.py (<name>) [--debug]
-	crawtext.py (<name>) --query=<query> --key=<key> [--nb=<nb>] [--lang=<lang>] [--user=<email>] [--depth=<depth>] [--debug] [--repeat=(day|week|month)]
+	crawtext.py (<name>) [--query=<query>] [--key=<key>] [--nb=<nb>] [--lang=<lang>] [--user=<email>] [--depth=<depth>] [--debug] [--repeat=(day|week|month)]
 	crawtext.py (<name>) (--url=<url>| --file=<file>) [--query=<query>] [--nb=<nb>] [--lang=<lang>] [--user=<email>] [--depth=<depth>] [--debug]
 	crawtext.py (<name>) delete [--debug]
 	crawtext.py (<name>) start [--debug]
@@ -21,6 +21,7 @@ Usage:
 	crawtext.py (<name>) report [--user=<email>] [--format=<format>] [--debug]
 	crawtext.py (<name>) stop [--debug]
 '''
+
 import os, sys, re
 import copy
 from docopt import docopt
@@ -35,6 +36,7 @@ from crawl import crawl
 import requests
 from logger import *
 from bson.son import SON
+import pickle
 
 ABSPATH = os.path.dirname(os.path.abspath(sys.argv[0]))
 RESULT_PATH = os.path.join(ABSPATH, "projects")
@@ -48,41 +50,61 @@ class Crawtext(object):
 		self.name = name
 		self.debug = debug
 		self.project_path = os.path.join(RESULT_PATH, name)
+		self.task_db = TaskDB()
+		self.coll = self.task_db.coll
+		self.task = self.coll.find_one({"name":self.name})
 		if self.config_task(user_input) is True:
-			print "COnfig from ui"
+			logging.info("Configuring the projet")
 			self.load_ui(user_input)
-			if self.task_exists():
-				print "Update"
-				self.coll.remove({"name":name})
+			if self.task is not None:
+				logging.info("Update")
+				self.update()
 			else:
-				print "create"
-			new_task = self.__dict__
-			del new_task['coll']
-			del new_task['task_db']
-			self.coll.insert(new_task)
-			self.show_project()
+				logging.info("Update")
+				self.create()
+				self.task = self.coll.find_one({"name":self.name})
+
+			#self.show_task()
+			sys.exit()
+		elif self.task is not None:
+			print self.task.items()
+			self.load_ui(user_input)
+			self.dispatch()
 			sys.exit()
 		else:
-			if self.task_exists():
-				self.dispatch()
-				sys.exit()
-			else:
-				sys.exit("No configuration found for project")
+			sys.exit("No configuration found for project")
 
 	def config_task(self,ui):
-		if len([v for v in ui.values() if v != None and v != False]) > 1:
+		ui_cmd = [v for v in ui.values() if v != None and v != False]
+		if len(ui_cmd) > 2:
 			return True
 		return False
 
-	def task_exists(self):
-		print "task exists"
-		self.task_db = TaskDB()
-		self.coll = self.task_db.coll
-		print self.coll
-		self.task = self.coll.find_one({"name":self.name})
-		if self.task is None:
-		 	return False
-		return True
+	def create_new_task(self):
+		new_task = copy.copy(self.__dict__)
+		for k,v in new_task.items():
+			if v is None and v is False:
+				del new_task[k]
+		del new_task['coll']
+		del new_task['task_db']
+		del new_task['task']
+		return new_task
+
+	def create(self):
+		new_task = copy.copy(self.__dict__)
+		del new_task['name']
+		return self.coll.insert({"name":self.name}, new_task)
+
+	def update(self):
+		new_task = copy.copy(self.__dict__)
+		for k,v in new_task.items():
+			if v is None and v is False:
+				del new_task[k]
+		del new_task['coll']
+		del new_task['task_db']
+		del new_task['task']
+		return self.coll.update({"name":self.task["name"]}, new_task)
+
 
 	def dispatch(self):
 		if self.stop is True:
@@ -111,7 +133,6 @@ class Crawtext(object):
 
 
 	def load_ui(self, ui):
-
 		for k, v in ui.items():
 			k = re.sub("--|<|>", "", k)
 			if k == "debug" and self.debug is True:
@@ -176,6 +197,7 @@ class Crawtext(object):
 			return self.set_crawler()
 
 	def show_task(self):
+		logging.info("Show current parameters stored for task")
 		for k, v in self.__dict__.items():
 			if type(v) == list:
 				print "*", k,":"
