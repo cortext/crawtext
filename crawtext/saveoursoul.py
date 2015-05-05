@@ -47,12 +47,42 @@ class Crawtext(object):
 	def __init__(self, name, user_input, debug):
 		self.name = name
 		self.debug = debug
-
 		self.project_path = os.path.join(RESULT_PATH, name)
-		self.load_ui(user_input)
+		if self.config_task(user_input) is True:
+			print "COnfig from ui"
+			self.load_ui(user_input)
+			if self.task_exists():
+				print "Update"
+				self.coll.remove({"name":name})
+			else:
+				print "create"
+			new_task = self.__dict__
+			del new_task['coll']
+			del new_task['task_db']
+			self.coll.insert(new_task)
+			self.show_project()
+			sys.exit()
+		else:
+			if self.task_exists():
+				self.dispatch()
+				sys.exit()
+			else:
+				sys.exit("No configuration found for project")
 
+	def config_task(self,ui):
+		if len([v for v in ui.values() if v != None and v != False]) > 1:
+			return True
+		return False
 
-
+	def task_exists(self):
+		print "task exists"
+		self.task_db = TaskDB()
+		self.coll = self.task_db.coll
+		print self.coll
+		self.task = self.coll.find_one({"name":self.name})
+		if self.task is None:
+		 	return False
+		return True
 
 	def dispatch(self):
 		if self.stop is True:
@@ -67,21 +97,21 @@ class Crawtext(object):
 		elif self.report is True:
 			print "report"
 			raise NotImplementedError
-		else:
-			self.load_config()
+		elif self.load_config() is not False:
 
-
-			if (self.url, self.file, self.key) != (False, False, False):
+			#if (self.url, self.file, self.key) != (False, False, False):
 			#if (self.url != False)|(if self.file != False) | if (self.key != False):
 				self.start_crawl()
 				return sys.exit()
-			else:
-				self.show_task()
-				self.show_stats()
-				return sys.exit()
+		else:
+			self.show_task()
+			self.show_stats()
+			return sys.exit()
+
 
 
 	def load_ui(self, ui):
+
 		for k, v in ui.items():
 			k = re.sub("--|<|>", "", k)
 			if k == "debug" and self.debug is True:
@@ -105,42 +135,35 @@ class Crawtext(object):
 					setattr(self, k, False)
 				else:
 					setattr(self, k, v)
-		return self.dispatch()
+		return bool(len([k for k, v in ui.items() if v is not None and v is not False])> 1)
 
 
 	def load_config(self):
-		self.task_db = TaskDB()
-		self.coll = self.task_db.coll
-		self.task = self.coll.find_one({"name":self.name})
-		if self.task is None:
-			self.active = False
-			sys.exit("No configuration found for project %s" %self.name)
-		else:
-			self.active = True
-			for k, v in self.task.items():
-				if k == "debug" and self.debug is True:
-					#forcing to consider first the debug of the program
-					pass
+		self.active = True
+		for k, v in self.task.items():
+			if k == "debug" and self.debug is True:
+				#forcing to consider first the debug of the program
+				pass
 
-				if type(v) == list:
-					for item in v:
-						if type(item) == list:
-							#if it's a list we just map the last value
-							if item[-1] is not None:
-								setattr(self, k, item[-1])
-							else:
-								setattr(self, k, False)
+			if type(v) == list:
+				for item in v:
+					if type(item) == list:
+						#if it's a list we just map the last value
+						if item[-1] is not None:
+							setattr(self, k, item[-1])
 						else:
-							if item is None:
-								setattr(self, k, False)
-							else:
-								setattr(self, k, item)
-				else:
-					if v is None or v is False:
-						setattr(self, k, False)
+							setattr(self, k, False)
 					else:
-						setattr(self, k, v)
-		return self
+						if item is None:
+							setattr(self, k, False)
+						else:
+							setattr(self, k, item)
+			else:
+				if v is None or v is False:
+					setattr(self, k, False)
+				else:
+					setattr(self, k, v)
+			return self
 
 	def start_crawl(self):
 		logging.info("start")
@@ -382,7 +405,6 @@ class Crawtext(object):
 		self.queue.list = self.sources.active.list
 		while self.queue.nb > 0:
 			for item in self.queue.list:
-
 				if item["url"] in self.results.urls:
 					self.queue.remove(item)
 				elif item["url"] in self.logs.urls:
