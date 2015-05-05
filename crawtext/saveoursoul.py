@@ -34,6 +34,7 @@ from article import Article, Page
 from crawl import crawl
 import requests
 from logger import *
+from bson.son import SON
 
 ABSPATH = os.path.dirname(os.path.abspath(sys.argv[0]))
 RESULT_PATH = os.path.join(ABSPATH, "projects")
@@ -48,20 +49,8 @@ class Crawtext(object):
 		self.debug = debug
 
 		self.project_path = os.path.join(RESULT_PATH, name)
+		self.load_ui(user_input)
 
-		self.task_db = TaskDB()
-		self.coll = self.task_db.coll
-		self.task = self.coll.find_one({"name":name})
-		if self.task is None:
-			self.active = False
-			sys.exit("No configuration found for project %s" %self.name)
-		else:
-			self.active = True
-			self.load_ui(user_input)
-
-			delattr(self, "task_db")
-			delattr(self, "coll")
-			self.dispatch()
 
 
 
@@ -80,14 +69,17 @@ class Crawtext(object):
 			raise NotImplementedError
 		else:
 			self.load_config()
-			if (self.url ^ self.file ^ self.key) is False:
+
+
+			if (self.url, self.file, self.key) != (False, False, False):
+			#if (self.url != False)|(if self.file != False) | if (self.key != False):
+				self.start_crawl()
+				return sys.exit()
+			else:
 				self.show_task()
 				self.show_stats()
 				return sys.exit()
-			else:
-				self.load_config()
-				self.start()
-				return sys.exit()
+
 
 	def load_ui(self, ui):
 		for k, v in ui.items():
@@ -113,11 +105,18 @@ class Crawtext(object):
 					setattr(self, k, False)
 				else:
 					setattr(self, k, v)
-		return self
+		return self.dispatch()
 
 
 	def load_config(self):
-		if self.active:
+		self.task_db = TaskDB()
+		self.coll = self.task_db.coll
+		self.task = self.coll.find_one({"name":self.name})
+		if self.task is None:
+			self.active = False
+			sys.exit("No configuration found for project %s" %self.name)
+		else:
+			self.active = True
 			for k, v in self.task.items():
 				if k == "debug" and self.debug is True:
 					#forcing to consider first the debug of the program
@@ -141,11 +140,11 @@ class Crawtext(object):
 						setattr(self, k, False)
 					else:
 						setattr(self, k, v)
-			return self
-		else:
-			sys.exit("No configuration found for project %s") %self.name
-	def start(self):
+		return self
+
+	def start_crawl(self):
 		logging.info("start")
+		self.load_project()
 		if self.url is not False:
 			return self.set_crawler()
 		elif self.file is not False:
@@ -170,7 +169,6 @@ class Crawtext(object):
 
 	def show_stats(self):
 		try:
-			print self.sources
 			print "********\n"
 			print "SOURCES:"
 			print "- Nb Sources indexées: %i" %self.sources.unique
@@ -190,7 +188,23 @@ class Crawtext(object):
 			print "********\n"
 			return self
 
-	def show_project(self):
+	def filter_last_items(self, field="status", filter="True"):
+		filter_active = [
+		  {"$unwind": "$+status"},
+		  {"$group": {
+		    "_id": '$_id',
+		    "url" : { "$first": '$url' },
+		    "source_url" : { "$first": '$source_url' },
+		    "depth" : { "$first": '$depth' },
+		   	"status" :  { "$last": '$status' },
+		    "date" :  { "$last": '$date' },
+		    }},
+		  {"$match": { 'status': "True" }},
+		  ]
+
+		return filter_active
+
+	def load_project(self):
 		self.project_db = Database(self.name)
 		self.results = self.project_db.use_coll('results')
 		self.sources = self.project_db.use_coll('sources')
@@ -199,45 +213,71 @@ class Crawtext(object):
 		print "Mapping project DB"
 		#RESULTS
 		self.results.nb = self.results.count()
-		self.results.urls = self.results.distinct("url")
-
+		self.results.urls = self.results.find().distinct("url")
 		self.results.unique = len(self.results.urls)
-		self.results.list = [self.results.find_one({"url":url}) for url in self.results.urls]
+		#self.results.list = [self.results.find_one({},{"url":url}) for url in self.results.urls]
+		#print self.results.list
 
 		#SOURCES
 		self.sources.nb = self.sources.count()
 		self.sources.urls = self.sources.distinct("url")
 		self.sources.unique = len(self.sources.urls)
-		self.sources.active_urls = [url for url in self.sources.urls if self.sources.find_one({"url":url})["status"][-1] is True]
-		self.sources.active_urls.nb = len(self.sources.active_url)
-		self.sources.inactive_urls = [url for url in self.sources.urls if self.sources.find_one({"url":url})["status"][-1] is False]
-		self.sources.inactive_urls.nb = len(self.sources.inactive_url)
-		self.sources.errors = [self.sources.find_one({"url":url})["msg"][-1] for url in self.sources.inactive_urls]
-		self.sources.list = [self.sources.find_one({"url":url}) for url in self.sources.active_urls]
+		#self.sources.list = filter_last_items(self, field="status", filter="True")
+
+		#filter_active = self.filter_last_items(field="status", filter="True")
+		'''
+		filter = [	{"$unwind": "$status"},
+		  			{"$group": {
+						    "_id": '$_id',
+						    "url" : { "$first": '$url' },
+						    "source_url" : { "$first": '$source_url' },
+						    "depth" : { "$first": '$depth' },
+						    "status" :  { "$last": '$status' },
+						    "date" :  { "$last": '$date' },
+						    }},
+					{"$match": { "status": "False" }},
+					{"$sort": SON([("_id", -1)])}
+		'''
+		filter = [
+		  {"$unwind": "$status"},
+		  {"$group": {
+		    "_id": '$_id',
+		    "url" : { "$first": '$url' },
+		    "source_url" : { "$first": '$source_url' },
+		    "depth" : { "$first": '$depth' },
+		    "status" :  { "$last": '$status' },
+		    "date" :  { "$last": '$date' },
+		    }},
+		  {"$match": { "status": "False" }},
+		  ]
+
+		self.sources.list = self.sources.aggregate(filter)
+		print self.sources.list['result']
+		#print self.sources.list
+
+		self.sources.active_nb = len(self.sources.list)
+		filter_inactive = self.filter_last_items(field="status", filter="False")
+		self.sources.inactive = list(self.sources.aggregate(filter_inactive))
+		self.sources.inactive_nb = len(self.sources.inactive)
+
 
 
 		#LOGS
 		self.logs.nb = self.logs.count()
 		self.logs.urls = self.logs.distinct("url")
 		self.logs.unique = len(self.logs.urls)
-
-		self.logs.errors = [self.logs.find_one({"url":url}) for url in self.logs.urls]
+		#self.logs.list = [self.logs.find_one({},{"url":url}) for url in self.logs.urls]
 		#QUEUE
 		self.queue.nb = self.queue.count()
 		self.queue.urls = self.queue.distinct("url")
 		self.queue.unique = len(self.queue.urls)
-		try:
-			self.queue.max_depth = max([self.queue.find_one({"url":url})["depth"] for url in self.queue.urls])
-		except ValueError:
-			pass
-		self.queue.list = [self.queue.find_one({"url":url}) for url in self.queue.urls]
+		self.queue.list = [self.queue.find_one({},{"url":url}) for url in self.queue.urls]
+		self.queue.max_depth = self.queue.find_one(sort=[("depth", -1)])
+		#self.queue.dates = self.queue.find({"date":{"$exists":"True"}})
+		#print self.queue.dates
 		#CRAWL INFOS
 		self.crawl = self.project_db.use_coll('info')
-		self.crawl.nb = len(self.sources.find_one({"url":self.sources.urls[-1]})["status"])
-		self.crawl.dates = [date[0].strftime("%d-%m-%Y@%H:%M:%S") for date in self.sources.find_one({"url":self.sources.urls[-1]})["date"]]
-		self.crawl.last_date = self.crawl.dates[-1]
-		self.crawl.first_date = self.crawl.dates[0]
-		self.crawl.max_depth = max([self.results.find_one({"url":url})["depth"] for url in self.results.urls])
+		self.crawl.nb = self.queue.unique+self.logs.unique+self.sources.active_nb
 		return self
 
 	def set_crawler(self):
@@ -257,8 +297,7 @@ class Crawtext(object):
 				self.get_seeds()
 			elif self.repeat is not False:
 				self.update_seeds()
-			else:
-				pass
+
 			return self.crawler(filter="on")
 		else:
 			if self.query is False:
@@ -423,7 +462,9 @@ class Crawtext(object):
 			if self.results.count() > 200000:
 				self.queue.drop()
 				break
+
 		return self.show_stats()
+
 
 if __name__ == "crawtext":
 	c = Crawtext(docopt(__doc__)["<name>"],docopt(__doc__), True)
