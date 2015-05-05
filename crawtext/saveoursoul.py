@@ -382,7 +382,7 @@ class Crawtext(object):
 		self.queue.list = self.sources.active.list
 		while self.queue.nb > 0:
 			for item in self.queue.list:
-				print item
+
 				if item["url"] in self.results.urls:
 					self.queue.remove(item)
 				elif item["url"] in self.logs.urls:
@@ -424,9 +424,11 @@ class Crawtext(object):
 					else:
 						print "Error Downloading"
 						self.logs.insert(p.log())
-				print "Removing"
-				self.queue.remove(item)
-				print self.queue.nb
+					print "Removing"
+					self.queue.remove(item)
+					print self.queue.nb
+				if self.queue.nb == 0:
+					break
 			if self.queue.nb == 0:
 				break
 			if self.results.count() > 200000:
