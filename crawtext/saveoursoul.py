@@ -251,6 +251,7 @@ class Crawtext(object):
 		return self.sources
 
 	def load_results(self):
+		logging.info("Loading results. May take a little while....")
 		self.results.nb = self.results.count()
 		self.results.urls = self.results.find().distinct("url")
 		self.results.unique = len(self.results.urls)
@@ -259,6 +260,7 @@ class Crawtext(object):
 		return self.results
 
 	def load_logs(self):
+		logging.info("Loading logs. May take a little while....")
 		self.logs.nb = self.logs.count()
 		self.logs.urls = self.logs.distinct("url")
 		self.logs.unique = len(self.logs.urls)
@@ -266,6 +268,7 @@ class Crawtext(object):
 		#self.logs.list = [self.logs.find_one({},{"url":url}) for url in self.logs.urls]
 		return self.logs
 	def load_queue(self):
+		logging.info("Loading queue. May take a little while....")
 		self.queue.nb = self.queue.count()
 		self.queue.urls = self.queue.distinct("url")
 		self.queue.unique = len(self.queue.urls)
