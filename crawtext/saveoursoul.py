@@ -110,7 +110,7 @@ class Crawtext(object):
 		return self.show()
 	def show(self):
 		'''showing the task parameters'''
-		self.task.find({"name": self.name})
+		self.task  = self.coll.find_one({"name": self.name})
 		if self.task is None:
 			sys.exit("Project doesn't exists.")
 		else:
