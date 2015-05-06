@@ -261,6 +261,7 @@ class Crawtext(object):
 	def load_logs(self):
 		self.logs.nb = self.logs.count()
 		self.logs.urls = self.logs.distinct("url")
+		self.logs.unique = len(self.logs.urls)
 		#self.logs.unique = self.logs.aggregate([{ $group: { _id: "$url"}  },{ $group: { _id: 1, count: { $sum: 1 } } } ])
 		#self.logs.list = [self.logs.find_one({},{"url":url}) for url in self.logs.urls]
 		return self.logs
