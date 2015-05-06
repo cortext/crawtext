@@ -55,32 +55,37 @@ class Crawtext(object):
 		self.task = self.coll.find_one({"name":self.name})
 		if self.config_task(user_input) is True:
 			logging.info("Configuring the projet")
-			self.load_ui(user_input)
-			if self.task is not None:
-				logging.info("Update")
-				self.update()
+			if self.load_ui(user_input) is False:
+				logging.info("Creating or updating project")
+				if self.task is not None:
+					logging.info("Update")
+					self.update()
+					sys.exit("Task udpated!")
+				else:
+					logging.info("Update")
+					self.create()
+					self.task = self.coll.find_one({"name":self.name})
+					self.show_task()
+					sys.exit("Task created!")
+
 			else:
-				logging.info("Update")
-				self.create()
-				self.task = self.coll.find_one({"name":self.name})
-
-			#self.show_task()
-			sys.exit()
-		elif self.task is not None:
-			print self.task.items()
-			self.load_ui(user_input)
-			self.dispatch()
-			sys.exit()
+				sys.exit("No parameters found to create a new project")
+		if self.load_ui(user_input) is True:
+			logging.info("Perform an action on project")
+			if self.task is not None:
+				self.config_task()
+				self.dispatch()
+				sys.exit()
 		else:
-			sys.exit("No configuration found for project")
-
-	def config_task(self,ui):
-		ui_cmd = [v for v in ui.values() if v != None and v != False]
-		if len(ui_cmd) > 2:
-			return True
-		return False
-
+			if self.task is not None:
+				self.show_task()
+				sys.exit()
+			else:
+				sys.exit("Project %s doesn't exists yet. Create it first!" %self.name)
+	
 	def create_new_task(self):
+		'''create a new task using the dict object'''
+		logging.info(create_new_task.__doc__)
 		new_task = copy.copy(self.__dict__)
 		for k,v in new_task.items():
 			if v is None and v is False:
@@ -91,6 +96,8 @@ class Crawtext(object):
 		return new_task
 
 	def create(self):
+		'''create a new task using the dict object and copying into the TaskDB.coll'''
+		logging.info(create.__doc__)
 		new_task = copy.copy(self.__dict__)
 		del new_task['name']
 		return self.coll.insert({"name":self.name}, new_task)
@@ -107,9 +114,12 @@ class Crawtext(object):
 
 
 	def dispatch(self):
-		if self.stop is True:
+		if self.start is True:
+			print "Starting crawl project"
+			return self.start_crawl()
+		elif self.stop is True:
 			print "stop"
-			raise NotImplementedError
+			return self._stop()
 		elif self.restart is True:
 			print "restart"
 			raise NotImplementedError
@@ -119,20 +129,12 @@ class Crawtext(object):
 		elif self.report is True:
 			print "report"
 			raise NotImplementedError
-		elif self.load_config() is not False:
 
-			#if (self.url, self.file, self.key) != (False, False, False):
-			#if (self.url != False)|(if self.file != False) | if (self.key != False):
-				self.start_crawl()
-				return sys.exit()
-		else:
-			self.show_task()
-			self.show_stats()
-			return sys.exit()
 
 
 
 	def load_ui(self, ui):
+		logging.info("Loading user parameters")
 		for k, v in ui.items():
 			k = re.sub("--|<|>", "", k)
 			if k == "debug" and self.debug is True:
@@ -156,7 +158,7 @@ class Crawtext(object):
 					setattr(self, k, False)
 				else:
 					setattr(self, k, v)
-		return bool(len([k for k, v in ui.items() if v is not None and v is not False])> 1)
+		return any([self.start, self.restart, self.export, self.report, self.stop, self.delete])
 
 
 	def load_config(self):
@@ -188,13 +190,19 @@ class Crawtext(object):
 
 	def start_crawl(self):
 		logging.info("start")
-		self.load_project()
+		print (self.url, self.file, self.query, self.key)
 		if self.url is not False:
+			print "Crawl with seed %s" %self.url
 			return self.set_crawler()
+
 		elif self.file is not False:
+			print "Crawl with seed file %s" %self.file
 			return self.set_crawler()
 		elif (self.query,self.key) != (False,False):
+			print "Crawl with seed search on %s" %self.query
 			return self.set_crawler()
+		else:
+			return False
 
 	def show_task(self):
 		logging.info("Show current parameters stored for task")
@@ -250,12 +258,13 @@ class Crawtext(object):
 		return filter_active
 
 	def load_project(self):
+		logging.info("Load project info")
 		self.project_db = Database(self.name)
 		self.results = self.project_db.use_coll('results')
 		self.sources = self.project_db.use_coll('sources')
 		self.logs = self.project_db.use_coll('logs')
 		self.queue = self.project_db.use_coll('queue')
-		print "Mapping project DB"
+
 		#RESULTS
 		self.results.nb = self.results.count()
 		self.results.urls = self.results.find().distinct("url")
@@ -296,16 +305,26 @@ class Crawtext(object):
 		return self
 
 	def set_crawler(self):
+		''' set configuration for crawler: filter with the query or open
+		if project has no query and at least one seed (file or url)
+			then the filter is off
+			and the crawl insert the seed into sources
+		elif the project has a query:
+			then the filter is on
+			and the crawl insert the seed into sources
+		'''
+		logging.info("Set crawler: Activating parameters and adding seeds to sources")
+		print (self.query, self.key, self.url, self.file)
 		if (self.query, self.key, self.url, self.file) == (False, False, False, False):
 			#logging.info("Invalid parameters task should have at least one seed (file, url or API key for search)")
 			return sys.exit("Invalid parameters task should have at least one seed (file, url or API key for search)")
 		elif (self.query, self.key, self.url) == (False, False, True):
 			self.upsert_url(self.url, "manual")
-			return self.crawler(filter="off")
+			filter="off"
 
 		elif (self.query, self.key, self.file) == (False, False, True):
 			self.upsert_file()
-			return self.crawler(filter="off")
+			filter="off"
 
 		elif (self.query, self.key) != (False, False):
 			if self.sources.unique == 0:
@@ -313,14 +332,16 @@ class Crawtext(object):
 			elif self.repeat is not False:
 				self.update_seeds()
 
-			return self.crawler(filter="on")
+			self.crawler(filter="on")
+			return self
 		else:
 			if self.query is False:
-				sys.exit("No query provided. Please add one")
+				return sys.exit("No query provided. Please add one")
 			elif self.key is False:
-				sys.exit("No BING API key provided")
+				return sys.exit("No BING API key provided")
 			else:
-				sys.exit("Invalid parameters")
+				return sys.exit("Invalid parameters")
+
 
 	def update_crawl(self):
 		raise NotImplementedError
@@ -424,6 +445,7 @@ class Crawtext(object):
 		return self
 
 	def crawler(self, filter="off"):
+		print "Crawler activated with query filter %s" %filter
 		self.queue.list = self.sources.active.list
 		while self.queue.nb > 0:
 			for item in self.queue.list:
@@ -481,6 +503,34 @@ class Crawtext(object):
 
 		return self.show_stats()
 
+	def _stop(self):
+		import subprocess, signal
+		p = subprocess.Popen(['ps', 'ax'], stdout=subprocess.PIPE)
+		out, err = p.communicate()
+		cmd = "crawtext.py %s start" %self.name
+		for line in out.splitlines():
+		  if cmd in line:
+		      pid = int([n for n in line.split(" ") if n != ""][0])
+		      #pid = int(line.split(" ")[0])
+		      print "Current crawl project %s killed" %self.name
+		      '''
+				if self.exists():
+
+				try:
+		              self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"stop crawl", "status": True, "date": dt.now(), "msg": "Ok"}})
+		          except Exception, e:
+		              self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"start crawl", "status": False, "date": date, "msg": e}})
+				'''
+		      os.kill(pid, signal.SIGKILL)
+		'''
+	      if self.exists():
+	          self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"stop crawl", "status": False, "date": dt.now(), "msg": "No running project found"}})
+	          print "No running project %s found" %self.name
+	          return False
+	      else:
+	          print "No crawl job %s found" %self.name
+	          return False
+		'''
 
 if __name__ == "crawtext":
 	c = Crawtext(docopt(__doc__)["<name>"],docopt(__doc__), True)
