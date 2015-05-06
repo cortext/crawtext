@@ -607,10 +607,21 @@ class Crawtext(object):
 			#self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"report: mail", "status":False, "date": self.date, "msg": "Error while sending the mail"}})
 		if generate_report(self.task, self.project_db, self.directory):
 			#self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"report: document", "status": True, "date": self.date, "msg": "Ok"}})
-			return sys.exit("Report created and sent!")
+			logging.info("Report sent and stored!")
+			return sys.exit(0)
 		else:
 			#self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"report: document", "status": False, "date": self.date, "msg": "Unable to create report document"}})
 			return sys.exit("Report failed")
+	def export(self):
+		logging.info("Export")
+		from export import generate
+		if generate(self.name, self.data, self.format, self.directory):
+			self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"export", "status": True, "date":dt.now(), "msg": "Exported"}})
+			logging.info("Export done!")
+			return sys.exit()
+		else:
+			self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"export", "status": False, "date": dt.now(), "msg": "Error while exporting"}})
+			return sys.exit("Failed to export")
 
 if __name__ == "crawtext":
 	c = Crawtext(docopt(__doc__)["<name>"],docopt(__doc__), True)
