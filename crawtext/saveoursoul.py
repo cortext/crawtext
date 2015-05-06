@@ -531,7 +531,7 @@ class Crawtext(object):
 										a.fetch_links()
 										if len(a.links) > 0:
 											for url, domain in zip(a.links, a.domains):
-												if url not in self.queue.find({"url": url}).extend(self.results.find({"url": url})):
+												if url not in self.queue.find({"url": url}) and url not in self.results.find({"url": url}):
 													self.queue.insert({"url": url, "source_url": item['url'], "depth": int(item['depth'])+1, "domain": domain, "date": a.date})
 													if self.debug: logging.info("\t-inserted %d nexts url" %len(a.links))
 												if a.url not in self.results.find({"url": url}):
@@ -622,6 +622,8 @@ class Crawtext(object):
 			#self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"report: document", "status": False, "date": self.date, "msg": "Unable to create report document"}})
 			return sys.exit("Report failed")
 	def export(self):
+		self.load_project()
+		self.create_dir()
 		self.load_project()
 		logging.info("Export")
 		from export import generate
