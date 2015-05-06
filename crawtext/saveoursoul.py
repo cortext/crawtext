@@ -390,8 +390,8 @@ class Crawtext(object):
 
 	def bing_search(self):
 		# dt = datetime.datetime.now()
-		if (dt.day, dt.month, dt.year) == (self.task['date'].day, self.task['date'].month, self.task['date'].year) :
-			logging.info("Search already done today")
+		if (dt.day, dt.month, dt.year, dt.hour) == (self.task['date'].day, self.task['date'].month, self.task['date'].year, self.task['date'].hour) :
+			logging.info("Search already done today in less than 1h ")
 		# 	return False
 		logging.info("bing is searching %s urls" %self.nb)
 		web_results = []
@@ -537,7 +537,7 @@ class Crawtext(object):
 										a.fetch_links()
 										if len(a.links) > 0:
 											for url, domain in zip(a.links, a.domains):
-												if url not in self.queue.distinct("url") and url not in self.results.disctint("url"):
+												if url not in self.queue.distinct("url") and url not in self.results.distinct("url"):
 													self.queue.insert({"url": url, "source_url": item['url'], "depth": int(item['depth'])+1, "domain": domain, "date": a.date})
 													if self.debug: logging.info("\t-inserted %d nexts url" %len(a.links))
 												if a.url not in self.results.find({"url": url}):
@@ -568,7 +568,7 @@ class Crawtext(object):
 						self.logs.insert(p.log())
 
 					self.queue.remove(item)
-					logging.info("Processing %i urls"%self.queue.nb)
+					logging.info("Processing %i urls"%self.queue.count())
 				if self.queue.nb == 0:
 					break
 			if self.queue.nb == 0:
