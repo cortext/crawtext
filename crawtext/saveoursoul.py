@@ -390,8 +390,8 @@ class Crawtext(object):
 
 	def bing_search(self):
 		# dt = datetime.datetime.now()
-		# if (dt.day, dt.month, dt.year) == (self.task['date'].day, self.task['date'].month, self.task['date'].year) :
-		# 	logging.info("Search already done today")
+		if (dt.day, dt.month, dt.year) == (self.task['date'].day, self.task['date'].month, self.task['date'].year) :
+			logging.info("Search already done today")
 		# 	return False
 		logging.info("bing is searching %s urls" %self.nb)
 		web_results = []
@@ -506,19 +506,19 @@ class Crawtext(object):
 		logging.info("Begin crawl with %i active urls"%self.sources.active.nb)
 		self.push_to_queue()
 
-		logging.info("Processing %i urls"%self.queue.nb)
+		logging.info("Processing %i urls"%self.queue.count())
 
 
 
 		#print self.queue.list
 
 		while self.queue.count() > 0:
-			for item in self.queue.list:
-				if item["url"] in self.results.find({"url": url}):
+			for item in self.queue.find():
+				if item["url"] in self.results.distinct("url"):
 					logging.info("in results")
 					self.queue.remove(item)
 
-				elif item["url"] in self.logs.find({"url": url}):
+				elif item["url"] in self.logs.distinct("url"):
 					logging.info("in logs")
 					self.queue.remove(item)
 				else:
@@ -537,7 +537,7 @@ class Crawtext(object):
 										a.fetch_links()
 										if len(a.links) > 0:
 											for url, domain in zip(a.links, a.domains):
-												if url not in self.queue.find({"url": url}) and url not in self.results.find({"url": url}):
+												if url not in self.queue.distinct("url") and url not in self.results.disctint("url"):
 													self.queue.insert({"url": url, "source_url": item['url'], "depth": int(item['depth'])+1, "domain": domain, "date": a.date})
 													if self.debug: logging.info("\t-inserted %d nexts url" %len(a.links))
 												if a.url not in self.results.find({"url": url}):
