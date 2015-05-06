@@ -10,8 +10,10 @@ def send_mail(user, db):
 
 	fromaddrs = "crawlex@cortext.net"
 	toaddrs  = user
-	html = db.mail_report()
-	txt = db.show_stats()
+	#html = db.mail_report()
+	html = db
+	txt = db
+	#txt = db.show_stats()
 	subject = "Crawlex on Duty: report of %s, breaking news from the front!" %str(db.db_name)
 	msg = createhtmlmail(html, txt, subject, fromaddrs)
 	# The actual mail send
