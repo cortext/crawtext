@@ -136,8 +136,8 @@ class Crawtext(object):
 			print "********\n"
 			print "SOURCES:"
 			print "- Nb Sources indexées: %i" %self.sources.unique
-			print "\t- pertinentes: %i" %self.sources.active_urls.nb
-			print "\t- non-pertinentes: %i" %self.sources.inactive_urls.nb
+			print "\t- pertinentes: %i" %self.sources.active.nb
+			print "\t- non-pertinentes: %i" %self.sources.inactive.nb
 			print "RESULTS:"
 			print "- Nb Pages indexées: %i" %self.results.unique
 			print "ERRORS:"
@@ -235,6 +235,7 @@ class Crawtext(object):
 		logging.info("Loading sources")
 		self.sources.nb = self.sources.count()
 		self.sources.urls = self.sources.distinct("url")
+		#self.sources.unique = db.sources.aggregate([{ $group: { _id: "$url"}  },{ $group: { _id: 1, count: { $sum: 1 } } }])
 		self.sources.unique = len(self.sources.urls)
 		self.sources.list = [self.sources.find_one({"url":url}) for url in self.sources.urls]
 
@@ -251,19 +252,21 @@ class Crawtext(object):
 		self.results.nb = self.results.count()
 		self.results.urls = self.results.find().distinct("url")
 		self.results.unique = len(self.results.urls)
-		#self.results.list = [self.results.find_one({},{"url":url}) for url in self.results.urls]
+		#self.results.unique = db.results.aggregate([{ $group: { _id: "$url"}  },{ $group: { _id: 1, count: { $sum: 1 } } } ])
+		self.results.list = [self.results.find_one({"url":url}) for url in self.results.urls]
 		return self.results
 
 	def load_logs(self):
 		self.logs.nb = self.logs.count()
 		self.logs.urls = self.logs.distinct("url")
-		self.logs.unique = len(self.logs.urls)
+		#self.logs.unique = self.logs.aggregate([{ $group: { _id: "$url"}  },{ $group: { _id: 1, count: { $sum: 1 } } } ])
 		#self.logs.list = [self.logs.find_one({},{"url":url}) for url in self.logs.urls]
 		return self.logs
 	def load_queue(self):
 		self.queue.nb = self.queue.count()
 		self.queue.urls = self.queue.distinct("url")
 		self.queue.unique = len(self.queue.urls)
+		#self.queue.unique = self.sources.aggregate([{ $group: { _id: "$url"}  },{ $group: { _id: 1, count: { $sum: 1 } } } ])
 		self.queue.list = [self.queue.find_one({"url":url}) for url in self.queue.urls]
 		self.queue.max_depth = self.queue.find_one(sort=[("depth", -1)])
 		#self.queue.dates = self.queue.find({"date":{"$exists":"True"}})
@@ -496,6 +499,7 @@ class Crawtext(object):
 
 		logging.info("Begin crawl with %i active urls"%self.sources.active.nb)
 		self.push_to_queue()
+		
 		logging.info("Processing %i urls"%self.queue.nb)
 
 
@@ -504,11 +508,11 @@ class Crawtext(object):
 
 		while self.queue.count() > 0:
 			for item in self.queue.list:
-				if item["url"] in self.results.urls:
+				if item["url"] in self.results.find({"url": url}):
 					logging.info("in results")
 					self.queue.remove(item)
 
-				elif item["url"] in self.logs.urls:
+				elif item["url"] in self.logs.find({"url": url}):
 					logging.info("in logs")
 					self.queue.remove(item)
 				else:
@@ -527,10 +531,11 @@ class Crawtext(object):
 										a.fetch_links()
 										if len(a.links) > 0:
 											for url, domain in zip(a.links, a.domains):
-												if url not in self.queue.urls:
+												if url not in self.queue.find({"url": url}) and not in self.results.find({"url": url}):
 													self.queue.insert({"url": url, "source_url": item['url'], "depth": int(item['depth'])+1, "domain": domain, "date": a.date})
 													if self.debug: logging.info("\t-inserted %d nexts url" %len(a.links))
-												self.results.insert(a.export())
+												if a.url not in self.results.find({"url": url}):
+													self.results.insert(a.export())
 									else:
 										logging.debug("depth exceeded")
 										self.logs.insert(a.log())
@@ -599,9 +604,11 @@ class Crawtext(object):
 		logging.info("Report")
 		self.load_project()
 		self.load_data()
+		self.create_dir()
 		if self.user is None or self.user is False:
 			self.user = __author__
-		if send_mail(self.user, self.project) is True:
+		data = self.show_project()
+		if send_mail(self.user, data) is True:
 			logging.info("A report email has been sent to %s\nCheck your mailbox!" %self.user)
 			#self.coll.update({"name": self.task['name']}, {"$push": {"action":"report: mail", "status":True, "date": self.date, "msg": "Ok"}})
 		else:
