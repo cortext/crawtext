@@ -73,7 +73,7 @@ class Crawtext(object):
 		if self.load_ui(user_input) is True:
 			logging.info("Perform an action on project")
 			if self.task is not None:
-				self.config_task()
+				self.load_config()
 				self.dispatch()
 				sys.exit()
 		else:
@@ -82,7 +82,7 @@ class Crawtext(object):
 				sys.exit()
 			else:
 				sys.exit("Project %s doesn't exists yet. Create it first!" %self.name)
-	
+
 	def create_new_task(self):
 		'''create a new task using the dict object'''
 		logging.info(create_new_task.__doc__)
