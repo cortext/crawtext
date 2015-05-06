@@ -82,13 +82,14 @@ class Crawtext(object):
 		if self.task is None:
 			new_task = copy.copy(self.__dict__)
 			logging.info(self.create.__doc__)
-			del new_task['name']
+
 			del new_task['task']
 			del new_task['task_db']
 			del new_task['coll']
 			#logging.debug(new_task.items())
-			self.coll.insert({"name":self.name}, new_task)
+			self.coll.insert(new_task)
 			logging.info("Sucessfully created")
+
 			return self.show()
 		else:
 			logging.info("Project already exists")
@@ -109,6 +110,7 @@ class Crawtext(object):
 		return self.show()
 	def show(self):
 		'''showing the task parameters'''
+		self.task.find({"name": self.name})
 		if self.task is None:
 			sys.exit("Project doesn't exists.")
 		else:
