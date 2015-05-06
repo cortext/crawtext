@@ -49,6 +49,8 @@ class Crawtext(object):
 	def __init__(self, name, user_input, debug):
 		self.name = name
 		self.debug = debug
+		dt = datetime.datetime.today()
+		self.date = dt.replace(minute=0, second=0, microsecond=0)
 		self.project_path = os.path.join(RESULT_PATH, name)
 		self.task_db = TaskDB()
 		self.coll = self.task_db.coll
@@ -72,7 +74,7 @@ class Crawtext(object):
 			else:
 				if v is not False and v is not None:
 					action = getattr(self, k)
-		print self.__dict__.items()
+		logging.debug(self.__dict__.items())
 		return action()
 
 	def create(self):
@@ -84,7 +86,7 @@ class Crawtext(object):
 			del new_task['task']
 			del new_task['task_db']
 			del new_task['coll']
-			print new_task.items()
+			#logging.debug(new_task.items())
 			self.coll.insert({"name":self.name}, new_task)
 			logging.info("Sucessfully created")
 			return self.show()
@@ -262,7 +264,7 @@ class Crawtext(object):
 		self.queue.nb = self.queue.count()
 		self.queue.urls = self.queue.distinct("url")
 		self.queue.unique = len(self.queue.urls)
-		self.queue.list = [self.queue.find_one({},{"url":url}) for url in self.queue.urls]
+		self.queue.list = [self.queue.find_one({"url":url}) for url in self.queue.urls]
 		self.queue.max_depth = self.queue.find_one(sort=[("depth", -1)])
 		#self.queue.dates = self.queue.find({"date":{"$exists":"True"}})
 		return self.queue
@@ -303,6 +305,20 @@ class Crawtext(object):
 		except AttributeError as e:
 			logging.warning(e)
 			return self
+	def create_dir(self):
+		try:
+			self.directory = getattr(self,"directory")
+		except AttributeError:
+			self.directory = os.path.join(RESULT_PATH, self.name)
+			if not os.path.exists(self.directory):
+				os.makedirs(self.directory)
+				index = os.path.join(self.directory, 'index')
+				try:
+					self.index_dir = os.makedirs('index')
+				except:
+					pass
+				logging.info("A specific directory has been created to store your projects\n Location:%s"	%(self.directory))
+		return self.directory
 
 	def filter_last_items(self, field="status", filter="True"):
 		filter_active = [
@@ -330,7 +346,7 @@ class Crawtext(object):
 			and the crawl insert the seed into sources
 		'''
 		logging.info("Set crawler: Activating parameters and adding seeds to sources")
-
+		self.create_dir()
 
 		if any([self.key, self.url, self.file]) is False:
 			#logging.info("Invalid parameters task should have at least one seed (file, url or API key for search)")
@@ -341,31 +357,37 @@ class Crawtext(object):
 			if self.key is True:
 				logging.warning("Search for seeds with an API key will not work unless you provide a query")
 				return sys.exit("Please provide a query")
-		else:
-			self.load_project()
-			self.load_data()
-			print(self.url, self.file, self.key)
-			self.target = True
-			if self.url is not False:
-				print "Adding url"
-				self.upsert_url(self.url, "manual")
-			if self.file is not False:
-				print "Adding urls in file"
-				self.upsert_file()
-			if self.key is not False:
-				print "Adding urls from search"
-				self.get_seeds()
-				#if self.sources.unique == 0:
-				#	self.get_seeds()
-				# elif self.repeat is not False:
-				# 	self.update_seeds()
+
+		self.load_project()
+		self.load_data()
+
+		self.target = True
+		if self.url is not False:
+			print "Adding url"
+			self.upsert_url(self.url, "manual")
+		if self.file is not False:
+			print "Adding urls in file"
+			self.upsert_file()
+		if self.key is not False:
+			print "Adding urls from search"
+			self.get_seeds()
+			#if self.sources.unique == 0:
+			#	self.get_seeds()
+			# elif self.repeat is not False:
+			# 	self.update_seeds()
 		return self
 	def update_crawl(self):
 		raise NotImplementedError
+
 	def bing_search(self):
+		# dt = datetime.datetime.now()
+		# if (dt.day, dt.month, dt.year) == (self.task['date'].day, self.task['date'].month, self.task['date'].year) :
+		# 	logging.info("Search already done today")
+		# 	return False
+		logging.info("bing is searching %s urls" %self.nb)
 		web_results = []
 		for i in range(0,self.nb, 50):
-			
+
 			#~ try:
 			r = requests.get('https://api.datamarket.azure.com/Bing/Search/v1/Web',
 				params={'$format' : 'json',
@@ -380,7 +402,7 @@ class Crawtext(object):
 			msg = r.raise_for_status()
 			if msg is None:
 				for e in r.json()['d']['results']:
-					print e["Url"]
+					#print e["Url"]
 					web_results.append(e["Url"])
 
 		if len(web_results) == 0:
@@ -407,6 +429,7 @@ class Crawtext(object):
 		bing_sources =  self.bing_search()
 		if bing_sources is not False:
 			total_bing_sources = len(bing_sources)
+			logging.info("Search into Bing got %i results" %total_bing_sources)
 			for i,url in enumerate(bing_sources):
 					self.sources.insert({
 											"url":url,
@@ -416,22 +439,31 @@ class Crawtext(object):
 											"total":total_bing_sources,
 											"msg":["inserted"],
 											"code": [100],
-											"status": [True]
+											"status": [True],
+											"date": [self.date]
 										})
-			logging.info("%i urls from BING search inserted")
+			logging.info("%i urls from BING search inserted" %i)
 			return self
 		else:
-			logging.warning("Bing search for source failed")
+			logging.warning("Bing search for source failed.")
 			return self
+	def push_to_queue(self):
+		for n in self.sources.active.list:
+			if self.queue.find_one({"url": n["url"]}) is None:
+				self.queue.insert(n)
+
+		return self.queue
+
 	def upsert_url(self, url, source_url):
 		if exists is None:
+
 			self.project.sources.insert({"url":url,
 											"source_url": source_url,
 											"depth": 0,
 											"msg":["inserted"],
 											"code": [100],
 											"status": [True],
-											"date": [self.date]
+											"date": [self.date],
 											})
 		else:
 			self.project.sources.update({"url":exists["url"]},
@@ -458,21 +490,33 @@ class Crawtext(object):
 				self.upsert_url(url, "file %s") %self.file
 		return self
 	def crawler(self):
-		print "Crawler activated with query filter %s" %self.target
+		logging.info("Crawler activated with query filter %s" %self.target)
 		# if self.sources.nb == 0:
 		# 	sys.exit("Error: no sources found in the project.")
-		self.queue.list = self.sources.active.list
-		print self.queue.nb
-		print self.sources.active.list
-		while self.queue.nb > 0:
+
+		logging.info("Begin crawl with %i active urls"%self.sources.active.nb)
+		self.push_to_queue()
+		logging.info("Processing %i urls"%self.queue.nb)
+
+
+
+		#print self.queue.list
+
+		while self.queue.count() > 0:
 			for item in self.queue.list:
 				if item["url"] in self.results.urls:
+					logging.info("in results")
 					self.queue.remove(item)
+
 				elif item["url"] in self.logs.urls:
+					logging.info("in logs")
 					self.queue.remove(item)
 				else:
-					print "Treating", item["url"], item["depth"]
-					p = Page(item["url"], item["source_url"],item["depth"], item["date"], True)
+					#print "Treating", item["url"], item["depth"]
+					try:
+						p = Page(item["url"], item["source_url"],item["depth"], item["date"], True)
+					except KeyError:
+						p = Page(item["url"], item["source_url"],item["depth"], self.date, True)
 					if p.download():
 						a = Article(p.url,p.html, p.source_url, p.depth,p.date, True)
 						if a.extract():
@@ -488,8 +532,10 @@ class Crawtext(object):
 													if self.debug: logging.info("\t-inserted %d nexts url" %len(a.links))
 												self.results.insert(a.export())
 									else:
+										logging.debug("depth exceeded")
 										self.logs.insert(a.log())
 								else:
+									logging.debug("Not relevant")
 									self.logs.insert(a.log())
 							else:
 								if a.check_depth(a.depth):
@@ -501,16 +547,17 @@ class Crawtext(object):
 												if self.debug: logging.info("\t-inserted %d nexts url" %len(a.links))
 											self.results.insert(a.export())
 								else:
+									logging.debug("Depth exceeded")
 									self.logs.insert(a.log())
 						else:
-							print "Error Extracting"
+							logging.debug("Error Extracting")
 							self.logs.insert(a.log())
 					else:
-						print "Error Downloading"
+						logging.debug("Error Downloading")
 						self.logs.insert(p.log())
-					print "Removing"
+
 					self.queue.remove(item)
-					print self.queue.nb
+					logging.info("Processing %i urls"%self.queue.nb)
 				if self.queue.nb == 0:
 					break
 			if self.queue.nb == 0:
@@ -519,7 +566,7 @@ class Crawtext(object):
 				self.queue.drop()
 				break
 
-		return self.show_stats()
+		return sys.exit(1)
 	def _stop(self):
 		import subprocess, signal
 		p = subprocess.Popen(['ps', 'ax'], stdout=subprocess.PIPE)
@@ -529,7 +576,7 @@ class Crawtext(object):
 		  if cmd in line:
 		      pid = int([n for n in line.split(" ") if n != ""][0])
 		      #pid = int(line.split(" ")[0])
-		      print "Current crawl project %s killed" %self.name
+		      logging.warning("Current crawl project %s killed" %self.name)
 		      '''
 				if self.exists():
 
