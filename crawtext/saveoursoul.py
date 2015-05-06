@@ -609,12 +609,12 @@ class Crawtext(object):
 	def report(self):
 		logging.info("Report")
 		self.load_project()
-		self.load_data()
+		#self.load_data()
 		self.create_dir()
 		if self.user is None or self.user is False:
 			self.user = __author__
-		data = self.show_project()
-		if send_mail(self.user, data) is True:
+		#data = self.show_project()
+		if send_mail(self.user, self.project) is True:
 			logging.info("A report email has been sent to %s\nCheck your mailbox!" %self.user)
 			#self.coll.update({"name": self.task['name']}, {"$push": {"action":"report: mail", "status":True, "date": self.date, "msg": "Ok"}})
 		else:
