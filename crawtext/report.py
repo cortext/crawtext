@@ -34,21 +34,21 @@ def generate_report(task, db, directory):
 		f.write("\n======PROJECT PARAMS======\n")
 		for k, v in task.items():
 			if k not in ["action", "status","msg", "date", "creation_date", "_id"]:
-				if k == "creation_date":
-					v = task[k].strftime('%d-%m-%Y %H-%M-%S')
+				if k == "date":
+					v = task[k].strftime('%d-%m-%Y@%H:%M:%S')
 					f.write(str(k)+": "+str(v)+"\n")
-				
+
 				try:
 					f.write(str(k)+": "+str(v)+"\n")
 				except Exception:
 					pass
-			
+
 		f.write(db.show_stats())
-		
+
 		f.write("\n\n======HISTORY OF THE PROJECT======\n")
-		
+
 		#date_list = [n.strftime('%d-%m-%Y %H-%M-%S') for n in task["date"]]
-		
+
 		status_list = list(zip(task["status"],task["msg"]))
 		for msg in status_list:
 			f.write("\n-"+str(msg))
