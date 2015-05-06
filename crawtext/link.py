@@ -53,7 +53,7 @@ class Link(object):
 		domain = self.get_domain(url)
 		domain_id = re.sub("www\.|http://", "", self.netloc)
 		domain_id = re.sub("\.", "_", domain_id)
-		
+
 		if url.startswith('/'):
 			l = self.parse_url(source_url)
 			return ("http://"+l.netloc+url, domain, l.domain_id)
@@ -85,7 +85,7 @@ class Link(object):
 			self.domain_id = self.domain
 		else:
 			self.domain_id = self.subdomain+"."+self.domain
-		print "Parse url domain id", self.domain_id
+		#print "Parse url domain id", self.domain_id
 		self.extension =  tld_dat.suffix
 		#info on page
 		self.path_chunk = [x for x in self.path.split('/') if len(x) > 0]
@@ -190,7 +190,7 @@ def parse_url(url):
 		info['domain_id']= info['domain_id']+"."+info['extension']
 	else:
 		info['domain_id']= info['subdomain']+"."+info["domain"]+"."+info['extension']
-	print info['domain_id']
+	#print info['domain_id']
 	#info on page
 	info['path_chunk'] = [x for x in info['path'].split('/') if len(x) > 0]
 	info['depth'] = len(info['path_chunk'])

@@ -35,7 +35,7 @@ class Page(object):
 		"""The **kwargs argument may be filled with config values, which
 		is added into the config object
 		"""
-		logging.info("Page Init")
+		#logging.info("Page Init")
 		self.debug = debug
 		self.depth = depth
 		self.date = date
@@ -65,10 +65,10 @@ class Page(object):
 
 
 	def is_valid(self):
-		logging.info("Valid url?")
+		#logging.info("Valid url?")
 		url = Link(self.url, self.source_url, self.debug)
 		if url.is_valid():
-			logging.info("Yes")
+			#logging.info("Yes")
 			return True
 		else:
 			self.msg = url.msg
