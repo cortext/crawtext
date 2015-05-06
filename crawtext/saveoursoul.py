@@ -11,15 +11,15 @@ Description:
 A simple crawler in command line for targeted websearch.
 
 Usage:
-	crawtext.py (<name>) [--debug]
-	crawtext.py (<name>) [--query=<query>] [--key=<key>] [--nb=<nb>] [--lang=<lang>] [--user=<email>] [--depth=<depth>] [--debug] [--repeat=(day|week|month)]
-	crawtext.py (<name>) (--url=<url>| --file=<file>) [--query=<query>] [--nb=<nb>] [--lang=<lang>] [--user=<email>] [--depth=<depth>] [--debug]
-	crawtext.py (<name>) delete [--debug]
+	crawtext.py (<name>) show [--debug]
+	crawtext.py (<name>) (create|update|add) [--query=<query>] [--file=<file>][--url=<url>][--key=<key>] [--nb=<nb>] [--lang=<lang>] [--user=<email>] [--depth=<depth>] [--debug] [--repeat=<repeat>]
+	crawtext.py (<name>) add [--query=<query>] [--file=<file>][--url=<url>][--key=<key>] [--nb=<nb>] [--lang=<lang>] [--user=<email>] [--depth=<depth>] [--debug] [--repeat=<repeat>]
 	crawtext.py (<name>) start [--debug]
 	crawtext.py (<name>) restart [--debug]
+	crawtext.py (<name>) stop [--debug]
 	crawtext.py (<name>) export [--data=<data>] [--format=<format>] [--debug]
 	crawtext.py (<name>) report [--user=<email>] [--format=<format>] [--debug]
-	crawtext.py (<name>) stop [--debug]
+	crawtext.py (<name>) delete [--debug]
 '''
 
 import os, sys, re
@@ -53,56 +53,48 @@ class Crawtext(object):
 		self.task_db = TaskDB()
 		self.coll = self.task_db.coll
 		self.task = self.coll.find_one({"name":self.name})
-		if self.config_task(user_input) is True:
-			logging.info("Configuring the projet")
-			if self.load_ui(user_input) is False:
-				logging.info("Creating or updating project")
-				if self.task is not None:
-					logging.info("Update")
-					self.update()
-					sys.exit("Task udpated!")
-				else:
-					logging.info("Update")
-					self.create()
-					self.task = self.coll.find_one({"name":self.name})
-					self.show_task()
-					sys.exit("Task created!")
+		self.dispatch_action(user_input)
 
+	def dispatch_action(self,user_input):
+		for k,v in user_input.items():
+			if k == "debug" and self.debug is True:
+				#forcing to consider first the debug of the program
+				pass
+			if k.startswith("<"):
+				# key = re.sub("<|>", "", k)
+				# setattr(self,key,v)
+				pass
+			elif k.startswith("--"):
+				key = re.sub("--", "", k)
+				if v is None:
+					v = False
+				setattr(self,key,v)
 			else:
-				sys.exit("No parameters found to create a new project")
-		if self.load_ui(user_input) is True:
-			logging.info("Perform an action on project")
-			if self.task is not None:
-				self.load_config()
-				self.dispatch()
-				sys.exit()
-		else:
-			if self.task is not None:
-				self.show_task()
-				sys.exit()
-			else:
-				sys.exit("Project %s doesn't exists yet. Create it first!" %self.name)
-
-	def create_new_task(self):
-		'''create a new task using the dict object'''
-		logging.info(create_new_task.__doc__)
-		new_task = copy.copy(self.__dict__)
-		for k,v in new_task.items():
-			if v is None and v is False:
-				del new_task[k]
-		del new_task['coll']
-		del new_task['task_db']
-		del new_task['task']
-		return new_task
+				if v is not False and v is not None:
+					action = getattr(self, k)
+		print self.__dict__.items()
+		return action()
 
 	def create(self):
-		'''create a new task using the dict object and copying into the TaskDB.coll'''
-		logging.info(create.__doc__)
-		new_task = copy.copy(self.__dict__)
-		del new_task['name']
-		return self.coll.insert({"name":self.name}, new_task)
+		'''create a new task with user params and store it into db'''
+		if self.task is None:
+			new_task = copy.copy(self.__dict__)
+			logging.info(self.create.__doc__)
+			del new_task['name']
+			del new_task['task']
+			del new_task['task_db']
+			del new_task['coll']
+			print new_task.items()
+			self.coll.insert({"name":self.name}, new_task)
+			logging.info("Sucessfully created")
+			return self.show()
+		else:
+			logging.info("Project already exists")
+			return self.update()
 
 	def update(self):
+		'''udpating project'''
+		logging.info(self.update.__doc__)
 		new_task = copy.copy(self.__dict__)
 		for k,v in new_task.items():
 			if v is None and v is False:
@@ -110,103 +102,19 @@ class Crawtext(object):
 		del new_task['coll']
 		del new_task['task_db']
 		del new_task['task']
-		return self.coll.update({"name":self.task["name"]}, new_task)
-
-
-	def dispatch(self):
-		if self.start is True:
-			print "Starting crawl project"
-			return self.start_crawl()
-		elif self.stop is True:
-			print "stop"
-			return self._stop()
-		elif self.restart is True:
-			print "restart"
-			raise NotImplementedError
-		elif self.export is True:
-			print "export"
-			raise NotImplementedError
-		elif self.report is True:
-			print "report"
-			raise NotImplementedError
-
-
-
-
-	def load_ui(self, ui):
-		logging.info("Loading user parameters")
-		for k, v in ui.items():
-			k = re.sub("--|<|>", "", k)
-			if k == "debug" and self.debug is True:
-				#forcing to consider first the debug of the program
-				pass
-			if type(v) == list:
-				for item in v:
-					if type(item) == list:
-						#if it's a list we just map the last value
-						if item[-1] is not None:
-							setattr(self, k, item[-1])
-						else:
-							setattr(self, k, False)
-					else:
-						if item is None:
-							setattr(self, k, False)
-						else:
-							setattr(self, k, item)
-			else:
-				if v is None or v is False:
-					setattr(self, k, False)
-				else:
-					setattr(self, k, v)
-		return any([self.start, self.restart, self.export, self.report, self.stop, self.delete])
-
-
-	def load_config(self):
-		self.active = True
-		for k, v in self.task.items():
-			if k == "debug" and self.debug is True:
-				#forcing to consider first the debug of the program
-				pass
-
-			if type(v) == list:
-				for item in v:
-					if type(item) == list:
-						#if it's a list we just map the last value
-						if item[-1] is not None:
-							setattr(self, k, item[-1])
-						else:
-							setattr(self, k, False)
-					else:
-						if item is None:
-							setattr(self, k, False)
-						else:
-							setattr(self, k, item)
-			else:
-				if v is None or v is False:
-					setattr(self, k, False)
-				else:
-					setattr(self, k, v)
-			return self
-
-	def start_crawl(self):
-		logging.info("start")
-		print (self.url, self.file, self.query, self.key)
-		if self.url is not False:
-			print "Crawl with seed %s" %self.url
-			return self.set_crawler()
-
-		elif self.file is not False:
-			print "Crawl with seed file %s" %self.file
-			return self.set_crawler()
-		elif (self.query,self.key) != (False,False):
-			print "Crawl with seed search on %s" %self.query
-			return self.set_crawler()
+		self.coll.update({"name":self.task["name"]}, new_task)
+		logging.info("Sucessfully updated")
+		return self.show()
+	def show(self):
+		'''showing the task parameters'''
+		if self.task is None:
+			sys.exit("Project doesn't exists.")
 		else:
-			return False
-
+			return self.show_task()
 	def show_task(self):
 		logging.info("Show current parameters stored for task")
-		for k, v in self.__dict__.items():
+		self.task = self.coll.find_one({"name": self.name})
+		for k, v in self.task.items():
 			if type(v) == list:
 				print "*", k,":"
 				for item in v:
@@ -217,10 +125,11 @@ class Crawtext(object):
 						print "\t", item
 			else:
 				print "*", k,":", v
+		return
 
-		return self
-
-	def show_stats(self):
+	def show_project(self):
+		self.load_project()
+		self.load_data()
 		try:
 			print "********\n"
 			print "SOURCES:"
@@ -241,6 +150,160 @@ class Crawtext(object):
 			print "********\n"
 			return self
 
+	def start(self):
+		if self.task is None:
+			sys.exit("Project doesn't exists.")
+		else:
+			print self.coll.find_one({"name":self.name})
+			logging.info("Loading task parameters")
+			self.load_task()
+			self.config_crawl()
+			self.crawler()
+			#self.update_task()
+			return self.show()
+
+
+
+
+	def mapp_ui(self, ui):
+		'''Mapping user parameters'''
+		logging.info(self.load_ui.__doc__)
+		for k, v in ui.items():
+			k = re.sub("--|<|>", "", k)
+
+			if type(v) == list:
+				for item in v:
+					if type(item) == list:
+						#if it's a list we just map the last value
+						if item[-1] is not None:
+							setattr(self, k, item[-1])
+						else:
+							setattr(self, k, False)
+					else:
+						if item is None:
+							setattr(self, k, False)
+						else:
+							setattr(self, k, item)
+			else:
+				if v is None or v is False:
+					setattr(self, k, False)
+				else:
+					setattr(self, k, v)
+		return self
+	def load_task(self):
+		logging.info("Loading task from TaskDB")
+		for k, v in self.task.items():
+			if k == "debug" and self.debug is True:
+				#forcing to consider first the debug of the program
+				pass
+
+			if type(v) == list:
+				for item in v:
+					if type(item) == list:
+						#if it's a list we just map the last value
+						if item[-1] is not None:
+							setattr(self, k, item[-1])
+						else:
+							setattr(self, k, False)
+					else:
+						if item is None:
+							setattr(self, k, False)
+						else:
+							setattr(self, k, item)
+			elif v is None:
+				setattr(self, k, False)
+			elif v is False:
+				setattr(self, k, False)
+			else:
+				setattr(self, k, v)
+		return self
+	def load_project(self):
+		logging.info("Loading Project DB")
+		self.project = Database(self.name)
+		self.results = self.project.use_coll('results')
+		self.sources = self.project.use_coll('sources')
+		self.logs = self.project.use_coll('logs')
+		self.queue = self.project.use_coll('queue')
+
+		return self.project
+
+	def load_sources(self):
+		'''loading sources data and stats'''
+		#SOURCES
+		logging.info("Loading sources")
+		self.sources.nb = self.sources.count()
+		self.sources.urls = self.sources.distinct("url")
+		self.sources.unique = len(self.sources.urls)
+		self.sources.list = [self.sources.find_one({"url":url}) for url in self.sources.urls]
+
+		self.sources.active = self.project.use_coll('info')
+		self.sources.active.list = [n for n in self.sources.list if n["status"][-1] is True]
+		self.sources.active.nb = len(self.sources.active.list)
+
+		self.sources.inactive = self.project.use_coll('info')
+		self.sources.inactive.list = [n for n in self.sources.list if n["status"][-1] is False]
+		self.sources.inactive.nb = len(self.sources.inactive.list)
+		return self.sources
+
+	def load_results(self):
+		self.results.nb = self.results.count()
+		self.results.urls = self.results.find().distinct("url")
+		self.results.unique = len(self.results.urls)
+		#self.results.list = [self.results.find_one({},{"url":url}) for url in self.results.urls]
+		return self.results
+
+	def load_logs(self):
+		self.logs.nb = self.logs.count()
+		self.logs.urls = self.logs.distinct("url")
+		self.logs.unique = len(self.logs.urls)
+		#self.logs.list = [self.logs.find_one({},{"url":url}) for url in self.logs.urls]
+		return self.logs
+	def load_queue(self):
+		self.queue.nb = self.queue.count()
+		self.queue.urls = self.queue.distinct("url")
+		self.queue.unique = len(self.queue.urls)
+		self.queue.list = [self.queue.find_one({},{"url":url}) for url in self.queue.urls]
+		self.queue.max_depth = self.queue.find_one(sort=[("depth", -1)])
+		#self.queue.dates = self.queue.find({"date":{"$exists":"True"}})
+		return self.queue
+
+	def load_data(self):
+		'''loading data and mapping it into object'''
+		logging.info("Loading data from project db")
+		try:
+			self.load_sources()
+
+		except AttributeError as e:
+			logging.warning(e)
+			pass
+		try:
+			self.load_results()
+		except AttributeError as e:
+			logging.warning(e)
+
+			pass
+		try:
+			self.load_queue()
+		except AttributeError as e:
+			logging.warning(e)
+
+			pass
+
+		try:
+			self.load_logs()
+		except AttributeError as e:
+			logging.warning(e)
+
+			pass
+		try:
+			self.crawl = self.project.use_coll('info')
+			self.crawl.process_nb = self.queue.unique
+			self.crawl.treated_nb = self.logs.unique+self.results.unique+self.sources.unique
+			return self
+		except AttributeError as e:
+			logging.warning(e)
+			return self
+
 	def filter_last_items(self, field="status", filter="True"):
 		filter_active = [
 		  {"$unwind": "$"+filter},
@@ -257,54 +320,7 @@ class Crawtext(object):
 
 		return filter_active
 
-	def load_project(self):
-		logging.info("Load project info")
-		self.project_db = Database(self.name)
-		self.results = self.project_db.use_coll('results')
-		self.sources = self.project_db.use_coll('sources')
-		self.logs = self.project_db.use_coll('logs')
-		self.queue = self.project_db.use_coll('queue')
-
-		#RESULTS
-		self.results.nb = self.results.count()
-		self.results.urls = self.results.find().distinct("url")
-		self.results.unique = len(self.results.urls)
-		#self.results.list = [self.results.find_one({},{"url":url}) for url in self.results.urls]
-		#print self.results.list
-
-		#SOURCES
-		self.sources.nb = self.sources.count()
-		self.sources.urls = self.sources.distinct("url")
-		self.sources.unique = len(self.sources.urls)
-		self.sources.list = [self.sources.find_one({"url":url}) for url in self.sources.urls]
-		self.sources.active = self.project_db.use_coll('info')
-		self.sources.active.list = [n for n in self.sources.list if n["status"][-1] is True]
-
-		self.sources.active.nb = len(self.sources.active.list)
-		self.sources.inactive = self.project_db.use_coll('info')
-		self.sources.inactive.list = [n for n in self.sources.list if n["status"][-1] is False]
-		self.sources.inactive.nb = len(self.sources.inactive.list)
-
-		# self.sources.list = self.sources.active.list
-		#LOGS
-		self.logs.nb = self.logs.count()
-		self.logs.urls = self.logs.distinct("url")
-		self.logs.unique = len(self.logs.urls)
-		#self.logs.list = [self.logs.find_one({},{"url":url}) for url in self.logs.urls]
-		#QUEUE
-		self.queue.nb = self.queue.count()
-		self.queue.urls = self.queue.distinct("url")
-		self.queue.unique = len(self.queue.urls)
-		self.queue.list = [self.queue.find_one({},{"url":url}) for url in self.queue.urls]
-		self.queue.max_depth = self.queue.find_one(sort=[("depth", -1)])
-		#self.queue.dates = self.queue.find({"date":{"$exists":"True"}})
-		#print self.queue.dates
-		#CRAWL INFOS
-		self.crawl = self.project_db.use_coll('info')
-		self.crawl.nb = self.queue.unique+self.logs.unique+self.sources.active.nb
-		return self
-
-	def set_crawler(self):
+	def config_crawl(self):
 		''' set configuration for crawler: filter with the query or open
 		if project has no query and at least one seed (file or url)
 			then the filter is off
@@ -314,47 +330,47 @@ class Crawtext(object):
 			and the crawl insert the seed into sources
 		'''
 		logging.info("Set crawler: Activating parameters and adding seeds to sources")
-		print (self.query, self.key, self.url, self.file)
-		if (self.query, self.key, self.url, self.file) == (False, False, False, False):
+
+
+		if any([self.key, self.url, self.file]) is False:
 			#logging.info("Invalid parameters task should have at least one seed (file, url or API key for search)")
 			return sys.exit("Invalid parameters task should have at least one seed (file, url or API key for search)")
-		elif (self.query, self.key, self.url) == (False, False, True):
-			self.upsert_url(self.url, "manual")
-			filter="off"
 
-		elif (self.query, self.key, self.file) == (False, False, True):
-			self.upsert_file()
-			filter="off"
-
-		elif (self.query, self.key) != (False, False):
-			if self.sources.unique == 0:
-				self.get_seeds()
-			elif self.repeat is not False:
-				self.update_seeds()
-
-			self.crawler(filter="on")
-			return self
+		elif self.query is False:
+			self.target = False
+			if self.key is True:
+				logging.warning("Search for seeds with an API key will not work unless you provide a query")
+				return sys.exit("Please provide a query")
 		else:
-			if self.query is False:
-				return sys.exit("No query provided. Please add one")
-			elif self.key is False:
-				return sys.exit("No BING API key provided")
-			else:
-				return sys.exit("Invalid parameters")
-
-
+			self.load_project()
+			self.load_data()
+			print(self.url, self.file, self.key)
+			self.target = True
+			if self.url is not False:
+				print "Adding url"
+				self.upsert_url(self.url, "manual")
+			if self.file is not False:
+				print "Adding urls in file"
+				self.upsert_file()
+			if self.key is not False:
+				print "Adding urls from search"
+				self.get_seeds()
+				#if self.sources.unique == 0:
+				#	self.get_seeds()
+				# elif self.repeat is not False:
+				# 	self.update_seeds()
+		return self
 	def update_crawl(self):
 		raise NotImplementedError
-
 	def bing_search(self):
 		web_results = []
 		for i in range(0,self.nb, 50):
-
+			
 			#~ try:
 			r = requests.get('https://api.datamarket.azure.com/Bing/Search/v1/Web',
 				params={'$format' : 'json',
 					'$skip' : i,
-					'$top': step,
+					'$top': 50,
 					'Query' : '\'%s\'' %self.query,
 					},auth=(self.key, self.key)
 					)
@@ -370,8 +386,8 @@ class Crawtext(object):
 		if len(web_results) == 0:
 			return False
 		return web_results
-
 	def get_seeds(self):
+		logging.info("Get_seeds")
 		try:
 			if self.nb is False:
 				self.nb = MAX_RESULTS
@@ -407,10 +423,9 @@ class Crawtext(object):
 		else:
 			logging.warning("Bing search for source failed")
 			return self
-
 	def upsert_url(self, url, source_url):
 		if exists is None:
-			self.project_db.sources.insert({"url":url,
+			self.project.sources.insert({"url":url,
 											"source_url": source_url,
 											"depth": 0,
 											"msg":["inserted"],
@@ -419,7 +434,7 @@ class Crawtext(object):
 											"date": [self.date]
 											})
 		else:
-			self.project_db.sources.update({"url":exists["url"]},
+			self.project.sources.update({"url":exists["url"]},
 											{"$push":{
 													"msg":"updated",
 													"code": 100,
@@ -428,7 +443,6 @@ class Crawtext(object):
 													}})
 
 			return False
-
 	def upsert_file(self):
 		try:
 			if self.directory is not False:
@@ -443,10 +457,13 @@ class Crawtext(object):
 			for url in f.readlines():
 				self.upsert_url(url, "file %s") %self.file
 		return self
-
-	def crawler(self, filter="off"):
-		print "Crawler activated with query filter %s" %filter
+	def crawler(self):
+		print "Crawler activated with query filter %s" %self.target
+		# if self.sources.nb == 0:
+		# 	sys.exit("Error: no sources found in the project.")
 		self.queue.list = self.sources.active.list
+		print self.queue.nb
+		print self.sources.active.list
 		while self.queue.nb > 0:
 			for item in self.queue.list:
 				if item["url"] in self.results.urls:
@@ -459,7 +476,8 @@ class Crawtext(object):
 					if p.download():
 						a = Article(p.url,p.html, p.source_url, p.depth,p.date, True)
 						if a.extract():
-							if filter == "on":
+							#Targeted crawk filtering for pertinency
+							if self.target:
 								if a.filter(self.query, self.directory):
 									if a.check_depth(a.depth):
 										a.fetch_links()
@@ -502,7 +520,6 @@ class Crawtext(object):
 				break
 
 		return self.show_stats()
-
 	def _stop(self):
 		import subprocess, signal
 		p = subprocess.Popen(['ps', 'ax'], stdout=subprocess.PIPE)
