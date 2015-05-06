@@ -597,6 +597,8 @@ class Crawtext(object):
 		'''
 	def report(self):
 		logging.info("Report")
+		self.load_project()
+		self.load_data()
 		if self.user is None or self.user is False:
 			self.user = __author__
 		if send_mail(self.user, self.project) is True:
@@ -605,7 +607,7 @@ class Crawtext(object):
 		else:
 			logging.info("Impossible to send mail to %s\nCheck your email!" %self.user)
 			#self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"report: mail", "status":False, "date": self.date, "msg": "Error while sending the mail"}})
-		if generate_report(self.task, self.project_db, self.directory):
+		if generate_report(self.task, self.project, self.directory):
 			#self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"report: document", "status": True, "date": self.date, "msg": "Ok"}})
 			logging.info("Report sent and stored!")
 			return sys.exit(0)
@@ -613,6 +615,7 @@ class Crawtext(object):
 			#self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"report: document", "status": False, "date": self.date, "msg": "Unable to create report document"}})
 			return sys.exit("Report failed")
 	def export(self):
+		self.load_project()
 		logging.info("Export")
 		from export import generate
 		if generate(self.name, self.data, self.format, self.directory):
