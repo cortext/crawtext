@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 import os, sys
 from datetime import datetime as dt
-
+from logger import logging
 def send_mail(user, db):
 	from packages.format_email import createhtmlmail
 	from packages.private import username, passw
@@ -49,8 +49,8 @@ def generate_report(task, db, directory):
 
 		#date_list = [n.strftime('%d-%m-%Y %H-%M-%S') for n in task["date"]]
 
-		status_list = list(zip(task["status"],task["msg"]))
-		for msg in status_list:
-			f.write("\n-"+str(msg))
-	print "Your report is ready!\nCheck here: %s" %(filename)
+		# status_list = list(zip(task["status"],task["msg"]))
+		# for msg in status_list:
+		# 	f.write("\n-"+str(msg))
+	logging.info("Your report is ready!\nCheck here: %s" %(filename))
 	return True
