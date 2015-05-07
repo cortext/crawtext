@@ -55,6 +55,7 @@ class Crawtext(object):
 		self.task_db = TaskDB()
 		self.coll = self.task_db.coll
 		self.task = self.coll.find_one({"name":self.name})
+		#run it
 		self.dispatch_action(user_input)
 
 	def dispatch_action(self,user_input):
@@ -235,19 +236,61 @@ class Crawtext(object):
 		'''loading sources data and stats'''
 		#SOURCES
 		logging.info("Loading sources")
+		#
+		self.sources.ensure_index([("$url" , pymongo.ASCENDING), ("unique" , True), ("dropDups" , True)])
+		#self.sources.ensureIndex({"url": 1}, {"unique": "true", "dropDups": "true"})
+		#self.sources.unique = self.sources.aggregate([{ $group: { _id: "url"}  },{ $group: { _id: 1, count: { $sum: 1 } } } ])
+		#remove duplicate
+
 		self.sources.nb = self.sources.count()
-		self.sources.urls = self.sources.distinct("url")
-		#self.sources.unique = db.sources.aggregate([{ $group: { _id: "$url"}  },{ $group: { _id: 1, count: { $sum: 1 } } }])
-		self.sources.unique = len(self.sources.urls)
-		self.sources.list = [self.sources.find_one({"url":url}) for url in self.sources.urls]
+		self.sources.inactive = self.sources.aggregate([
+		  {"$unwind": "$status"},
+		  {"$group": {
+		    "_id": '$_id',
+		    "url" : { "$first": '$url' },
+		    "source_url" : { "$first": '$source_url' },
+		    "depth" : { "$first": '$depth' },
+		    "status" :  { "$last": '$status' },
+		    "date" :  { "$last": '$date' },
+		    }},
+		  {"$match": { "status": "false" }},
+		])
+		self.sources.active = self.sources.aggregate([
+		  {"$unwind": "$status"},
+		  {"$group": {
+		    "_id": '$_id',
+		    "url" : { "$first": '$url' },
+		    "source_url" : { "$first": '$source_url' },
+		    "depth" : { "$first": '$depth' },
+		    "status" :  { "$last": '$status' },
+		    "date" :  { "$last": '$date' },
+		    }},
+		  {"$match": { "status": "true" }},
+		])
+		self.sources.last_dates = self.sources.aggregate([
+		  {"$unwind": "$date"},
+		  {"$group": {
+		    "_id": '$_id',
+		    "url" : { "$first": '$url' },
+		    "source_url" : { "$first": '$source_url' },
+		    "depth" : { "$first": '$depth' },
+		    "status" :  { "$last": '$status' },
+		    "date" :  { "$last": '$date' },
+		    }},
+		])
 
-		self.sources.active = self.project.use_coll('info')
-		self.sources.active.list = [n for n in self.sources.list if n["status"][-1] is True]
-		self.sources.active.nb = len(self.sources.active.list)
+		# self.sources.urls = self.sources.distinct("url")
+		# #self.sources.unique = db.sources.aggregate([{ $group: { _id: "$url"}  },{ $group: { _id: 1, count: { $sum: 1 } } }])
+		# self.sources.unique = len(self.sources.urls)
+		# self.sources.list = [self.sources.find_one({"url":url}) for url in self.sources.urls]
 
-		self.sources.inactive = self.project.use_coll('info')
-		self.sources.inactive.list = [n for n in self.sources.list if n["status"][-1] is False]
-		self.sources.inactive.nb = len(self.sources.inactive.list)
+		#self.sources.active = self.project.use_coll('info')
+		#self.sources.active.list = [n for n in self.sources.list if n["status"][-1] is True]
+		#self.sources.active.nb = len(self.sources.active.list)
+
+		#self.sources.inactive = self.project.use_coll('info')
+		#self.sources.inactive.list = [n for n in self.sources.list if n["status"][-1] is False]
+		#self.sources.inactive.nb = len(self.sources.inactive.list)
 		return self.sources
 
 	def load_results(self):
@@ -268,12 +311,16 @@ class Crawtext(object):
 		#self.logs.list = [self.logs.find_one({},{"url":url}) for url in self.logs.urls]
 		return self.logs
 	def load_queue(self):
-		logging.info("Loading queue. May take a little while....")
-		self.queue.nb = self.queue.count()
+		logging.info("Loading queue.")
 		self.queue.urls = self.queue.distinct("url")
-		self.queue.unique = len(self.queue.urls)
+		#remove duplicates
+		self.queue.ensure_index([("$url" , pymongo.ASCENDING), ("unique" , True), ("dropDups" , True)])
+		#count
+		self.queue.nb = self.queue.count()
+		self.queue.unique = self.queue.aggregate([{ "$group": { "_id": "url"}  },{ "$group": { "_id": 1, "count": { "$sum": 1 } } } ])
+		print self.queue.unique
 		#self.queue.unique = self.sources.aggregate([{ $group: { _id: "$url"}  },{ $group: { _id: 1, count: { $sum: 1 } } } ])
-		self.queue.list = [self.queue.find_one({"url":url}) for url in self.queue.urls]
+		#self.queue.list = [self.queue.find_one({"url":url}) for url in self.queue.urls]
 		self.queue.max_depth = self.queue.find_one(sort=[("depth", -1)])
 		#self.queue.dates = self.queue.find({"date":{"$exists":"True"}})
 		return self.queue
@@ -308,8 +355,8 @@ class Crawtext(object):
 			pass
 		try:
 			self.crawl = self.project.use_coll('info')
-			self.crawl.process_nb = self.queue.unique
-			self.crawl.treated_nb = self.logs.unique+self.results.unique+self.sources.unique
+
+			#self.crawl.treated_nb = self.logs.unique+self.results.unique+self.sources.unique
 			return self
 		except AttributeError as e:
 			logging.warning(e)
@@ -503,7 +550,7 @@ class Crawtext(object):
 		# if self.sources.nb == 0:
 		# 	sys.exit("Error: no sources found in the project.")
 
-		logging.info("Begin crawl with %i active urls"%self.sources.active.nb)
+		logging.info("Begin crawl with %i active urls"%self.sources.nb)
 		self.push_to_queue()
 
 		logging.info("Processing %i urls"%self.queue.count())
