@@ -19,12 +19,19 @@ def create_field(directory, format):
 		"zip": os.path.join(directory,"logs.zip"),
 		"fields": 'url,code,scope,statuss,msg',
 		}
+	
 	dict_values["results"] = {
-		"filename": os.path.join(directory, "results_%s.%s") %(date, format), 
-		"format":format,
-		"zip": os.path.join(directory,"results.zip"),
-		"fields": 'url,domain,title,text,outlinks',
-		}
+                "filename": os.path.join(directory, "results_%s.%s") %(date, fo$
+                "format":format,
+                "zip": os.path.join(directory,"results.zip"),
+                "fields": 'url,domain,title,text,outlinks,depth',
+                }
+        dict_values["queue"] = {
+                "filename": os.path.join(directory, "results_%s.%s") %(date, fo$
+                "format":format,
+                "zip": os.path.join(directory,"results.zip"),
+                "fields": 'url,domain,depth,source_url',
+                }
 	return dict_values
 
 
