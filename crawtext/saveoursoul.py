@@ -108,6 +108,7 @@ class Crawtext(object):
 		self.coll.update({"name":self.task["name"]}, new_task)
 		logging.info("Sucessfully updated")
 		return self.show()
+
 	def show(self):
 		'''showing the task parameters'''
 		self.task  = self.coll.find_one({"name": self.name})
@@ -153,7 +154,13 @@ class Crawtext(object):
 			print "No data loaded into project"
 			print "********\n"
 			return self
-
+	def remove_dups(self):
+                ''' only available for < Mongo 2'''
+               	self.project.results.create_index([("url", pymongo.DESCENDING, background=True, unique = True)
+		self.project.sources.create_index([("url", pymongo.DESCENDING, background=True, unique=True) 
+		self.project.sources.ensure_index()
+		self.project.results.ensure_index()
+		return  self
 	def start(self):
 		if self.task is None:
 			sys.exit("Project doesn't exists.")
@@ -369,6 +376,11 @@ class Crawtext(object):
 
 		self.load_project()
 		self.load_data()
+		#Attention un petit hack en cas de pb avec le srv mongo 
+                if len(self.queue.distint("url")) >0:
+                #do not update sources
+                        self.target = True
+                        return self
 
 		self.target = True
 		if self.url is not False:
