@@ -156,11 +156,12 @@ class Crawtext(object):
 			return self
 	def remove_dups(self):
                 ''' only available for < Mongo 2'''
-               	self.project.results.create_index([("url", pymongo.DESCENDING, background=True, unique = True)
-		self.project.sources.create_index([("url", pymongo.DESCENDING, background=True, unique=True) 
-		self.project.sources.ensure_index()
-		self.project.results.ensure_index()
-		return  self
+               	#self.project.results.create_index([("url", pymongo.DESCENDING, "background"=True, "unique"= True)
+		#self.project.sources.create_index([("url", pymongo.DESCENDING, "background"=True, "unique"=True) 
+		self.project.sources.ensure_index("url", unique=True)
+		self.project.results.ensure_index("url", unique=True)
+		self.project.queue.ensure_index("url", unique=True)
+		return self
 	def start(self):
 		if self.task is None:
 			sys.exit("Project doesn't exists.")
@@ -377,8 +378,9 @@ class Crawtext(object):
 		self.load_project()
 		self.load_data()
 		#Attention un petit hack en cas de pb avec le srv mongo 
-                if len(self.queue.distint("url")) >0:
+                if len(self.queue.distinct("url")) >0:
                 #do not update sources
+			self.remove_dups()
                         self.target = True
                         return self
 
