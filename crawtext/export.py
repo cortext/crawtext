@@ -21,15 +21,15 @@ def create_field(directory, format):
 		}
 	
 	dict_values["results"] = {
-                "filename": os.path.join(directory, "results_%s.%s") %(date, fo$
+                "filename": os.path.join(directory, "results_%s.%s") %(date, format),$
                 "format":format,
                 "zip": os.path.join(directory,"results.zip"),
                 "fields": 'url,domain,title,text,outlinks,depth',
                 }
         dict_values["queue"] = {
-                "filename": os.path.join(directory, "results_%s.%s") %(date, fo$
+                "filename": os.path.join(directory, "queue_%s.%s") %(date, fo$
                 "format":format,
-                "zip": os.path.join(directory,"results.zip"),
+                "zip": os.path.join(directory,"queue.zip"),
                 "fields": 'url,domain,depth,source_url',
                 }
 	return dict_values
