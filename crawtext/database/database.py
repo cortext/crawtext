@@ -15,10 +15,16 @@ class Database(object):
 	def __init__(self, database_name, debug=False):
 		self.debug = debug
 		self.client = MongoClient('mongodb://localhost,localhost:27017')
+		connection = pymongo.Connection()
+		self.version = connection.server_info()['version']
+		self.t_version = tuple(self.version.split("."))
 		self.db_name = database_name
 		self.db = getattr(self.client,database_name)
 		self.date = datetime.now()
+		#print self.t_version[0]
 
+		#serverVersion = tuple(connection.server_info()['version'].split('.'))
+		#requiredVersion = tuple("1.3.3".split("."))
 	def set_colls(self):
 		self.sources = self.db["sources"]
 		self.logs = self.db["logs"]
@@ -123,7 +129,7 @@ class Database(object):
 		result = self.db.results.find_one({"url":log['url']})
 		source = self.db.sources.find_one({"url":log['url']})
 		if source is not None:
-			if self.debug: print "\t- sources udpated"			
+			if self.debug: print "\t- sources udpated"
 			self.db.sources.update({"_id":source["_id"]}, {"$push": {"date": log["date"], "status": True, "msg": "Result stored"}})
 		if result is not None:
 			return self.update_result(log)
