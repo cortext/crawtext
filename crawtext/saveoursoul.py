@@ -20,6 +20,7 @@ Usage:
 	crawtext.py (<name>) export [--data=<data>] [--format=<format>] [--debug]
 	crawtext.py (<name>) report [--user=<email>] [--format=<format>] [--debug]
 	crawtext.py (<name>) delete [--debug]
+	crawtext.py -l
 '''
 
 import os, sys, re
@@ -51,11 +52,15 @@ class Crawtext(object):
 		self.debug = debug
 		dt = datetime.datetime.today()
 		self.date = dt.replace(minute=0, second=0, microsecond=0)
-		self.project_path = os.path.join(RESULT_PATH, name)
 		self.task_db = TaskDB()
 		self.coll = self.task_db.coll
 		self.task = self.coll.find_one({"name":self.name})
-		self.dispatch_action(user_input)
+
+		if self.name is not None:
+			self.project_path = os.path.join(RESULT_PATH, name)
+			self.dispatch_action(user_input)
+		else:
+			self.list_projects()
 
 	def dispatch_action(self,user_input):
 		for k,v in user_input.items():
@@ -226,10 +231,12 @@ class Crawtext(object):
 	def load_project(self):
 		logging.info("Loading Project DB")
 		self.project = Database(self.name)
-		self.results = self.project.use_coll('results')
-		self.sources = self.project.use_coll('sources')
-		self.logs = self.project.use_coll('logs')
-		self.queue = self.project.use_coll('queue')
+		for n in self.project.create_colls(["results", "sources", "logs", "queue"]):
+			print self.project[n].count()
+		# self.results = self.project.use_coll('results')
+		# self.sources = self.project.use_coll('sources')
+		# self.logs = self.project.use_coll('logs')
+		# self.queue = self.project.use_coll('queue')
 		self.project.drop_dups()
 		return self.project
 
@@ -649,6 +656,18 @@ class Crawtext(object):
 		else:
 			self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"export", "status": False, "date": dt.now(), "msg": "Error while exporting"}})
 			return sys.exit("Failed to export")
+
+	def list_projects(self):
+		for n in self.coll.find():
+			try:
+				print "-", n["name"]
+			except KeyError:
+				self.coll.remove(n)
+
+				#print "-", "[ERROR]", n.keys()
+		return sys.exit(0)
+
+
 
 if __name__ == "crawtext":
 	c = Crawtext(docopt(__doc__)["<name>"],docopt(__doc__), True)
