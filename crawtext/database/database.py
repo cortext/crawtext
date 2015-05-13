@@ -25,12 +25,15 @@ class Database(object):
 
 		#serverVersion = tuple(connection.server_info()['version'].split('.'))
 		#requiredVersion = tuple("1.3.3".split("."))
-	def set_colls(self):
-		self.sources = self.db["sources"]
-		self.logs = self.db["logs"]
-		self.results = self.db["results"]
-		self.queue = self.db["queue"]
-		self.drop_dups()
+	def set_colls(self, colls=[]):
+		if len(coll) == 0:
+			self.colls = ["sources", "logs", "results", "queue"]
+		else:
+			self.colls = colls
+		for i in self.colls:
+			setattr(i, self) = self.db[i]
+
+
 		return self
 
 	def use_db(self, database_name):
@@ -54,13 +57,14 @@ class Database(object):
 		return self
 
 	def create_colls(self, coll_names=["results","sources", "logs", "queue"]):
-		for n in coll_names:
+		if len(coll_names) > 0:
+			self.colls = ["results","sources", "logs", "queue"]
+		else:
+			self.colls = coll_names
+		for n in self.colls:
 			setattr(self, n, self.db[str(n)])
-		# self.queue = self.db['queue']
-		# self.log = self.db['log']
-		# self.sources = self.db['sources']
-		# #print ("Creating coll",  [n for n in self.db.collection_names()])
-		return [n for n in self.db.collection_names()]
+			self.create_index("url", self.db[str(n)])
+		return self.colls
 
 	def show_coll(self):
 		try:
@@ -72,8 +76,23 @@ class Database(object):
 	def show_coll_items(self, coll_name):
 		return [n for n in self.db[str(coll_name)].find()]
 
+	def create_index(key, coll):
+		 return coll.create_index([(key, pymongo.DESCENDING, "background"=True, "unique"= True)
+
+	def drop_dups(key, coll):
+		logging.DEBUG(coll.count())
+		if self.t_version[0] > 2:
+			#self.project.sources.aggregate
+			raise NotImplementedError
+		else:
+			coll.ensure_index({url: 1}, {unique:true, dropDups: true})
+			#coll.ensure_index("url", unique=True)
+			logging.DEBUG(coll.count())
+			return
+
+	'''
 	def drop_dups(self):
-        ''' only available for < Mongo 2'''
+        #only available for < Mongo 2
 		if self.t_version[0] > 2:
 			#self.project.sources.aggregate
 			raise NotImplementedError
@@ -91,6 +110,7 @@ class Database(object):
 			# self.queue.ensure_index("url", unique=True)
 
 		return self
+	'''
 
 	def drop(self, type, name):
 		if type == "collection":
@@ -162,7 +182,7 @@ class Database(object):
 
 
 	def update_result(self, log):
-		"\t-result updated"
+		# "\t-result updated"
 		try:
 			result = self.db.results.find_one({"url":log['url']})
 			updated = self.db.results.update({"_id":result["_id"]},{"$push": {"date": log["date"], "status": True, "msg": "Result stored"}})
