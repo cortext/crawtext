@@ -80,15 +80,29 @@ class Database(object):
 	def create_index(key, coll):
 		 return coll.create_index([(key, pymongo.DESCENDING,True,True)])
 
-	def drop_dups(key, coll):
-		logging.DEBUG(coll.count())
+	def drop_dups(self, key, coll):
+		#logger.DEBUG(coll.count())
+		coll = getattr(self, coll)
 		if self.t_version[0] > 2:
+			print coll.count()
+			pipeline = [{ $group: { _id: "url"}  },{ $group: { _id: 1, count: { $sum: 1 } } } ]
+			print self.db.command(db.str(coll).aggregate(pipeline))
+
 			#self.project.sources.aggregate
-			raise NotImplementedError
+			# complete = [coll.find_one({"url":n}) for n in coll.distinct("url")]
+			# for n in coll.find():
+			# 	if n[""] not in coll.
+			# 	if n["url"] not in complete:
+			# 		coll.remove(n)
+			# print coll.count()
+
+
+			pass
 		else:
 			coll.ensure_index({url: 1}, {unique:true, dropDups: true})
+			print coll.count()
 			#coll.ensure_index("url", unique=True)
-			logging.DEBUG(coll.count())
+			#logger.DEBUG(coll.count())
 			return
 
 	'''

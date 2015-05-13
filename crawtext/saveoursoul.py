@@ -232,12 +232,12 @@ class Crawtext(object):
 		logging.info("Loading Project DB")
 		self.project = Database(self.name)
 		for n in self.project.create_colls(["results", "sources", "logs", "queue"]):
-			print self.project[n].count()
+			print n
 		# self.results = self.project.use_coll('results')
 		# self.sources = self.project.use_coll('sources')
 		# self.logs = self.project.use_coll('logs')
 		# self.queue = self.project.use_coll('queue')
-		self.project.drop_dups()
+			self.project.drop_dups("url", n)
 		return self.project
 
 	def load_sources(self):
