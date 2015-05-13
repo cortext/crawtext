@@ -71,6 +71,24 @@ class Database(object):
 	def show_coll_items(self, coll_name):
 		return [n for n in self.db[str(coll_name)].find()]
 
+	def drop_dups(self):
+        ''' only available for < Mongo 2'''
+		if self.t_version[0] > 2:
+			#self.project.sources.aggregate
+			raise NotImplementedError
+		else:
+	        self.results.create_index([("url", pymongo.DESCENDING, "background"=True, "unique"= True)
+			self.queue.create_index([("url", pymongo.DESCENDING, "background"=True, "unique"=True)
+			self.sources.create_index([("url", pymongo.DESCENDING, "background"=True, "unique"=True)
+			self.queue.ensure_index({url: 1}, {unique:true, dropDups: true})
+			self.sources.ensure_index({url: 1}, {unique:true, dropDups: true})
+			self.queue.ensure_index({url: 1}, {unique:true, dropDups: true})
+			self.project.sources.ensure_index("url", unique=True)
+			self.project.results.ensure_index("url", unique=True)
+			self.project.queue.ensure_index("url", unique=True)
+			self.queue.ensure_index({url: 1}, {unique:true, dropDups: true})
+		return self
+
 	def drop(self, type, name):
 		if type == "collection":
 			return self.db[str(name)].drop()

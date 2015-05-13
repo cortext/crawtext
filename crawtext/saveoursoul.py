@@ -154,14 +154,8 @@ class Crawtext(object):
 			print "No data loaded into project"
 			print "********\n"
 			return self
-	def remove_dups(self):
-                ''' only available for < Mongo 2'''
-               	#self.project.results.create_index([("url", pymongo.DESCENDING, "background"=True, "unique"= True)
-		#self.project.sources.create_index([("url", pymongo.DESCENDING, "background"=True, "unique"=True) 
-		self.project.sources.ensure_index("url", unique=True)
-		self.project.results.ensure_index("url", unique=True)
-		self.project.queue.ensure_index("url", unique=True)
-		return self
+
+
 	def start(self):
 		if self.task is None:
 			sys.exit("Project doesn't exists.")
@@ -236,7 +230,7 @@ class Crawtext(object):
 		self.sources = self.project.use_coll('sources')
 		self.logs = self.project.use_coll('logs')
 		self.queue = self.project.use_coll('queue')
-
+		self.project.drop_dups()
 		return self.project
 
 	def load_sources(self):
@@ -377,7 +371,7 @@ class Crawtext(object):
 
 		self.load_project()
 		self.load_data()
-		#Attention un petit hack en cas de pb avec le srv mongo 
+		#Attention un petit hack en cas de pb avec le srv mongo
                 if len(self.queue.distinct("url")) >0:
                 #do not update sources
 			self.remove_dups()
@@ -512,6 +506,7 @@ class Crawtext(object):
 			for url in f.readlines():
 				self.upsert_url(url, "file %s") %self.file
 		return self
+
 	def crawler(self):
 		logging.info("Crawler activated with query filter %s" %self.target)
 		# if self.sources.nb == 0:
