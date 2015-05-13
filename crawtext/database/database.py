@@ -30,6 +30,7 @@ class Database(object):
 		self.logs = self.db["logs"]
 		self.results = self.db["results"]
 		self.queue = self.db["queue"]
+		self.drop_dups()
 		return self
 
 	def use_db(self, database_name):
@@ -80,13 +81,15 @@ class Database(object):
 	        self.results.create_index([("url", pymongo.DESCENDING, "background"=True, "unique"= True)
 			self.queue.create_index([("url", pymongo.DESCENDING, "background"=True, "unique"=True)
 			self.sources.create_index([("url", pymongo.DESCENDING, "background"=True, "unique"=True)
+
 			self.queue.ensure_index({url: 1}, {unique:true, dropDups: true})
 			self.sources.ensure_index({url: 1}, {unique:true, dropDups: true})
 			self.queue.ensure_index({url: 1}, {unique:true, dropDups: true})
-			self.project.sources.ensure_index("url", unique=True)
-			self.project.results.ensure_index("url", unique=True)
-			self.project.queue.ensure_index("url", unique=True)
-			self.queue.ensure_index({url: 1}, {unique:true, dropDups: true})
+			# Python syntax?
+			# self.sources.ensure_index("url", unique=True)
+			# self.results.ensure_index("url", unique=True)
+			# self.queue.ensure_index("url", unique=True)
+
 		return self
 
 	def drop(self, type, name):
