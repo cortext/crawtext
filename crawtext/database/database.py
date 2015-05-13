@@ -6,7 +6,7 @@ from pymongo import MongoClient
 from pymongo import errors
 import re
 from datetime import datetime
-
+from copy import copy
 TASK_MANAGER_NAME = "crawtext_jobs"
 TASK_COLL = "job"
 
@@ -31,7 +31,8 @@ class Database(object):
 		else:
 			self.colls = colls
 		for i in self.colls:
-			setattr(i, self) = self.db[i]
+			setattr(self, str(i), self.db[str(i)])
+
 
 
 		return self
@@ -63,7 +64,7 @@ class Database(object):
 			self.colls = coll_names
 		for n in self.colls:
 			setattr(self, n, self.db[str(n)])
-			self.create_index("url", self.db[str(n)])
+			#self.db.create_index({"url", self.db[str(n)]})
 		return self.colls
 
 	def show_coll(self):
@@ -77,7 +78,7 @@ class Database(object):
 		return [n for n in self.db[str(coll_name)].find()]
 
 	def create_index(key, coll):
-		 return coll.create_index([(key, pymongo.DESCENDING, "background"=True, "unique"= True)
+		 return coll.create_index([(key, pymongo.DESCENDING,True,True)])
 
 	def drop_dups(key, coll):
 		logging.DEBUG(coll.count())
