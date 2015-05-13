@@ -84,9 +84,10 @@ class Database(object):
 		#logger.DEBUG(coll.count())
 		coll = getattr(self, coll)
 		if self.t_version[0] > 2:
-			print coll.count()
-			pipeline = [{ $group: { _id: "url"}  },{ $group: { _id: 1, count: { $sum: 1 } } } ]
-			print self.db.command(db.str(coll).aggregate(pipeline))
+			# print coll.count()
+			# pipeline = [{ $group: { _id: "url"}  },{ $group: { _id: 1, count: { $sum: 1 } } } ]
+			# print self.db.command(db.str(coll).aggregate(pipeline))
+
 
 			#self.project.sources.aggregate
 			# complete = [coll.find_one({"url":n}) for n in coll.distinct("url")]
