@@ -407,7 +407,7 @@ class Crawtext(object):
 
 	def bing_search(self):
 		# dt = datetime.datetime.now()
-		if (dt.day, dt.month, dt.year, dt.hour) == (self.task['date'].day, self.task['date'].month, self.task['date'].year, self.task['date'].hour) :
+		if (dt.day, dt.month, dt.year, dt.hour) == (self.task['date'][-1].day, self.task['date'][-1].month, self.task['date'][-1].year, self.task['date'][-1].hour) :
 			logging.info("Search already done today in less than 1h ")
 		# 	return False
 		logging.info("bing is searching %s urls" %self.nb)
