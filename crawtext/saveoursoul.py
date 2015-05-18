@@ -258,13 +258,19 @@ class Crawtext(object):
 		stats['results']['max_depth'] = max(self.results.distinct("depth"))
 		for i in range(0, stats['results']['max_depth']+1):
 			stats['results']["depth"+str(i)] = self.results.find({"depth": i}).count()
-		stats['logs']['nb'] = self.project.logs.count()
-		stats['logs']['max_depth'] = max(self.logs.distinct("depth"))
-		stats['logs']['err_type'] = zip(self.logs.distinct("code"), [self.logs.find({"code":n}).count() for n in self.logs.distinct("code")], [self.logs.find_one({"code":n})['msg'] for n in self.logs.distinct("code")])
-		stats['queue']['nb'] = self.project.queue.count()
-		stats['queue']['max_depth'] = max(self.queue.distinct("depth"))
-		for i in range(0, stats['queue']['max_depth']+1):
-			stats['queue']["depth"+str(i)] = self.queue.find({"depth": i}).count()
+		try:
+			stats['logs']['nb'] = self.project.logs.count()
+			stats['logs']['max_depth'] = max(self.logs.distinct("depth"))
+			stats['logs']['err_type'] = zip(self.logs.distinct("code"), [self.logs.find({"code":n}).count() for n in self.logs.distinct("code")], [self.logs.find_one({"code":n})['msg'] for n in self.logs.distinct("code")])
+		except ValueError:
+			pass
+		try:
+			stats['queue']['nb'] = self.project.queue.count()
+			stats['queue']['max_depth'] = max(self.queue.distinct("depth"))
+			for i in range(0, stats['queue']['max_depth']+1):
+				stats['queue']["depth"+str(i)] = self.queue.find({"depth": i}).count()
+		except ValueError:
+			pass
 		return stats
 
 	def show_project(self):
