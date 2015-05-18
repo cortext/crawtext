@@ -473,7 +473,7 @@ class Crawtext(object):
 											"status": [True],
 											"date": [self.date]
 										})
-					except pymongo.errors.DuplicatKeyError:
+					except pymongo.errors.DuplicateKeyError:
 						self.sources.update({
 											"url":url},
 											{"$push":
