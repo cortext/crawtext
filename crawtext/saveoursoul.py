@@ -245,9 +245,7 @@ class Crawtext(object):
 			setattr(self, str(n), self.project.use_coll(str(n)))
 			logging.info("\t- %s: %i" %(n,self.__dict__[n].count()))
 		return self
-	def show_project(self):
-		self.load_project()
-		self.project.load_data()
+	def stats(self):
 		netw_err = range(400, 520)
 		spe_err =  [100, 101, 102, 404, 700, 800]
 
@@ -263,11 +261,15 @@ class Crawtext(object):
 		stats['logs']['nb'] = self.project.logs.count()
 		stats['logs']['max_depth'] = max(self.logs.distinct("depth"))
 		stats['logs']['err_type'] = zip(self.logs.distinct("code"), [self.logs.find({"code":n}).count() for n in self.logs.distinct("code")], [self.logs.find_one({"code":n})['msg'] for n in self.logs.distinct("code")])
-		print stats['logs']
+		return stats
+	def show_project(self):
+		self.load_project()
+		self.project.load_data()
+		self.project_stats = self.stats()
 
 
 
-		'''
+
 		print "==Project stats=="
 		print "*Sources:", self.project.sources.count()
 		print "\t actives:", self.project.sources.active.count()
@@ -296,91 +298,7 @@ class Crawtext(object):
 		print "\t - MAX Depth:", max(self.queue.distinct("depth"))
 		for i in range (0, max(self.queue.distinct("depth"))+1):
 			print "\t - Depth", str(i),":", self.queue.find({"depth": i}).count()
-		'''
 
-	# def load_sources(self):
-	# 	'''loading sources data and stats'''
-	# 	#SOURCES
-	# 	logging.info("Loading sources")
-	# 	self.sources.nb = self.sources.count()
-	# 	self.sources.urls = self.sources.distinct("url")
-	# 	#self.sources.unique = db.sources.aggregate([{ $group: { _id: "$url"}  },{ $group: { _id: 1, count: { $sum: 1 } } }])
-	# 	self.sources.unique = len(self.sources.urls)
-	# 	self.sources.list = [self.sources.find_one({"url":url}) for url in self.sources.urls]
-	#
-	# 	self.sources.active = self.project.use_coll('info')
-	# 	self.sources.active.list = [n for n in self.sources.list if n["status"][-1] is True]
-	# 	self.sources.active.nb = len(self.sources.active.list)
-	#
-	# 	self.sources.inactive = self.project.use_coll('info')
-	# 	self.sources.inactive.list = [n for n in self.sources.list if n["status"][-1] is False]
-	# 	self.sources.inactive.nb = len(self.sources.inactive.list)
-	# 	return self.sources
-	#
-	# def load_results(self):
-	# 	logging.info("Loading results. May take a little while....")
-	# 	self.results.nb = self.results.count()
-	# 	self.results.urls = self.results.find().distinct("url")
-	# 	self.results.unique = len(self.results.urls)
-	# 	#self.results.unique = db.results.aggregate([{ $group: { _id: "$url"}  },{ $group: { _id: 1, count: { $sum: 1 } } } ])
-	# 	self.results.list = [self.results.find_one({"url":url}) for url in self.results.urls]
-	# 	return self.results
-	#
-	# def load_logs(self):
-	# 	logging.info("Loading logs. May take a little while....")
-	# 	self.logs.nb = self.logs.count()
-	# 	self.logs.urls = self.logs.distinct("url")
-	# 	self.logs.unique = len(self.logs.urls)
-	# 	#self.logs.unique = self.logs.aggregate([{ $group: { _id: "$url"}  },{ $group: { _id: 1, count: { $sum: 1 } } } ])
-	# 	#self.logs.list = [self.logs.find_one({},{"url":url}) for url in self.logs.urls]
-	# 	return self.logs
-	# def load_queue(self):
-	# 	logging.info("Loading queue.")
-	# 	self.queue.nb = self.queue.count()
-	# 	self.queue.urls = self.queue.distinct("url")
-	# 	self.queue.unique = len(self.queue.urls)
-	# 	#self.queue.unique = self.sources.aggregate([{ $group: { _id: "$url"}  },{ $group: { _id: 1, count: { $sum: 1 } } } ])
-	# 	self.queue.list = [self.queue.find_one({"url":url}) for url in self.queue.urls]
-	# 	self.queue.max_depth = self.queue.find_one(sort=[("depth", -1)])
-	# 	#self.queue.dates = self.queue.find({"date":{"$exists":"True"}})
-	# 	return self.queue
-	#
-	# def load_data(self):
-	# 	'''loading data and mapping it into object'''
-	# 	logging.info("Loading data from project db")
-	# 	try:
-	# 		self.load_sources()
-	#
-	# 	except AttributeError as e:
-	# 		logging.warning(e)
-	# 		pass
-	# 	try:
-	# 		self.load_results()
-	# 	except AttributeError as e:
-	# 		logging.warning(e)
-	#
-	# 		pass
-	# 	try:
-	# 		self.load_queue()
-	# 	except AttributeError as e:
-	# 		logging.warning(e)
-	#
-	# 		pass
-	#
-	# 	try:
-	# 		self.load_logs()
-	# 	except AttributeError as e:
-	# 		logging.warning(e)
-	#
-	# 		pass
-	# 	try:
-	# 		self.crawl = self.project.use_coll('info')
-	# 		self.crawl.process_nb = self.queue.unique
-	# 		self.crawl.treated_nb = self.logs.unique+self.results.unique+self.sources.unique
-	# 		return self
-	# 	except AttributeError as e:
-	# 		logging.warning(e)
-	# 		return self
 
 	def create_dir(self):
 		try:
