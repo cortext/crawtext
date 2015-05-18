@@ -407,7 +407,10 @@ class Crawtext(object):
 
 	def bing_search(self):
 		# dt = datetime.datetime.now()
-		if (dt.day, dt.month, dt.year, dt.hour) == (self.task['date'][-1].day, self.task['date'][-1].month, self.task['date'][-1].year, self.task['date'][-1].hour) :
+		#petit hack pour éviter les projets qui ont l'historique activé et cexu qui ne l'ont pas avant de le réimplémenter
+		if type(self.task["date"]) == list:
+			self.task["date"] = self.self.task["date"][-1]
+		if (dt.day, dt.month, dt.year, dt.hour) == (self.task['date'].day, self.task['date'].month, self.task['date'].year, self.task['date'].hour) :
 			logging.info("Search already done today in less than 1h ")
 		# 	return False
 		logging.info("bing is searching %s urls" %self.nb)
@@ -458,17 +461,29 @@ class Crawtext(object):
 			total_bing_sources = len(bing_sources)
 			logging.info("Search into Bing got %i results" %total_bing_sources)
 			for i,url in enumerate(bing_sources):
-					self.sources.insert({
+					try:
+						self.sources.insert({
 											"url":url,
 											"source_url": "search",
 											"depth": 0,
-											"nb":i,
-											"total":total_bing_sources,
+											"nb":[i],
+											"total":[total_bing_sources],
 											"msg":["inserted"],
 											"code": [100],
 											"status": [True],
 											"date": [self.date]
 										})
+					except pymongo.errors.DuplicatKeyError:
+						self.sources.update({
+											"url":url},
+											{"$push":
+											{"nb":i,
+											"total":total_bing_sources,
+											"msg":"updated",
+											"code": 101,
+											"status": True,
+											"date": self.date
+											}})
 			logging.info("%i urls from BING search inserted" %i)
 			return self
 		else:
