@@ -1,15 +1,18 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-
+__name__ == "mongodb"
 import pymongo
-
+import logging
+logger = logging.getLogger(__name__)
+FORMAT = "[%(filename)s:%(lineno)s - %(funcName)20s() ] %(message)s"
+logging.basicConfig(file="mongodb.log", format=FORMAT, level=logging.INFO)
 
 import re
 from datetime import datetime
 from copy import copy
 TASK_MANAGER_NAME = "crawtext_jobs"
 TASK_COLL = "job"
-from logger import logging
+
 
 class Database(object):
 	'''Database creation'''
@@ -40,6 +43,7 @@ class Database(object):
 		return self.client[str(database_name)]
 
 	def create_db(self, database_name):
+		logging.info("Creating a new Database %s" %database_name)
 		self.db = self.client[str(database_name)]
 		self.create_colls()
 		return self
@@ -57,6 +61,7 @@ class Database(object):
 		return self
 
 	def create_colls(self, coll_names=["results","sources", "logs", "queue"]):
+		logging.info("Creating new collections")
 		if len(coll_names) > 0:
 			self.colls = ["results","sources", "logs", "queue"]
 		else:
@@ -70,11 +75,7 @@ class Database(object):
 		return self.colls
 
 	def load_sources(self):
-		print "Loading sources"
-		print self.sources.count()
-		#self.sources.actives = []
-		self.sources.inactives = []
-		print type(self.sources.actives)
+		logging.info("Loading sources")
 		'''
 		pipeline = [
 		          #On déroule les status
@@ -139,10 +140,15 @@ class Database(object):
 					self.sources.active.insert_one(n)
 				except pymongo.errors.DuplicateKeyError:
 					pass
-		print self.sources.count()
-		print self.sources.active.count()
-		print self.sources.inactive.count()
-		return self
+		logging.info("%i sources", self.sources.count())
+		logging.info("%i active sources", self.sources.active.count())
+		logging.info("%i inactive sources", self.sources.inactive.count())
+		return self.sources
+	def load_logs(self):
+		print self.logs.count()
+		logging.info("%i logs", self.logs.count())
+
+		return self.logs
 
 	def show_coll(self):
 		try:

@@ -144,7 +144,7 @@ class Crawtext(object):
 
 	def show_project(self):
 		self.load_project()
-		self.load_data()
+
 		try:
 			print "********\n"
 			print "SOURCES:"
@@ -240,7 +240,7 @@ class Crawtext(object):
 		for n in self.project.create_colls(["results", "sources", "logs", "queue"]):
 			setattr(self, str(n), self.project.use_coll(str(n)))
 			print n, ":", self.__dict__[n].count()
-		#self.project.load_data()
+
 		return self
 
 	# def load_sources(self):
@@ -379,29 +379,31 @@ class Crawtext(object):
 			if self.key is True:
 				logging.warning("Search for seeds with an API key will not work unless you provide a query")
 				return sys.exit("Please provide a query")
-		self.load_project()
-		#self.load_data()
+		else:
+			self.load_project()
+			self.load_sources()
 
 
-		#Attention un petit hack en cas de pb avec le srv mongo
-		self.target = True
-		if len(self.queue.distinct("url")) > 0:
-			#do not update sources
+			#Attention un petit hack en cas de pb avec le srv mongo
+
+			self.target = True
+			if len(self.queue.distinct("url")) > 0:
+				#do not update sources
+				return self
+			if self.url is not False:
+				print "Adding url"
+				self.upsert_url(self.url, "manual")
+			if self.file is not False:
+				print "Adding urls in file"
+				self.upsert_file()
+			if self.key is not False:
+				print "Adding urls from search"
+				self.get_seeds()
+				#if self.sources.unique == 0:
+				#	self.get_seeds()
+				# elif self.repeat is not False:
+				# 	self.update_seeds()
 			return self
-		if self.url is not False:
-			print "Adding url"
-			self.upsert_url(self.url, "manual")
-		if self.file is not False:
-			print "Adding urls in file"
-			self.upsert_file()
-		if self.key is not False:
-			print "Adding urls from search"
-			self.get_seeds()
-			#if self.sources.unique == 0:
-			#	self.get_seeds()
-			# elif self.repeat is not False:
-			# 	self.update_seeds()
-		return self
 	def update_crawl(self):
 		raise NotImplementedError
 
@@ -434,6 +436,7 @@ class Crawtext(object):
 		if len(web_results) == 0:
 			return False
 		return web_results
+
 	def get_seeds(self):
 		logging.info("Get_seeds")
 		try:
@@ -473,9 +476,10 @@ class Crawtext(object):
 		else:
 			logging.warning("Bing search for source failed.")
 			return self
+
 	def push_to_queue(self):
 		for n in self.sources.active.find():
-			print n
+
 			try:
 			 	self.queue.insert(n)
 			except pymongo.errors.DuplicateKeyError:
@@ -521,9 +525,15 @@ class Crawtext(object):
 		logging.info("Crawler activated with query filter %s" %self.target)
 		# if self.sources.nb == 0:
 		# 	sys.exit("Error: no sources found in the project.")
-		self.project.load_sources()
-		print self.sources.active.count()
-		print self.sources.inactive.count()
+		try:
+			self.project.load_logs()
+		except AttributeError:
+			self.load_project()
+
+
+
+
+
 		#logging.info("Begin crawl with %i active urls"%self.sources.active_nb)
 		self.push_to_queue()
 		logging.info("Processing %i urls"%self.queue.count())
@@ -574,10 +584,15 @@ class Crawtext(object):
 									a.fetch_links()
 									if len(a.links) > 0:
 										for url, domain in zip(a.links, a.domains):
-											if url not in self.queue.urls:
+											try:
 												self.queue.insert({"url": url, "source_url": item['url'], "depth": int(item['depth'])+1, "domain": domain, "date": a.date})
+											except pymongo.errors.DuplicateError:
+												pass
 												if self.debug: logging.info("\t-inserted %d nexts url" %len(a.links))
-											self.results.insert(a.export())
+											try:
+												self.results.insert(a.export())
+											except pymongo.errors.DuplicateError:
+												pass
 								else:
 									logging.debug("Depth exceeded")
 									self.logs.insert(a.log())

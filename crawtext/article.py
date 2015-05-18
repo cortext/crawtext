@@ -122,7 +122,7 @@ class Page(object):
 	def log(self):
 		# if self.debug is True:
 		#     print {"url":self.url, "status": self.status, "msg": self.msg, "code": self.code}
-		return {"url":self.url, "status": self.status, "msg": self.msg, "code": self.code}
+		return {"url":self.url, "status": self.status, "msg": self.msg, "code": self.code, "depth": self.depth}
 
 	def export(self):
 		return {"url":self.url, "source_url": self.source_url, "depth": self.depth, "html": self.html}
