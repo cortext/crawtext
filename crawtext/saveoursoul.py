@@ -24,10 +24,11 @@ Usage:
 '''
 
 import os, sys, re
-import copy
+from copy import copy
 from docopt import docopt
 from datetime import datetime as dt
 from database import *
+import pymongo
 import datetime
 #from url import Link
 from report import send_mail, generate_report
@@ -85,7 +86,7 @@ class Crawtext(object):
 	def create(self):
 		'''create a new task with user params and store it into db'''
 		if self.task is None:
-			new_task = copy.copy(self.__dict__)
+			new_task = copy(self.__dict__)
 			logging.info(self.create.__doc__)
 
 			del new_task['task']
@@ -103,14 +104,18 @@ class Crawtext(object):
 	def update(self):
 		'''udpating project'''
 		logging.info(self.update.__doc__)
-		new_task = copy.copy(self.__dict__)
+		new_task = copy(self.__dict__)
 		for k,v in new_task.items():
 			if v is None and v is False:
-				del new_task[k]
+				if self.task[k] is not False and self.task[k] is not None:
+					new_task[k] = self.task[k]
+				else:
+					del new_task[k]
 		del new_task['coll']
 		del new_task['task_db']
 		del new_task['task']
-		self.coll.update({"name":self.task["name"]}, new_task)
+
+		self.coll.update({"name":self.task["name"]}, new_task, upsert=True)
 		logging.info("Sucessfully updated")
 		return self.show()
 
@@ -228,101 +233,100 @@ class Crawtext(object):
 			else:
 				setattr(self, k, v)
 		return self
+
 	def load_project(self):
 		logging.info("Loading Project DB")
 		self.project = Database(self.name)
 		for n in self.project.create_colls(["results", "sources", "logs", "queue"]):
-			print n
-		# self.results = self.project.use_coll('results')
-		# self.sources = self.project.use_coll('sources')
-		# self.logs = self.project.use_coll('logs')
-		# self.queue = self.project.use_coll('queue')
-			self.project.drop_dups("url", n)
-		return self.project
+			setattr(self, str(n), self.project.use_coll(str(n)))
+			print n, ":", self.__dict__[n].count()
+		#self.project.load_data()
+		return self
 
-	def load_sources(self):
-		'''loading sources data and stats'''
-		#SOURCES
-		logging.info("Loading sources")
-		self.sources.nb = self.sources.count()
-		self.sources.urls = self.sources.distinct("url")
-		#self.sources.unique = db.sources.aggregate([{ $group: { _id: "$url"}  },{ $group: { _id: 1, count: { $sum: 1 } } }])
-		self.sources.unique = len(self.sources.urls)
-		self.sources.list = [self.sources.find_one({"url":url}) for url in self.sources.urls]
+	# def load_sources(self):
+	# 	'''loading sources data and stats'''
+	# 	#SOURCES
+	# 	logging.info("Loading sources")
+	# 	self.sources.nb = self.sources.count()
+	# 	self.sources.urls = self.sources.distinct("url")
+	# 	#self.sources.unique = db.sources.aggregate([{ $group: { _id: "$url"}  },{ $group: { _id: 1, count: { $sum: 1 } } }])
+	# 	self.sources.unique = len(self.sources.urls)
+	# 	self.sources.list = [self.sources.find_one({"url":url}) for url in self.sources.urls]
+	#
+	# 	self.sources.active = self.project.use_coll('info')
+	# 	self.sources.active.list = [n for n in self.sources.list if n["status"][-1] is True]
+	# 	self.sources.active.nb = len(self.sources.active.list)
+	#
+	# 	self.sources.inactive = self.project.use_coll('info')
+	# 	self.sources.inactive.list = [n for n in self.sources.list if n["status"][-1] is False]
+	# 	self.sources.inactive.nb = len(self.sources.inactive.list)
+	# 	return self.sources
+	#
+	# def load_results(self):
+	# 	logging.info("Loading results. May take a little while....")
+	# 	self.results.nb = self.results.count()
+	# 	self.results.urls = self.results.find().distinct("url")
+	# 	self.results.unique = len(self.results.urls)
+	# 	#self.results.unique = db.results.aggregate([{ $group: { _id: "$url"}  },{ $group: { _id: 1, count: { $sum: 1 } } } ])
+	# 	self.results.list = [self.results.find_one({"url":url}) for url in self.results.urls]
+	# 	return self.results
+	#
+	# def load_logs(self):
+	# 	logging.info("Loading logs. May take a little while....")
+	# 	self.logs.nb = self.logs.count()
+	# 	self.logs.urls = self.logs.distinct("url")
+	# 	self.logs.unique = len(self.logs.urls)
+	# 	#self.logs.unique = self.logs.aggregate([{ $group: { _id: "$url"}  },{ $group: { _id: 1, count: { $sum: 1 } } } ])
+	# 	#self.logs.list = [self.logs.find_one({},{"url":url}) for url in self.logs.urls]
+	# 	return self.logs
+	# def load_queue(self):
+	# 	logging.info("Loading queue.")
+	# 	self.queue.nb = self.queue.count()
+	# 	self.queue.urls = self.queue.distinct("url")
+	# 	self.queue.unique = len(self.queue.urls)
+	# 	#self.queue.unique = self.sources.aggregate([{ $group: { _id: "$url"}  },{ $group: { _id: 1, count: { $sum: 1 } } } ])
+	# 	self.queue.list = [self.queue.find_one({"url":url}) for url in self.queue.urls]
+	# 	self.queue.max_depth = self.queue.find_one(sort=[("depth", -1)])
+	# 	#self.queue.dates = self.queue.find({"date":{"$exists":"True"}})
+	# 	return self.queue
+	#
+	# def load_data(self):
+	# 	'''loading data and mapping it into object'''
+	# 	logging.info("Loading data from project db")
+	# 	try:
+	# 		self.load_sources()
+	#
+	# 	except AttributeError as e:
+	# 		logging.warning(e)
+	# 		pass
+	# 	try:
+	# 		self.load_results()
+	# 	except AttributeError as e:
+	# 		logging.warning(e)
+	#
+	# 		pass
+	# 	try:
+	# 		self.load_queue()
+	# 	except AttributeError as e:
+	# 		logging.warning(e)
+	#
+	# 		pass
+	#
+	# 	try:
+	# 		self.load_logs()
+	# 	except AttributeError as e:
+	# 		logging.warning(e)
+	#
+	# 		pass
+	# 	try:
+	# 		self.crawl = self.project.use_coll('info')
+	# 		self.crawl.process_nb = self.queue.unique
+	# 		self.crawl.treated_nb = self.logs.unique+self.results.unique+self.sources.unique
+	# 		return self
+	# 	except AttributeError as e:
+	# 		logging.warning(e)
+	# 		return self
 
-		self.sources.active = self.project.use_coll('info')
-		self.sources.active.list = [n for n in self.sources.list if n["status"][-1] is True]
-		self.sources.active.nb = len(self.sources.active.list)
-
-		self.sources.inactive = self.project.use_coll('info')
-		self.sources.inactive.list = [n for n in self.sources.list if n["status"][-1] is False]
-		self.sources.inactive.nb = len(self.sources.inactive.list)
-		return self.sources
-
-	def load_results(self):
-		logging.info("Loading results. May take a little while....")
-		self.results.nb = self.results.count()
-		self.results.urls = self.results.find().distinct("url")
-		self.results.unique = len(self.results.urls)
-		#self.results.unique = db.results.aggregate([{ $group: { _id: "$url"}  },{ $group: { _id: 1, count: { $sum: 1 } } } ])
-		self.results.list = [self.results.find_one({"url":url}) for url in self.results.urls]
-		return self.results
-
-	def load_logs(self):
-		logging.info("Loading logs. May take a little while....")
-		self.logs.nb = self.logs.count()
-		self.logs.urls = self.logs.distinct("url")
-		self.logs.unique = len(self.logs.urls)
-		#self.logs.unique = self.logs.aggregate([{ $group: { _id: "$url"}  },{ $group: { _id: 1, count: { $sum: 1 } } } ])
-		#self.logs.list = [self.logs.find_one({},{"url":url}) for url in self.logs.urls]
-		return self.logs
-	def load_queue(self):
-		logging.info("Loading queue. May take a little while....")
-		self.queue.nb = self.queue.count()
-		self.queue.urls = self.queue.distinct("url")
-		self.queue.unique = len(self.queue.urls)
-		#self.queue.unique = self.sources.aggregate([{ $group: { _id: "$url"}  },{ $group: { _id: 1, count: { $sum: 1 } } } ])
-		self.queue.list = [self.queue.find_one({"url":url}) for url in self.queue.urls]
-		self.queue.max_depth = self.queue.find_one(sort=[("depth", -1)])
-		#self.queue.dates = self.queue.find({"date":{"$exists":"True"}})
-		return self.queue
-
-	def load_data(self):
-		'''loading data and mapping it into object'''
-		logging.info("Loading data from project db")
-		try:
-			self.load_sources()
-
-		except AttributeError as e:
-			logging.warning(e)
-			pass
-		try:
-			self.load_results()
-		except AttributeError as e:
-			logging.warning(e)
-
-			pass
-		try:
-			self.load_queue()
-		except AttributeError as e:
-			logging.warning(e)
-
-			pass
-
-		try:
-			self.load_logs()
-		except AttributeError as e:
-			logging.warning(e)
-
-			pass
-		try:
-			self.crawl = self.project.use_coll('info')
-			self.crawl.process_nb = self.queue.unique
-			self.crawl.treated_nb = self.logs.unique+self.results.unique+self.sources.unique
-			return self
-		except AttributeError as e:
-			logging.warning(e)
-			return self
 	def create_dir(self):
 		try:
 			self.directory = getattr(self,"directory")
@@ -375,17 +379,15 @@ class Crawtext(object):
 			if self.key is True:
 				logging.warning("Search for seeds with an API key will not work unless you provide a query")
 				return sys.exit("Please provide a query")
-
 		self.load_project()
-		self.load_data()
-		#Attention un petit hack en cas de pb avec le srv mongo
-                if len(self.queue.distinct("url")) >0:
-                #do not update sources
-			self.remove_dups()
-                        self.target = True
-                        return self
+		#self.load_data()
 
+
+		#Attention un petit hack en cas de pb avec le srv mongo
 		self.target = True
+		if len(self.queue.distinct("url")) > 0:
+			#do not update sources
+			return self
 		if self.url is not False:
 			print "Adding url"
 			self.upsert_url(self.url, "manual")
@@ -472,16 +474,17 @@ class Crawtext(object):
 			logging.warning("Bing search for source failed.")
 			return self
 	def push_to_queue(self):
-		for n in self.sources.active.list:
-			if self.queue.find_one({"url": n["url"]}) is None:
-				self.queue.insert(n)
-
+		for n in self.sources.active.find():
+			print n
+			try:
+			 	self.queue.insert(n)
+			except pymongo.errors.DuplicateKeyError:
+				pass
 		return self.queue
 
 	def upsert_url(self, url, source_url):
-		if exists is None:
-
-			self.project.sources.insert({"url":url,
+		try:
+			self.sources.insert({"url":url,
 											"source_url": source_url,
 											"depth": 0,
 											"msg":["inserted"],
@@ -489,8 +492,8 @@ class Crawtext(object):
 											"status": [True],
 											"date": [self.date],
 											})
-		else:
-			self.project.sources.update({"url":exists["url"]},
+		except pymongo.errors.DuplicateKeyError:
+			self.sources.update({"url":url},
 											{"$push":{
 													"msg":"updated",
 													"code": 100,
@@ -498,7 +501,7 @@ class Crawtext(object):
 													"date": self.date
 													}})
 
-			return False
+			return
 	def upsert_file(self):
 		try:
 			if self.directory is not False:
@@ -518,10 +521,11 @@ class Crawtext(object):
 		logging.info("Crawler activated with query filter %s" %self.target)
 		# if self.sources.nb == 0:
 		# 	sys.exit("Error: no sources found in the project.")
-
-		logging.info("Begin crawl with %i active urls"%self.sources.active.nb)
+		self.project.load_sources()
+		print self.sources.active.count()
+		print self.sources.inactive.count()
+		#logging.info("Begin crawl with %i active urls"%self.sources.active_nb)
 		self.push_to_queue()
-
 		logging.info("Processing %i urls"%self.queue.count())
 
 
@@ -530,6 +534,7 @@ class Crawtext(object):
 
 		while self.queue.count() > 0:
 			for item in self.queue.find():
+
 				if item["url"] in self.results.distinct("url"):
 					logging.info("in results")
 					self.queue.remove(item)

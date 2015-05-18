@@ -2,26 +2,28 @@
 # -*- coding: utf-8 -*-
 
 import pymongo
-from pymongo import MongoClient
-from pymongo import errors
+
+
 import re
 from datetime import datetime
 from copy import copy
 TASK_MANAGER_NAME = "crawtext_jobs"
 TASK_COLL = "job"
+from logger import logging
 
 class Database(object):
 	'''Database creation'''
 	def __init__(self, database_name, debug=False):
 		self.debug = debug
-		self.client = MongoClient('mongodb://localhost,localhost:27017')
-		connection = pymongo.Connection()
-		self.version = connection.server_info()['version']
+		self.client = pymongo.MongoClient('mongodb://localhost,localhost:27017')
+		#connection = pymongo.Connection()
+		self.version = self.client.server_info()['version']
 		self.t_version = tuple(self.version.split("."))
 		self.db_name = database_name
 		self.db = getattr(self.client,database_name)
 		self.date = datetime.now()
-		#print self.t_version[0]
+		logging.info(self.version)
+
 
 		#serverVersion = tuple(connection.server_info()['version'].split('.'))
 		#requiredVersion = tuple("1.3.3".split("."))
@@ -32,9 +34,6 @@ class Database(object):
 			self.colls = colls
 		for i in self.colls:
 			setattr(self, str(i), self.db[str(i)])
-
-
-
 		return self
 
 	def use_db(self, database_name):
@@ -64,8 +63,86 @@ class Database(object):
 			self.colls = coll_names
 		for n in self.colls:
 			setattr(self, n, self.db[str(n)])
-			#self.db.create_index({"url", self.db[str(n)]})
+			try:
+				self.__dict__[n].create_index("url", unique=True)
+			except pymongo.errors.DuplicateKeyError:
+				pass
 		return self.colls
+
+	def load_sources(self):
+		print "Loading sources"
+		print self.sources.count()
+		#self.sources.actives = []
+		self.sources.inactives = []
+		print type(self.sources.actives)
+		'''
+		pipeline = [
+		          #On déroule les status
+		          {"$unwind": "$status"},
+		          #On les groupes par dernières occurences
+		          {"$group": {"_id":
+									{"url": "$url",
+									"source_url": "$source_url",
+									"depth": "$depth",
+									"date": "$date",
+									"msg": "$msg" ,
+									"_id": "$_id",
+									},
+
+								"status": {"$last": "$status"}
+							}},
+		          #ON vérifie que le dernier est valide
+		          {"$match": { "status": True }},
+		          #On conserve l\'ordre du  tri
+		          {"$sort": { "_id._id": 1 }}
+		          ]
+		#self.sources.active = self.sources.aggregate(pipeline)
+		self.sources.active = self.sources.aggregate(pipeline, useCursor=False)
+
+		self.sources.nb = len([n for n in self.sources.actives])
+		logging.info("%i url actives",self.sources.nb)
+
+
+		pipeline2 = [
+		          #On déroule les status
+		          {"$unwind": "$status"},
+		          #On les groupes par dernières occurences
+		          {"$group": {"_id":
+									{"url": "$url",
+									"source_url": "$source_url",
+									"depth": "$depth",
+									"date": "$date",
+									"msg": "$msg" ,
+									"_id": "$_id",
+									},
+
+								"status": {"$last": "$status"}
+							}},
+		          #ON vérifie que le dernier est valide
+		          {"$match": { "status": False }},
+		          #On conserve l\'ordre du  tri
+		          {"$sort": { "_id": 1 }}
+		          ]
+
+		self.sources.inactive = self.sources.aggregate(pipeline2)
+		self.sources.inactive.nb = len([ n for n in self.sources.inactive])
+		print self.sources.inactive_nb
+		'''
+		for n in self.sources.find():
+			if n["status"][-1] is False:
+				try:
+					self.sources.inactive.insert_one(n)
+				except pymongo.errors.DuplicateKeyError:
+					pass
+			else:
+				try:
+					self.sources.active.insert_one(n)
+				except pymongo.errors.DuplicateKeyError:
+					pass
+		print self.sources.count()
+		print self.sources.active.count()
+		print self.sources.inactive.count()
+		return self
 
 	def show_coll(self):
 		try:
@@ -84,6 +161,16 @@ class Database(object):
 		#logger.DEBUG(coll.count())
 		coll = getattr(self, coll)
 		if self.t_version[0] > 2:
+			print coll.aggregate([{
+							"$group": {"_id": { "url": "$url"},
+									"uniqueIds": { "$addToSet": "$_id" },
+									"count": { "$sum": 1 }}},
+									{ "$match": {
+										"count": { "$gt": 1 }
+										}
+									}
+							])
+
 			# print coll.count()
 			# pipeline = [{ $group: { _id: "url"}  },{ $group: { _id: 1, count: { $sum: 1 } } } ]
 			# print self.db.command(db.str(coll).aggregate(pipeline))
