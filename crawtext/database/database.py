@@ -25,7 +25,7 @@ class Database(object):
 		self.db_name = database_name
 		self.db = getattr(self.client,database_name)
 		self.date = datetime.now()
-		logging.info(self.version)
+		logging.debug("MongoDB Version :"+self.version)
 
 
 		#serverVersion = tuple(connection.server_info()['version'].split('.'))
@@ -43,7 +43,7 @@ class Database(object):
 		return self.client[str(database_name)]
 
 	def create_db(self, database_name):
-		logging.info("Creating a new Database %s" %database_name)
+		logging.info("Configuring Database %s" %database_name)
 		self.db = self.client[str(database_name)]
 		self.create_colls()
 		return self
@@ -61,7 +61,7 @@ class Database(object):
 		return self
 
 	def create_colls(self, coll_names=["results","sources", "logs", "queue"]):
-		logging.info("Creating new collections")
+		logging.debug("Configure collections")
 		if len(coll_names) > 0:
 			self.colls = ["results","sources", "logs", "queue"]
 		else:
@@ -144,11 +144,25 @@ class Database(object):
 		logging.info("%i active sources", self.sources.active.count())
 		logging.info("%i inactive sources", self.sources.inactive.count())
 		return self.sources
-	def load_logs(self):
-		print self.logs.count()
-		logging.info("%i logs", self.logs.count())
 
+	def load_logs(self):
+		logging.info("%i logs", self.logs.count())
 		return self.logs
+
+	def load_queue(self):
+		logging.info("%i candidate nodes", self.queue.count())
+		return self.queue
+
+	def load_results(self):
+		logging.info("%i results", self.results.count())
+		return self.results
+
+	def load_data(self):
+		self.load_sources()
+		self.load_queue()
+		self.load_logs()
+		self.load_results()
+		return self
 
 	def show_coll(self):
 		try:
