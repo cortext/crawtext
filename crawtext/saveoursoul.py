@@ -257,19 +257,37 @@ class Crawtext(object):
 		stats['results']['nb'] = self.results.count()
 		stats['results']['max_depth'] = max(self.results.distinct("depth"))
 		for i in range(0, stats['results']['max_depth']+1):
-			stats['results']["depth"+str(i)] = self.queue.find({"depth": i}).count()
+			stats['results']["depth"+str(i)] = self.results.find({"depth": i}).count()
 		stats['logs']['nb'] = self.project.logs.count()
 		stats['logs']['max_depth'] = max(self.logs.distinct("depth"))
 		stats['logs']['err_type'] = zip(self.logs.distinct("code"), [self.logs.find({"code":n}).count() for n in self.logs.distinct("code")], [self.logs.find_one({"code":n})['msg'] for n in self.logs.distinct("code")])
+		stats['queue']['nb'] = self.project.queue.count()
+		stats['queue']['max_depth'] = max(self.queue.distinct("depth"))
+		for i in range(0, stats['queue']['max_depth']+1):
+			stats['queue']["depth"+str(i)] = self.queue.find({"depth": i}).count()
 		return stats
+
 	def show_project(self):
 		self.load_project()
 		self.project.load_data()
 		self.project_stats = self.stats()
+		print "\n==PROJECT STATS ==\n"
+		for k in self.project_stats.keys():
+			print "*"+k.upper(), ":\n"
+			print len("*"+k.upper()+" :") * "_"
+			for i,j in self.project_stats[k].items():
+				print "\t-", i,":"
+				if type(j) == list:
+					print "err_code|\tnb\t|\tmsg "
+					for n in j:
+						print str(n[0])+ "\t|\t" + str(n[1])+ "\t|\t" + n[2]
+				else:
+					print "\t\t", j
 
 
 
 
+		'''
 		print "==Project stats=="
 		print "*Sources:", self.project.sources.count()
 		print "\t actives:", self.project.sources.active.count()
@@ -298,7 +316,7 @@ class Crawtext(object):
 		print "\t - MAX Depth:", max(self.queue.distinct("depth"))
 		for i in range (0, max(self.queue.distinct("depth"))+1):
 			print "\t - Depth", str(i),":", self.queue.find({"depth": i}).count()
-
+		'''
 
 	def create_dir(self):
 		try:
