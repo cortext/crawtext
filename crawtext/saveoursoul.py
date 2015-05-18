@@ -25,6 +25,7 @@ Usage:
 
 import os, sys, re
 from copy import copy
+from collections import defaultdict
 from docopt import docopt
 from datetime import datetime as dt
 from database import *
@@ -46,6 +47,7 @@ RESULT_PATH = os.path.join(ABSPATH, "projects")
 MAX_RESULTS = 1000
 #max depth
 DEPTH = 100
+
 
 class Crawtext(object):
 	def __init__(self, name, user_input, debug):
@@ -119,13 +121,15 @@ class Crawtext(object):
 		logging.info("Sucessfully updated")
 		return self.show()
 
+		self.task  = self.coll.find_one({"name": self.name})
 	def show(self):
 		'''showing the task parameters'''
-		self.task  = self.coll.find_one({"name": self.name})
 		if self.task is None:
 			sys.exit("Project doesn't exists.")
 		else:
-			return self.show_task()
+			self.show_task()
+			return self.show_project()
+
 	def show_task(self):
 		logging.info("Show current parameters stored for task")
 		self.task = self.coll.find_one({"name": self.name})
@@ -141,7 +145,7 @@ class Crawtext(object):
 			else:
 				print "*", k,":", v
 		return
-
+	'''
 	def show_project(self):
 		self.load_project()
 
@@ -164,7 +168,7 @@ class Crawtext(object):
 			print "No data loaded into project"
 			print "********\n"
 			return self
-
+			'''
 
 	def start(self):
 		if self.task is None:
@@ -239,9 +243,60 @@ class Crawtext(object):
 		self.project = Database(self.name)
 		for n in self.project.create_colls(["results", "sources", "logs", "queue"]):
 			setattr(self, str(n), self.project.use_coll(str(n)))
-			print n, ":", self.__dict__[n].count()
-
+			logging.info("\t- %s: %i" %(n,self.__dict__[n].count()))
 		return self
+	def show_project(self):
+		self.load_project()
+		self.project.load_data()
+		netw_err = range(400, 520)
+		spe_err =  [100, 101, 102, 404, 700, 800]
+
+		all_err = spe_err + netw_err
+		stats = dict.fromkeys(self.project.colls,dict())
+		stats['sources']['nb'] = self.sources.count()
+		stats['sources']['active'] = self.sources.active.count()
+		stats['sources']['inactive'] = self.sources.inactive.count()
+		stats['results']['nb'] = self.results.count()
+		stats['results']['max_depth'] = max(self.results.distinct("depth"))
+		for i in range(0, stats['results']['max_depth']+1):
+			stats['results']["depth"+str(i)] = self.queue.find({"depth": i}).count()
+		stats['logs']['nb'] = self.project.logs.count()
+		stats['logs']['max_depth'] = max(self.logs.distinct("depth"))
+		stats['logs']['err_type'] = zip(self.logs.distinct("code"), [self.logs.find({"code":n}).count() for n in self.logs.distinct("code")], [self.logs.find_one({"code":n})['msg'] for n in self.logs.distinct("code")])
+		print stats['logs']
+
+
+
+		'''
+		print "==Project stats=="
+		print "*Sources:", self.project.sources.count()
+		print "\t actives:", self.project.sources.active.count()
+		print "\t inactives:", self.sources.inactive.count()
+		print "*Results:", self.project.results.count()
+		print "\t - MAX Depth ", max(self.results.distinct("depth"))
+		for i in range (0, max(self.results.distinct("depth"))+1):
+			print "\t - Depth", str(i),":", self.queue.find({"depth": i}).count()
+
+		print "*Logs:", self.logs.count()
+		# print "\t - Type of errors:"
+		# for err_code in self.logs.distinct("code"):
+		# 	print "\t\t-", str(err_code), self.logs.find_one({"code":err_code}, {"_id":False, "msg":True})["msg"]
+
+		print "\t - Network error ", self.logs.find({"code": {"$in":netw_err}}).count()
+		print "\t - Not HTML ressource (included as a network err)", self.logs.find({"code": 404}).count()
+		print "\t - Extraction error ", self.logs.find({"code": 700}).count()
+		print "\t - Blocked and filtered domains ", self.logs.find({"code": 100}).count()
+		print "\t - Irrelevant ", self.logs.find({"code": 800}).count()
+		print "\t - Max depth exceed ", self.logs.find({"code": 102}).count()
+		print "\t - Other ", self.logs.find({"code": {"$nin": all_err}}).count()
+		# if self.logs.find({"code": {"$nin": all_err}}).count() >0:
+		# 	for n in self.logs.find({"code": {"$nin": all_err}}):
+		# 		print "\t\t", n
+		print "*Candidate nodes:\n(Url awaiting to be processed): ", self.project.queue.count()
+		print "\t - MAX Depth:", max(self.queue.distinct("depth"))
+		for i in range (0, max(self.queue.distinct("depth"))+1):
+			print "\t - Depth", str(i),":", self.queue.find({"depth": i}).count()
+		'''
 
 	# def load_sources(self):
 	# 	'''loading sources data and stats'''
@@ -539,6 +594,8 @@ class Crawtext(object):
 		# if self.sources.nb == 0:
 		# 	sys.exit("Error: no sources found in the project.")
 		try:
+			self.project.load_sources()
+			self.project.load_queue()
 			self.project.load_logs()
 		except AttributeError:
 			self.load_project()
@@ -583,8 +640,12 @@ class Crawtext(object):
 												if url not in self.queue.distinct("url") and url not in self.results.distinct("url"):
 													self.queue.insert({"url": url, "source_url": item['url'], "depth": int(item['depth'])+1, "domain": domain, "date": a.date})
 													if self.debug: logging.info("\t-inserted %d nexts url" %len(a.links))
-												if a.url not in self.results.find({"url": url}):
+												try:
 													self.results.insert(a.export())
+												except pymongo.errors.DuplicateKeyError:
+													#self.results.update(a.export())
+													pass
+
 									else:
 										logging.debug("depth exceeded")
 										self.logs.insert(a.log())
