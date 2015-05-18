@@ -380,10 +380,8 @@ class Crawtext(object):
 				logging.warning("Search for seeds with an API key will not work unless you provide a query")
 				return sys.exit("Please provide a query")
 		else:
+			#mapping project values
 			self.load_project()
-			self.load_sources()
-
-
 			#Attention un petit hack en cas de pb avec le srv mongo
 
 			self.target = True
@@ -544,7 +542,6 @@ class Crawtext(object):
 
 		while self.queue.count() > 0:
 			for item in self.queue.find():
-
 				if item["url"] in self.results.distinct("url"):
 					logging.info("in results")
 					self.queue.remove(item)
@@ -586,19 +583,26 @@ class Crawtext(object):
 										for url, domain in zip(a.links, a.domains):
 											try:
 												self.queue.insert({"url": url, "source_url": item['url'], "depth": int(item['depth'])+1, "domain": domain, "date": a.date})
-											except pymongo.errors.DuplicateError:
+											except pymongo.errors.DuplicateKeyError:
 												pass
 												if self.debug: logging.info("\t-inserted %d nexts url" %len(a.links))
 											try:
 												self.results.insert(a.export())
-											except pymongo.errors.DuplicateError:
+											except pymongo.errors.DuplicateKeyError:
 												pass
 								else:
 									logging.debug("Depth exceeded")
-									self.logs.insert(a.log())
+									try:
+										self.logs.insert(a.log())
+									except pymongo.errors.DuplicateKeyError:
+										self.logs.update({"url":a.url}, {"$push":{"msg": a.msg}})
+
 						else:
 							logging.debug("Error Extracting")
-							self.logs.insert(a.log())
+							try:
+								self.logs.insert(a.log())
+							except pymongo.errors.DuplicateKeyError:
+								self.logs.update({"url":a.url}, {"$push":{"msg": a.msg}})
 					else:
 						logging.debug("Error Downloading")
 						self.logs.insert(p.log())
