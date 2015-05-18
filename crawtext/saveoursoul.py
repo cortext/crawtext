@@ -270,7 +270,7 @@ class Crawtext(object):
 			for i in range(0, stats['queue']['max_depth']+1):
 				stats['queue']["depth"+str(i)] = self.queue.find({"depth": i}).count()
 		except ValueError:
-
+			pass
 		return stats
 
 	def show_project(self):
@@ -688,7 +688,7 @@ class Crawtext(object):
 	def export(self):
 		self.load_project()
 		self.create_dir()
-		
+
 		logging.info("Export")
 		from export import generate
 		if generate(self.name, self.data, self.format, self.directory):
