@@ -282,7 +282,8 @@ class Crawtext(object):
 	def show_project(self):
 		self.load_project()
 		self.project.load_data()
-		for k,v in self.stats.items():
+		self.project_stats = self.stats()
+		for k,v in project_stats.items():
 			print k.upper()
 			print "=" *len(k)
 			for i,j in sorted(v.items()):
