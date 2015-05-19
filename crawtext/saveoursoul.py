@@ -529,7 +529,7 @@ class Crawtext(object):
 		#print self.queue.list
 
 		while self.queue.count() > 0:
-			for item in self.queue.find().sort({"depth:1"}):
+			for item in self.queue.find().sort([("depth", 1)]):
 				if item["url"] in self.results.distinct("url"):
 					logging.info("in results")
 					self.queue.remove(item)
