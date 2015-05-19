@@ -251,78 +251,113 @@ class Crawtext(object):
 
 		self.all_err = self.spe_err + self.netw_err
 		stats = dict.fromkeys(self.project.colls,dict())
-		stats['sources']['nb'] = self.sources.count()
-		stats['sources']['active'] = self.sources.active.count()
-		stats['sources']['inactive'] = self.sources.inactive.count()
-		stats['results']['nb'] = self.results.count()
-		stats['results']['max_depth'] = max(self.results.distinct("depth"))
-		for i in range(0, stats['results']['max_depth']+1):
-			stats['results']["depth"+str(i)] = self.results.find({"depth": i}).count()
-		try:
-			stats['logs']['nb'] = self.project.logs.count()
-			stats['logs']['max_depth'] = max(self.logs.distinct("depth"))
-			stats['logs']['err_type'] = zip(self.logs.distinct("code"), [self.logs.find({"code":n}).count() for n in self.logs.distinct("code")], [self.logs.find_one({"code":n})['msg'] for n in self.logs.distinct("code")])
-		except ValueError:
-			pass
-		try:
-			stats['queue']['nb'] = self.project.queue.count()
-			stats['queue']['max_depth'] = max(self.queue.distinct("depth"))
-			for i in range(0, stats['queue']['max_depth']+1):
-				stats['queue']["depth"+str(i)] = self.queue.find({"depth": i}).count()
-		except ValueError:
-			pass
+		stats['sources'] = {'active':self.sources.active.count()}
+		stats['sources'].update({'inactive':self.sources.inactive.count()})
+
+		errortype = sorted(self.logs.distinct("code"))
+		for code in self.logs.distinct("code"):
+			stats["logs"]= {"err_list": [[{"code": k[0], "nb":k[1], "msg" :k[2]}] for k in zip(
+										self.logs.distinct("code"),
+										[self.logs.find({"code":code}).count() for code in self.logs.distinct("code")],
+										[self.logs.find_one({"code":code})['msg'] for code in self.logs.distinct("code")]
+										)]
+										}
+
+		for k in stats.keys():
+			print k
+			stats[k]= {	"nb":self.__dict__[k].count(),
+								"max_depth":max(self.__dict__[k].distinct("depth"))
+						}
+			if stats[k]["nb"]> 0:
+				for i in range(0, stats[k]['max_depth']+1):
+					stats[k]["depth_"+str(i)] = self.__dict__[k].find({"depth": i}).count()
+
+
+													# "msg":self.logs.find_one({"code":code})['msg']),
+													# }})
+		for k,v in stats.items():
+			print k.upper()
+			print "=" *len(k)
+			for i,j in sorted(v.items()):
+
+				if type(j) != list:
+					print "\t-", i, j
+					pass
+				else:
+					for err in j:
+						for l,m in err[0].items():
+							print "\t\t#",l,":", m
+
+						#print "|".join(err[0].values())
+					# print "\t-",i, "(error code, nb of err, msg info)"
+					#
+					# for el in j:
+					# 	print el['code']
+
+						#print  "\t\t-",el
+
 		return stats
+
+
 
 	def show_project(self):
 		self.load_project()
 		self.project.load_data()
-		self.project_stats = self.stats()
-		print "\n==PROJECT STATS ==\n"
-		for k in self.project_stats.keys():
-			print "*"+k.upper(), ":\n"
-			print len("*"+k.upper()+" :") * "_"
-			for i,j in self.project_stats[k].items():
-				print "\t-", i,":"
-				if type(j) == list:
-					print "err_code|\tnb\t|\tmsg "
-					for n in j:
-						print str(n[0])+ "\t|\t" + str(n[1])+ "\t|\t" + n[2]
-				else:
-					print "\t\t", j
+		self.stats()
+		# self.project_stats = self.stats()
+		# print "\n==PROJECT STATS ==\n"
+		# for k,v in self.project_stats.items():
+		# 	print k
+		# 	for i,j in v.items():
+		# 		print "\t", i
+			#header = "* "+k.upper()+" :"
+			#print header
+			#print len(header) * "°"
+			#print sorted(v.items())
+
+			# for i,j in self.project_stats[k].items():
+			# 	print "\t-", i,":"
+			# 	if type(j) == list:
+			# 		print "err_code|\tnb\t|\tmsg "
+			# 		for n in j:
+			# 			print str(n[0])+ "\t|\t" + str(n[1])+ "\t|\t" + n[2]
+			# 	else:
+			# 		print "\t\t", j
 
 
 
 
-		'''
-		print "==Project stats=="
-		print "*Sources:", self.project.sources.count()
-		print "\t actives:", self.project.sources.active.count()
-		print "\t inactives:", self.sources.inactive.count()
-		print "*Results:", self.project.results.count()
-		print "\t - MAX Depth ", max(self.results.distinct("depth"))
-		for i in range (0, max(self.results.distinct("depth"))+1):
-			print "\t - Depth", str(i),":", self.results.find({"depth": i}).count()
 
-		print "*Logs:", self.logs.count()
-		# print "\t - Type of errors:"
-		# for err_code in self.logs.distinct("code"):
-		# 	print "\t\t-", str(err_code), self.logs.find_one({"code":err_code}, {"_id":False, "msg":True})["msg"]
 
-		print "\t - Network error ", self.logs.find({"code": {"$in":self.netw_err}}).count()
-		print "\t - Not HTML ressource (included as a network err)", self.logs.find({"code": 404}).count()
-		print "\t - Extraction error ", self.logs.find({"code": 700}).count()
-		print "\t - Blocked and filtered domains ", self.logs.find({"code": 100}).count()
-		print "\t - Irrelevant ", self.logs.find({"code": 800}).count()
-		print "\t - Max depth exceed ", self.logs.find({"code": 102}).count()
-		print "\t - Other ", self.logs.find({"code": {"$nin": self.all_err}}).count()
-		# if self.logs.find({"code": {"$nin": all_err}}).count() >0:
-		# 	for n in self.logs.find({"code": {"$nin": all_err}}):
-		# 		print "\t\t", n
-		print "*Candidate nodes:\n(Url awaiting to be processed): ", self.project.queue.count()
-		print "\t - MAX Depth:", max(self.queue.distinct("depth"))
-		for i in range (0, max(self.queue.distinct("depth"))+1):
-			print "\t - Depth", str(i),":", self.queue.find({"depth": i}).count()
-		'''
+		# print "==Project stats=="
+		# print "*Sources:", self.project.sources.count()
+		# print "\t actives:", self.project.sources.active.count()
+		# print "\t inactives:", self.sources.inactive.count()
+		# print "*Results:", self.project.results.count()
+		# print "\t - MAX Depth ", max(self.results.distinct("depth"))
+		# for i in range (0, max(self.results.distinct("depth"))+1):
+		# 	print "\t - Depth", str(i),":", self.results.find({"depth": i}).count()
+		#
+		# print "*Logs:", self.logs.count()
+		# # print "\t - Type of errors:"
+		# # for err_code in self.logs.distinct("code"):
+		# # 	print "\t\t-", str(err_code), self.logs.find_one({"code":err_code}, {"_id":False, "msg":True})["msg"]
+		#
+		# print "\t - Network error ", self.logs.find({"code": {"$in":self.netw_err}}).count()
+		# print "\t - Not HTML ressource (included as a network err)", self.logs.find({"code": 404}).count()
+		# print "\t - Extraction error ", self.logs.find({"code": 700}).count()
+		# print "\t - Blocked and filtered domains ", self.logs.find({"code": 100}).count()
+		# print "\t - Irrelevant ", self.logs.find({"code": 800}).count()
+		# print "\t - Max depth exceed ", self.logs.find({"code": 102}).count()
+		# print "\t - Other ", self.logs.find({"code": {"$nin": self.all_err}}).count()
+		# # if self.logs.find({"code": {"$nin": all_err}}).count() >0:
+		# # 	for n in self.logs.find({"code": {"$nin": all_err}}):
+		# # 		print "\t\t", n
+		# print "*Candidate nodes:\n(Url awaiting to be processed): ", self.project.queue.count()
+		# print "\t - MAX Depth:", max(self.queue.distinct("depth"))
+		# for i in range (0, max(self.queue.distinct("depth"))+1):
+		# 	print "\t - Depth", str(i),":", self.queue.find({"depth": i}).count()
+
 
 	def create_dir(self):
 		try:
