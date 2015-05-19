@@ -264,10 +264,12 @@ class Crawtext(object):
 										}
 
 		for k in stats.keys():
-			print k
-			stats[k]= {	"nb":self.__dict__[k].count(),
-								"max_depth":max(self.__dict__[k].distinct("depth"))
-						}
+
+			stats[k]= {	"nb":self.__dict__[k].count()}
+			if len(self.__dict__[k].distinct("depth"))) > 0:
+				stats[k] = {"max_depth":max(self.__dict__[k].distinct("depth"))}
+			else:
+				stats[k] = {"max_depth":0}
 			if stats[k]["nb"]> 0:
 				for i in range(0, stats[k]['max_depth']+1):
 					stats[k]["depth_"+str(i)] = self.__dict__[k].find({"depth": i}).count()
