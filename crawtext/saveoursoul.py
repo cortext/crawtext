@@ -272,7 +272,7 @@ class Crawtext(object):
 
 			if self.__dict__[k].count() > 0:
 				for i in range(0, stats[k]['max_depth']+1):
-					stats[k]["depth_"+str(i)] = self.__dict__[k].find({"depth": i}).count()
+					stats[k]["depth_"+str(i)] = self.__dict__[k].count({"depth": i})
 
 
 													# "msg":self.logs.find_one({"code":code})['msg']),
@@ -529,7 +529,7 @@ class Crawtext(object):
 		#print self.queue.list
 
 		while self.queue.count() > 0:
-			for item in self.queue.find():
+			for item in self.queue.find().sort({"depth:1"}):
 				if item["url"] in self.results.distinct("url"):
 					logging.info("in results")
 					self.queue.remove(item)
