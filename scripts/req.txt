@@ -1,0 +1,13 @@
+DOCKER
+
+requirement for CRAWTEXT
+
+Mongo >= 2.4.9
+
+PIP
+
+beautifulsoup4==4.3.2
+docopt==0.6.2
+pymongo==3.0.1
+requests==2.6.2
+Whoosh==2.7.0

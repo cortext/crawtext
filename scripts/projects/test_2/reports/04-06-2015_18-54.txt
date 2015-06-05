@@ -1,0 +1,41 @@
+
+======PROJECT PARAMS======
+file: False
+repeat: False
+name: test_2
+url: False
+nb: 10
+project_path: /home/c24b/projets/docker/cortizone/scripts/projects/test_2
+depth: 10
+user: 4barbes@gmail.com
+key: J8zQNrEwAJ2u3VcMykpouyPf4nvA6Wre1019v/dIT0o
+debug: False
+query: COP21 OR COP 21
+==== Project: Test_2 ====
+2015-06-04 18:54:15.761090
+- 04/54/2015 at 18:54 -
+#Queue:
+{
+    "nb": 0,
+    "depth": []
+}
+#Sources:
+{
+    "nb": 0,
+    "depth": []
+}
+#Results:
+{
+    "nb": 0,
+    "depth": []
+}
+#Logs:
+{
+    "nb": 0,
+    "depth": []
+}
+#Monitoring:
+	Name of the database: test_2
+	Size of the database: 0 MB
+
+======HISTORY OF THE PROJECT======
