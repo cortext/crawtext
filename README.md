@@ -1,410 +1,270 @@
-
 ![http://www.cortext.net](http://www.cortext.net/IMG/siteon0.png)
 
-
-Crawtext
-===============================================
-Crawtext is a project of the Cortext Lab. It is independant from the **Cortext manager** plateform but deisgned to interact with it.
-Get a free account and discover the tools you can use for your own research by registering at
-![Cortext](http://manager.cortext.net/)
-
-**Crawtext** is a web spider in command line that let you investigate and collect the ressources of the web that match the special keywords. Usefull for archiving the web around a special theme, results could also be used with the cortext manager to explore the relationships between websites on a special topic.
-
-
-Basic Principle
----------
-Crawtext  is a tiny webspider that goes from page to page colecting relevant article given a few keywords
-
-The crawler needs:
-* a **query** to select pertinent pages 
-and 
-* **starting urls** to collect data 
-
-Given a list of url
-* 1. the robot will collect the article for each url
-* 2. It will search for the keywords inside the text extracted from the article. 
-    ```=> If the page is relevant it stores the content of the page in the results and```
-* 3. The links inside the page will be added to the next lists to be treated
-
-
-Installation
-===
-
-* Install MongoDB (Mandatory)
-
-    - For Debian distribution
-```
-$ sudo apt-get install mongodb
-```
-
-    - For OSX distribution install it with brew:
-
-```
-$ brew install mongodb
-```
-
-NB: (By defaut, in NIX systems mongodb datasets are stored in /data/db please be sure that you have enought space there)
-
-
-* Set up a VirtualEnv (Recommended)
-
-
-```
-	$mkvirtualenv crawtext_env
-	(crawtext_env)$
-```	
-
-* Clone the repository or download the zip
-
-```
-	(crawtext_env)$ git clone https://github.com/cortext/crawtext
-	(crawtext_env)$ cd crawtext
-```
-
-
-* Install requirements throught pip
-```
-	(crawtext_env)$pip install -r requirements.pip
-```
-
-And that's all!
-
-
-Getting started
+CRAWTEXT
 ====
 
-1. Enter in the project directory
+Crawtext est un module indépendant du Cortext manager qui permet la constitution de gros corpus web autour d'une thématique ou d'une expression de recherche donnée. La capitalisation de données web produites par Crawtext se fait sur une fréquence journalière, hebdomadaire ou mensuelle en fonction des besoins du projets et paramétrables par l'utilisateur. 
+Crawtext est un crawler web par cible. Il stocke les pages web qui correspondent à l'expression de recherche demandée.
+
+
+##Contexte
+
+Les outils de constitution de corpus traditionnels sont nombreux (publications scientifiques, corpus de presse, rapports...), cependant il manquait aux chercheurs un moyen de collecter facilement des données du Web, de créer des archives issues d'Internet pour examiner la représentation d'un sujet ou d'une polémique en ligne.
+Quelques crawlers ont déjà été développés mais aucun ne propose une approche par cible et par pertinence priviligiant la pag de départ.
+Ils sont peu robustes ou difficile d'accès pour les non initiés ou parfois simplement limités dans leurs résultats et leur usage:
+- 80legs version de (démo gratuite et limitée) [https://portal.80legs.com/users/sign_up?plan=basic] non ciblé
+- Navicrawler (module Firefox d'archivage de sa navigation)
+- TIRESIAS http://prosperologie.org (client lourd, non ciblé)
+- Scrapy (installation et gestion complexe des règles, non ciblé, développement nécessaire)
+- pyspider (développement nécessaire)
+
+
+##Usage
+
+
+Crawtext est un module d'extraction et d'archivage de pages Internet, il permet la constitution de corpus centrée autour d'un thème ou d'une expression.
+Il permet donc la constitution d'une base de données constituées de pages internet et consolidées par un archivage régulier et son interrogation en l'important dans le Cortext Manager
+
+##Fonctionnement
+
+Crawtext est un crawler web ciblé: à partir d'une ou plusieurs urls, le crawler télécharge les pages examine le texte de la page et vérifie la correspondance avec le thème ou l'expression de recherche donnée. Si la page est pertinente, il ajoute les urls trouvées sur la page, télécharge les pages correspondants à ces urls et reproduit le traitement.
+
+On obtient donc un ensemble de pages internet qui correspondent à une requete données et reliées entre elles par des urls communes.
+
+
+##Architecture
+
+Module indépendant du cortext manager, il est composé de plusieurs briques logicielles: 
+* un systeme de gestion de tâches (parametrages, crawl, export, reporting) extensible selon les besoins
+* une API de crawl (interrogeable en ligne de commande ou intégrable dans des scripts externes) 
+* une interface web de paramêtrage en accès restreint. 
+
+##Politique d'accès et limitations
+
+Le développement de ce module a été fait de manière indépendante du cortext manager et son utilisation controlée pour plusieurs raisons: le volume de données, l'utilisation de la bande passante et les éventuelles questions juridiques de stockage de données et de téléchargement de pages web. 
+
+L'interface web n'est disponible qu'aux utilisateur muni d'un compte et d'un mot de passe
+
+Crawtext limite le nombre de résultats à 200.000, une fois ce résultat atteint il supprime les pages de la profondeur maximum atteinte.
+
+Le nombre de résultats donnés par BING est limité à 1000 résultats, par défaut l'application en récupère 500 mais cette limitation est paramêtrable.
+
+Le crawler n'accepte que les contenus html et filtre en amont les pages commerciales référencées par le module AdBlockPlus
+
+Pour optimiser le temps de traitement des crawls lancés à date fixe, les urls déjà traitées et de nouveau identifiées
+ne sont pas retraitées dans leur intégralité mais mis à jour avec la date du crawl.
+
+
+Aperçu des fonctionnalités
+=
+
+Crawtext est un script développé en Python 2.7 avec une base de données Mongo.
+
+Le gestionnaire de tâches consiste en l'interrogation d'une base de données mongo 
+qui contient la liste de tâches affecté à chaque projet (crawl/report/export).
+A chaque projet est affecté une liste de paramêtres, un historique des modifications dans cette base 
+Chaque projet dispose :
+- d'un dossier spécifique qui contient:
+    - rapports d'avancement et statistiques(.txt) 
+    - exports des données (csv/json ET zip) contenu dans une BDD spécifique
+        - resultats
+        - sources
+        - logs d'erreur
+
+L'API permet:
+- la consultation des tâches 
+- la consulation et modification des paramêtres de chaque projet
+- la gestion d'un crawl:
+    - configuration (ajout/modification/suppression de paramêtres)
+    - start
+    - stop
+    - delete
+- la création et l'envoi de rapport sur un projet
+- la création d'export
+
+L'appel à l'API peut se faire en ligne de commande ou utilisée comme script ad hoc.
+Le paramétrage et la création d'un crawl peuvent se faire via l'interface web.
+
+
+##Utilisation
+
+Pour lancer un crawl seules 3 paramêtres sont obligatoires:
+- un nom de projet
+- une requete (Cf Syntaxe de requete)
+- une ou plusieurs urls de départs: les sources du crawl
+
+
+
+###Interface web 
+
+La création et le paramêtrage d'un crawl peut se faire via un simple formulaire en ligne 
+pour les utilisateurs muni d'un compte et d'un mot de passe.
+
+
+- Nom du projet
+- Requete:
+    La syntaxe de recherche accepte plusieurs opérateurs:
+    - AND OR NOT 
+    - recherche exacte: "" 
+- Sources de départ:
+Il existe plusieurs manières d'ajouter les sources de départ:
+    - ajouter une url
+    - ajouter plusieurs urls via un fichier .txt 
+    - ajouter les x urls issus d'une recherche BING en donnant la clé API (nombre de résultats modifiable <=1000) 
+        defaut: 500
+
+Plusieurs options peuvent être ajoutées:
+- un mail pour l'envoi par mail des rapports (disponible aussi dans le dossier du projet)
+- la profondeur de crawl 
+    defaut: 100
+- le format de l'export (csv/json) 
+    defaut: json
+- la récurrence du crawl 
+    defaut: tous les mois
+
+###Ligne de commande
+
+
+L'intégralité du projet crawtext peut être téléchargé et installé sur son propre serveur.
+Le seul prérequis est d'avoir préalablement installé MongoDB sur sa machine
+Les sources de l'application sont disponibles sur Github à cette adresse:
+[https://github.com/cortext/crawtext]
+Pour les détails d'installation et d'utilisation voir la documentation technique 
+[https://github.com/cortext/crawtext/blob/master/README.md]
+
+
+
+##Implémentation et choix techniques
+
+Crawtext est développé en Python 2.7, les bases de données de gestion des tâches et de stocakges des résultats est MOngoDB
+Hormis l'installation de mongo, l'ajout du scheduler en crontab et l'éventuelle modification de l'adresse du serveur de mail
+Tous les modules externes utilisés sont des modules python disponible via pip
+
+###Paramêtrage
+
+####Interface web
+
+L'interface web est développée avec un mini serveur HTTP en python bottle.py un template bootstrap et des scripts en javascript développé en interne. 
+####Ligne de commande
+La gestion en ligne de commande utilise le module python docopt
+Toutes les valeurs acceptées par la ligne de commande sont listées dans la documenation technique
+
+####API 
+L'appel direct à l'API via un autre script utilise l'objet Worker() présent dans le fichier wk.py
+
+####Ajout des sources
+- Ajout de sources de départ via Bing:
+    Requete GET sur l' API Search V2 de BING: pour obtenir sa clé API:
+     [https://github.com/cortext/crawtext/blob/master/README.md]
+     Suite aux limitations de l'api de BING et la découverte de l'aspect aléatoires du nmbre de rsultats maximum: la limitation par défaut du nombre de résultats retourné est de 500 (en théorie <=1000)
+
+###Téléchargement et extraction
+- Téléchargement et extraction de pages web: requests (pas d'utilisation de proxies ni de multithreading des urls, timeout de 5sec, nombre d'essai 2)
+
+- Extraction et enrichissement des résultats de la page: BeautifulSoup
+
+    Après les tests de plusieurs solutions d'extraction d'article:
+        - newspaper
+        - python-goose
+        - boilerpipe
+    aucune ne s'est avérée capable d'extraire proprement les articles issu des blogs. Le calcul de pertinence de l'article étant faussé nous avons finalement opté pour un extract brute de texte entier de la page html. 
+- Enrichissement des résultats de l'url: tldextract + module spécifique inspiré de Newspapers + Scrapy
+
+###Filtrage et calcul de pertinence
+- Filtrage des urls non pertinentes: 
+    - format html uniquement
+    - protocol http/https uniquement
+    - url non présentes dans le fichier AdBlockPlus (non mis à jour automatiquement)
+- Calcul de pertinence des pages:
+    - recherche exacte: ("") utilisation du module de regex
+    - recherche combinée: moteur d'indexation Whoosh et de son parser de requete par défaut
+
+###Stockage et export
+
+- La manipulation et l'accès au base de données MongoDB utilise le module pymongo 
+encapsulé dans un module de gestion interne database/database.py
+
+L'export est disponible via la fonction export et possède plusieurs paramêtres facultatifs:
+- le format d'export: (csv, json) par defaut: json
+- le type de données à exporter: results sources logs par défaut: les trois
+
+A note que l'export csv pour respecter l'aspect tabulaires des données est incomplet.
+
+* Gestionnaire de tache:
+Chaque tache est présente dans une base de données appelée crawtext_jobs et stockés dans la même "table" 
+ou collection appelée "job". 
+Elle sont stockées par tache comme suit:
 ```
-	$cd crawtext
-```
-2. Create a new project
- 
-
-A project need to be configure with 3 basic requirements:
-* a name: the name of your project
-```
-e.g: pesticides
-```
-* a query: search query or expression that have to be found in web pages.
-The query expression supports simple logical operator : (AND, OR, NOT) and semantic operator: ("", *)
-```
-e.g: pesticide* AND DDT NOT DTD
-```
-
-* one or multiple url to start crawl:
-
-You have three options to add starting urls to your project:
-	** specifiying one url
-	** giving a text file where urls are stored line by line
-    ** making a search in Bing by giving your API key, will retrieve 500 first urls of the results
-
-See how to get your ![BING API key](https://datamarket.azure.com/dataset/bing/search)
-
-```
-e.g: XVDVYU53456FDZ
-```
-
-Here as an example: it create a new project called pesticides with the 500 urls given by BING results search
-
-```
-	$ python crawtext.py pesticides --query="pesticides AND ddt" --key=XVDVYU53456
-```
-Once the script has check the starting urls a few informations on the project will be displayed.
-
-If everything is ok, lauch the crawl:
-```
-	$python crawtext.py pesticides start
-```
-When crawl is finished a report will be stored in the directory of your project:
-```
-	$cd projects/pesticides
-```
-
-If you want to receive it by mail add a user to your project and the report will be sent by mail to the given address:
-```
-	$python crawtext.py pesticides add --user="constance@cortext.fr"
-```
-
-Monitoring the project
-====
-See how is your crawl going using the report option:
-
-```
-$python crawtext.py pesticides report
-
-```
-Report will be stored in the dedicated file of your project
-```
-$cd projects/pesticides/report
-```
-
-If you prefere to receive and email add your email to project configuration:
-
-```
-$python crawtext.py pesticides add --user=me@mailbox.net
-$python crawtext.py pesticides report
-```
-
-Exporting data
-====
-When a crawl is finished, the data are automatically exported and stored in the project directory in JSON file.
-You can run your own export, specifying the format (json/csv) and the type of data you want.
-
-Defaut export will export data, logs, sources in JSON format and stored in the project directory
-```
-$python crawtext.py pesticides export
-
-```
-
-Export only the sources in csv:
-
-```
-$python crawtext.py pesticides export --format=csv --data=sources
-
-```
-
-Managing the project (advanced)
-====
-Crawtext gives you some facilities to modify delete add more parameters
-
-- **Add** or **modify** parameters:
-You can add or change the following parameters:
-	- user (--user=)
-	- file (--file=)
-	- url (--url=)
-	- query (--query=)
-	- key (--key=)
-	- depth (--depth=)
-	- format (--format=)
-
-using the following syntax:
-```
-$python crawtext.py add --user="new_mail@mailbox.com"
-$python crawtext.py add --depth=10
-
-```
-
-- **Remove** parameters: 
-You can remove the following parameters:
-	- user (-u)
-	- file (-f)
-	- url (--url=http://example.com)
-	- query (-q)
-	- key (-k)
-	- depth (-d)
-	
-using the following syntax:
-```
-$python crawtext.py delete -u
-$python crawtext.py delete -d
-
-```
-- **Stop** the crawl:
-
-You can stop the current process of crawl
-```
-$python crawtext.py pesticides stop
-```
-
-Next run will start from where it stops
-
-- **Delete**:
-You can delete the entire project. Every single datasets will be destroyed so be carefull!
-```
-$python crawtext.py pesticides delete
-```
-
-- **Schedule next run**:
-The crawl by default will be run every week, but you can change to repeat the process:
-every month, every week or every day.
-
-```
-$python crawtext.py pesticides --r="day"
-```
-To activate the scheduler in your machine, you will need to add to your crontab the python script scheduler.py 
-to be run every day
-
-
-Outputs
-====
-
-Datasets are stored in json and zip in 3 collections in the dedicated directory of your project:
-* results
-* sources
-* logs
->> See Examples
-
-Sources
-====
-Sources of your project correspond a datatable that can export in json or csv
-Date msg and status are updated for each run of the crawl with the corresponding status msg
-{   "_id" : { "$oid" : "54ba81fddabe6e2e318c2e40" }, 
-    "date" : [ 
-        { "$date" : 1421512716603 }, 
-        { "$date" : 1421512726281 }, 
-        { "$date" : 1421512726281 }, 
-        { "$date" : 1421512728910 }, 
-        { "$date" : 1421663553873 }, 
-        { "$date" : 1421663553873 } 
-        ], 
-
-    "depth" : 0, 
-    "msg" : [ 
-        "Inserted", 
-        "Ok", 
-        "Ok", 
-        "Result stored", 
-        "Ok", 
-        "Ok" ],
-    "nb" : [ 
-            0, 
-            0, 
-            0, 
-            0, 
-            0 ], 
-    "nb_results" : [ 
-            50, 
-            50, 
-            50, 
-            50, 
-            50 ], 
-    "origin" : "bing", 
-    "source_url" : null, 
-    "status" : [ 
-        true, 
-        true, 
-        true, 
-        true, 
-        true, 
-        true ], 
-    "step" : [ 
-        "Added", 
-        "Updated", 
-        "Updated", 
-        "Updated", 
-        "Updated" ], 
-    "url" : "http://fr.wikipedia.org/wiki/Algue_verte" }
-
->> See [sources_examples.json](examples/sources_examples.json) for details 
-
-
-Results
-====
 {
-"url": http://en.wikipedia.org/wiki/Algue_verte,
-"domain":"wikipedia" ,
-"subdomain": "fr",
-"extension": "org",
-"filetype": None,
-"date": [ { "$date" : 1416293382397 } ],
-"source": "http://en.wikipedia.org/wiki/",
-"title": "Title of the webpage",
-"cited_links": ["http://en.wikipedia.org/wiki/",],
-"cited_domains": [wikipedia, ],
-"html": "<body>...</body>",
-"text": "Cleaned text",
-"depth": 0,
-"crawl_nb": 0,
-"status": [True],
-"msg": ["Ok"]
+    "_id" : ObjectId("54bf8e4cdabe6e1383ae172f"),
+    "status" : [
+        "True",
+        "True",
+    ],
+    "project_name" : "pesticides3",
+    "date" : [
+        ISODate("2015-01-21T12:32:28.322Z"),
+        ISODate("2015-01-28T01:00:00.0000")
+    ],
+    "name" : "pesticides3",
+    "creation_date" : ISODate("2015-01-21T12:32:28.322Z"),
+    "directory" : "./crawtext/crawtext/projects/pesticides",
+    "key" : "J8zQNrEwAJ2u3VcMykpouyPf4nvA6Wre1019v/dIT0o",
+    "action" : [
+        "create",
+        "crawl"
+    ],
+    "query" : "pesticides AND DDT",
+    "type" : "crawl",
+    "msg" : [
+        "Ok",
+        "Ok",
+    ]
 }
-
->> See [results_examples.json](examples/results_examples.json) for details 
-
-Log
-====
-{   "_id" : { "$oid" : "54ba8246dabe6e2e3b9c3fa1" }, 
-    "status" : false, 
-    "code" : 800, 
-    "url" : "http://fr.wikipedia.org/wiki/Aide:Redirection", 
-    "date" : [ { "$date" : 1421512790313 } ], 
-    "msg" : "Article Query: not relevant" }
-
->> See [logs_examples.json](examples/log_examples.json) for details 
-
-Put the data into the Cortext manager
-====
-1. Zip the json file you want to analyse
-2. Upload it into Cortext Manager
-3. Parse it throught using JSON scrip
-4. Then Parse the result using cortext script
-==> You have now a useful dataset for running script on cortext
-Ex: Build a map of crossn references:
-1. Select the final dataset
-2. Select map
-3. Choose url and links
-You will have a pdf that maps the relationship
-
-
-Schedule the crawl jobs
-====
-
-Crawtext jobs are stored in a Task Manager Database, to run jobs daily/weekly 
-
-Update
-===
-- Bing results defaut is : 500 results
-- Max depth option activated (defaut: 100)
-- Update results without crawling it again
-- Automatic zip export
-
-
-
-Next features:
-===
-- Enable Google Search option
-- Simple web interface
-
-
-Sources
-====
-
-You can see the code ![here] (https://github.com/cortext/crawtext)
-
-
-Getting help
-====
-
-Crawtext is a simple module in command line to crawl the web given a query.
-This interface offers you a full set of option to set up a project.
-If you need any help on interacting with the shell command you can just type to see all the options:
-
 ```
-python crawtext.py --help
+* Base de données projet:
+Chaque projet dispose de sa propre base de données avec 3 "tables" ou "collections":
+- sources : voir [https://github.com/cortext/crawtext/blob/master/examples/sources_example.json]
+- results: [https://github.com/cortext/crawtext/blob/master/examples/results_example.json]
+- logs [https://github.com/cortext/crawtext/blob/master/examples/logs_example.json]
+
+
+###Reporting
+
+
+- Serveur de mail: gmail par défaut (ajout d'un user and passw) 
+    L'appel à un autre serveur SMTP est modifiable dans le code utils/mail.py
+- Le moteur de templating est Jinja
+- Les statistiques de traitement sont exposés dans le module de gestion des bases de données développé en interne
+    (database/database.py)
+
+###Scheduler
+
+Le module de gestion de la des projest par jour/semaine/mois s'effectue à partir de la date de crawl
+Il nécessite la programmation du script scheduler.py en crontab qui sera lancé tous les jours, ce script appelle la base de données de tache et vérifie les dates de crawl. 
+Exemple de configuration de crontab pour un projet pesticides où le dossier github de crawtext serait stocké dans /srv/scripts
+```
+    # m h  dom mon dow   command
+    0 1 * * * python /srv/scripts/crawtext/crawtext/crawtext.py RRI_0 start
+    0 * * * 1 python /srv/scripts/crawtext/crawtext/crawtext.py RRI_0 report
 ```
 
-You can also ask for pull request here http://github.com/cortext/crawtext/, 
-we will be happy to answer to any configuration problem or desired features.
+Pour optimiser les crawls lancé à date fixe, les urls déjà traitées et de nouveau identifiées
+ne sont pas retraitées dans leur intégralité mais la date de crawl est ajoutée.
 
 
+##Evolutions et Features
 
 
-COMMON PROBLEMS
-----
-
-* Mongo Database:
-
-Sometimes if you shut your programm by forcing, you could have an error to connect to database such has:	
-
-```
-couldn't connect to server 127.0.0.1:27017 at src/mongo/shell/mongo.js:145
-```
-
-The way to repair it is to remove locks of mongod 
-
-```
-sudo rm /var/lib/mongodb/mongod.lock
-sudo service mongodb restart
-```
-
-
-If it doesn't work it means the index is corrupted so you have to repair it:
-
-```
-sudo mongod --repair
-```
-
-* Article detection: 
-We removed article detection system:
-both Goose and Newspaper modules had some problems to detect text in blog
+*Interface web:
+    ** Authentification pour l'accès à l'interface web
+    ** Ajout d'une url pour le téléchargement des résultats
+    ** Ajout d'une alerte avant suppression du projet
+*API:
+    ** Extension des formats acceptés: téléchargement de pdf (images, videos?)
+    ** Prise en compte de la langue de la page
+    ** Ajout d'une option de crawl centré sur un seul site
+    ** Détection et extraction des articles
+    ** Parallélisation des requetes HTTP
+    ** Proxys tournants et anonymisation des requetes
 
