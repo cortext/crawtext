@@ -215,11 +215,11 @@ class Crawtext(object):
 			print self.coll.find_one({"name":self.name})
 			logging.info("Loading task parameters")
 			self.load_task()
-			self.update_task(self.task["name"], "config crawl")
+			self.update_status(self.task["name"], "config crawl")
 			self.config_crawl()
-			self.update_task(self.task["name"], "running")
+			self.update_status(self.task["name"], "running")
 			self.crawler()
-			self.update_task(self.task["name"], "executed")
+			self.update_status(self.task["name"], "executed")
 			return self.show()
 
 
@@ -662,7 +662,7 @@ class Crawtext(object):
 				#pid = int(line.split(" ")[0])
 				logging.warning("Current crawl project %s killed" %self.name)
 				os.kill(pid, signal.SIGKILL)
-				self.update_task(self.task["name"], "stop")
+				self.update_status(self.task["name"], "stop")
 		      		
 	def report(self):
 		logging.info("Report")
@@ -674,19 +674,19 @@ class Crawtext(object):
 		#data = self.show_project()
 		if send_mail(self.user, self.project) is True:
 			logging.info("A report email has been sent to %s\nCheck your mailbox!" %self.user)
-			self.update_task(self.task['name'], "report : mail")
+			self.update_status(self.task['name'], "report : mail")
 		else:
 			logging.info("Impossible to send mail to %s\nCheck your email!" %self.user)
-			self.update_task(self.task['name'], "report : mail", False)
+			self.update_status(self.task['name'], "report : mail", False)
 			
 		if generate_report(self.task, self.project, self.directory):
 			#self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"report: document", "status": True, "date": self.date, "msg": "Ok"}})
-			self.update_task(self.task['name'], "report : doc")
+			self.update_status(self.task['name'], "report : doc")
 			logging.info("Report sent and stored!")
 			return sys.exit(0)
 		else:
 			#self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"report: document", "status": False, "date": self.date, "msg": "Unable to create report document"}})
-			self.update_task(self.task['name'], "report : doc", False)
+			self.update_status(self.task['name'], "report : doc", False)
 			return sys.exit("Report failed")
 	
 	def export(self):
@@ -696,11 +696,11 @@ class Crawtext(object):
 		logging.info("Export")
 		from export import generate
 		if generate(self.name, self.data, self.format, self.directory):
-			self.update_task(self.task['name'], "export")
+			self.update_status(self.task['name'], "export")
 			logging.info("Export done!")
 			return sys.exit()
 		else:
-			self.update_task(self.task['name'], "export", False)
+			self.update_status(self.task['name'], "export", False)
 			return sys.exit("Failed to export")
 	def delete(self):
 		self.task = self.coll.find_one({"name": self.name})
