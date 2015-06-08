@@ -587,85 +587,88 @@ class Crawtext(object):
 		#print self.queue.list
 
 		while self.queue.count() > 0:
-			for item in self.queue.find().sort([("depth", 1)]):
-				if item["url"] in self.results.distinct("url"):
-					logging.info("in results")
-					self.queue.remove(item)
+			try:
+				for item in self.queue.find().sort([("depth", 1)]):
+			except pymongo.errors.OperationFailure:
+				for item in self.queue.find():
+					if item["url"] in self.results.distinct("url"):
+						logging.info("in results")
+						self.queue.remove(item)
 
-				elif item["url"] in self.logs.distinct("url"):
-					logging.info("in logs")
-					self.queue.remove(item)
-				else:
-					#print "Treating", item["url"], item["depth"]
-					try:
-						p = Page(item["url"], item["source_url"],item["depth"], item["date"], True)
-					except KeyError:
-						p = Page(item["url"], item["source_url"],item["depth"], self.date, True)
-					if p.download():
-						a = Article(p.url,p.html, p.source_url, p.depth,p.date, True)
-						if a.extract():
-							#Targeted crawk filtering for pertinency
-							if self.target:
-								if a.filter(self.query, self.directory):
+					elif item["url"] in self.logs.distinct("url"):
+						logging.info("in logs")
+						self.queue.remove(item)
+					else:
+						#print "Treating", item["url"], item["depth"]
+						try:
+							p = Page(item["url"], item["source_url"],item["depth"], item["date"], True)
+						except KeyError:
+							p = Page(item["url"], item["source_url"],item["depth"], self.date, True)
+						if p.download():
+							a = Article(p.url,p.html, p.source_url, p.depth,p.date, True)
+							if a.extract():
+								#Targeted crawk filtering for pertinency
+								if self.target:
+									if a.filter(self.query, self.directory):
+										if a.check_depth(a.depth):
+											a.fetch_links()
+											if len(a.links) > 0:
+												for url, domain in zip(a.links, a.domains):
+													if url not in self.queue.distinct("url") and url not in self.results.distinct("url"):
+														self.queue.insert({"url": url, "source_url": item['url'], "depth": int(item['depth'])+1, "domain": domain, "date": a.date})
+														if self.debug: logging.info("\t-inserted %d nexts url" %len(a.links))
+													try:
+														self.results.insert(a.export())
+													except pymongo.errors.DuplicateKeyError:
+														#self.results.update(a.export())
+														pass
+
+										else:
+											logging.debug("depth exceeded")
+											self.logs.insert(a.log())
+									else:
+										logging.debug("Not relevant")
+										self.logs.insert(a.log())
+								else:
 									if a.check_depth(a.depth):
 										a.fetch_links()
 										if len(a.links) > 0:
 											for url, domain in zip(a.links, a.domains):
-												if url not in self.queue.distinct("url") and url not in self.results.distinct("url"):
+												try:
 													self.queue.insert({"url": url, "source_url": item['url'], "depth": int(item['depth'])+1, "domain": domain, "date": a.date})
+												except pymongo.errors.DuplicateKeyError:
+													pass
 													if self.debug: logging.info("\t-inserted %d nexts url" %len(a.links))
 												try:
 													self.results.insert(a.export())
 												except pymongo.errors.DuplicateKeyError:
-													#self.results.update(a.export())
 													pass
-
 									else:
-										logging.debug("depth exceeded")
-										self.logs.insert(a.log())
-								else:
-									logging.debug("Not relevant")
-									self.logs.insert(a.log())
+										logging.debug("Depth exceeded")
+										try:
+											self.logs.insert(a.log())
+										except pymongo.errors.DuplicateKeyError:
+											self.logs.update({"url":a.url}, {"$push":{"msg": a.msg}})
+
 							else:
-								if a.check_depth(a.depth):
-									a.fetch_links()
-									if len(a.links) > 0:
-										for url, domain in zip(a.links, a.domains):
-											try:
-												self.queue.insert({"url": url, "source_url": item['url'], "depth": int(item['depth'])+1, "domain": domain, "date": a.date})
-											except pymongo.errors.DuplicateKeyError:
-												pass
-												if self.debug: logging.info("\t-inserted %d nexts url" %len(a.links))
-											try:
-												self.results.insert(a.export())
-											except pymongo.errors.DuplicateKeyError:
-												pass
-								else:
-									logging.debug("Depth exceeded")
-									try:
-										self.logs.insert(a.log())
-									except pymongo.errors.DuplicateKeyError:
-										self.logs.update({"url":a.url}, {"$push":{"msg": a.msg}})
-
+								logging.debug("Error Extracting")
+								try:
+									self.logs.insert(a.log())
+								except pymongo.errors.DuplicateKeyError:
+									self.logs.update({"url":a.url}, {"$push":{"msg": a.msg}})
 						else:
-							logging.debug("Error Extracting")
-							try:
-								self.logs.insert(a.log())
-							except pymongo.errors.DuplicateKeyError:
-								self.logs.update({"url":a.url}, {"$push":{"msg": a.msg}})
-					else:
-						logging.debug("Error Downloading")
-						self.logs.insert(p.log())
+							logging.debug("Error Downloading")
+							self.logs.insert(p.log())
 
-					self.queue.remove(item)
-					logging.info("Processing %i urls"%self.queue.count())
+						self.queue.remove(item)
+						logging.info("Processing %i urls"%self.queue.count())
+					if self.queue.nb == 0:
+						break
 				if self.queue.nb == 0:
 					break
-			if self.queue.nb == 0:
-				break
-			if self.results.count() > 200000:
-				self.queue.drop()
-				break
+				if self.results.count() > 200000:
+					self.queue.drop()
+					break
 
 		return sys.exit(1)
 
