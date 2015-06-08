@@ -102,7 +102,10 @@ class Crawtext(object):
 			self.coll.insert(new_task)
 			self.task =  self.coll.find_one({"name": new_task["name"]})
 			logging.info("Sucessfully created")
-			return self.update_status(new_task["name"], "created", True,"Ok")
+			try:
+				return self.update_status(new_task["name"], "created", True,"Ok")
+			except pymongo.errors.OperationFailure:
+				return
 		else:
 			logging.info("Project already exists")
 			return self.update()
@@ -134,7 +137,10 @@ class Crawtext(object):
 		
 		if len(updated) > 0:
 			self.coll.update({"name":self.task["name"]}, new_task, upsert=True)
-			self.update_status(self.task["name"], "updated : %s" %(",".join(updated)))
+			try:
+				self.update_status(self.task["name"], "updated : %s" %(",".join(updated)))
+			except pymongo.errors.OperationFailure:
+				pass
 			logging.info("Sucessfully updated %s" %self.task["name"])
 			sys.exit(0)
 		else:
@@ -165,7 +171,10 @@ class Crawtext(object):
 		else:
 			self.show_task()
 			self.show_project()
-			self.update_status(self.name, "show")
+			try:
+				self.update_status(self.name, "show")
+			except pymongo.errors.OperationFailure:
+				pass
 			sys.exit(0)
 
 	def show_task(self):
@@ -215,11 +224,20 @@ class Crawtext(object):
 			print self.coll.find_one({"name":self.name})
 			logging.info("Loading task parameters")
 			self.load_task()
-			self.update_status(self.task["name"], "config crawl")
+			try:
+				self.update_status(self.task["name"], "config crawl")
+			except pymongo.errors.OperationFailure:
+				pass
 			self.config_crawl()
-			self.update_status(self.task["name"], "running")
+			try:
+				self.update_status(self.task["name"], "running")
+			except pymongo.errors.OperationFailure:
+				pass
 			self.crawler()
-			self.update_status(self.task["name"], "executed")
+			try:
+				self.update_status(self.task["name"], "executed")
+			except pymongo.errors.OperationFailure:
+				pass
 			return self.show()
 
 
@@ -662,7 +680,10 @@ class Crawtext(object):
 				#pid = int(line.split(" ")[0])
 				logging.warning("Current crawl project %s killed" %self.name)
 				os.kill(pid, signal.SIGKILL)
-				self.update_status(self.task["name"], "stop")
+		try:
+			self.update_status(self.task["name"], "stop")
+		except pymongo.errors.OperationFailure:
+			pass
 		      		
 	def report(self):
 		logging.info("Report")
@@ -674,19 +695,31 @@ class Crawtext(object):
 		#data = self.show_project()
 		if send_mail(self.user, self.project) is True:
 			logging.info("A report email has been sent to %s\nCheck your mailbox!" %self.user)
-			self.update_status(self.task['name'], "report : mail")
+			try:
+				self.update_status(self.task['name'], "report : mail")
+			except pymongo.errors.OperationFailure:
+				pass
 		else:
 			logging.info("Impossible to send mail to %s\nCheck your email!" %self.user)
-			self.update_status(self.task['name'], "report : mail", False)
+			try:
+				self.update_status(self.task['name'], "report : mail", False)
+			except pymongo.errors.OperationFailure:
+				pass
 			
 		if generate_report(self.task, self.project, self.directory):
 			#self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"report: document", "status": True, "date": self.date, "msg": "Ok"}})
-			self.update_status(self.task['name'], "report : doc")
+			try:
+				self.update_status(self.task['name'], "report : doc")
+			except pymongo.errors.OperationFailure:
+				pass
 			logging.info("Report sent and stored!")
 			return sys.exit(0)
 		else:
 			#self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"report: document", "status": False, "date": self.date, "msg": "Unable to create report document"}})
-			self.update_status(self.task['name'], "report : doc", False)
+			try:
+				self.update_status(self.task['name'], "report : doc", False)
+			except pymongo.errors.OperationFailure:
+				pass
 			return sys.exit("Report failed")
 	
 	def export(self):
@@ -696,11 +729,17 @@ class Crawtext(object):
 		logging.info("Export")
 		from export import generate
 		if generate(self.name, self.data, self.format, self.directory):
-			self.update_status(self.task['name'], "export")
+			try:
+				self.update_status(self.task['name'], "export")
+			except pymongo.errors.OperationFailure:
+				pass
 			logging.info("Export done!")
 			return sys.exit()
 		else:
-			self.update_status(self.task['name'], "export", False)
+			try:
+				self.update_status(self.task['name'], "export", False)
+			except pymongo.errors.OperationFailure:
+				pass
 			return sys.exit("Failed to export")
 	def delete(self):
 		self.task = self.coll.find_one({"name": self.name})
