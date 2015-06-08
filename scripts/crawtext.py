@@ -592,7 +592,7 @@ class Crawtext(object):
 				
 			except pymongo.errors.OperationFailure:
 				#If too big need to create and index file and sort then
-				self.queue.create_index([("depth", pymongo.DESCENDING, background=True)]
+				self.queue.create_index([("depth", pymongo.DESCENDING)],background=True)
 				data = self.queue.find().sort([("depth", 1)])
 				
 				
