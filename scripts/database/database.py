@@ -271,7 +271,8 @@ class Database(object):
 	#STATS
 	def load_sources(self):
 		logging.info("Loading sources")
-		'''pipeline = [
+		'''
+		pipeline = [
 		          #On déroule les status
 		          {"$unwind": "$status"},
 		          #On les groupes par dernières occurences
@@ -290,7 +291,9 @@ class Database(object):
 		          {"$match": { "status": True }},
 		          #On conserve l\'ordre du  tri
 		          {"$sort": { "_id._id": 1 }}
-		          ]'''
+		          ]
+		'''
+		#self.sources.aggregate(pipeline)
 		self.sources = self.db.sources
 		self.sources.active = self.use_coll("active_sources")
 		self.sources.inactive = self.use_coll("inactive_sources")
@@ -373,25 +376,25 @@ class Database(object):
 		return self
 		
 	def sources_stats(self):
-		self.show_stats()
-		return self.template[3]
+		self.export_stats()
+		return self.report[3]
 
 	def results_stats(self):
-		self.show_stats()
-		return self.template[1]
+		self.export_stats()
+		return self.report[1]
 
 	def logs_stats(self):
-		self.show_stats()
-		return self.template[2]
+		self.export_stats()
+		return self.report[2]
+	
 	def dump_obj(self):
 		pass
 		
 	def build_stats(self):
 		from collections import defaultdict
+		self.load_data()
 		#print dict.fromkeys(["results", "sources", "logs", "queue"])
 		self.stats = dict.fromkeys(["results", "sources", "logs", "queue"], {})
-		
-		
 		for k,v in self.__dict__.items():
 			if k in self.stats.keys():
 				self.stats[k]["nb"] = v.count()
@@ -413,9 +416,6 @@ class Database(object):
 							
 						else:
 							self.stats[k][i] = value
-		
-		
-		
 		return self.stats
 	
 	def export_stats(self):
@@ -473,8 +473,9 @@ def test():
 	tk = TaskDB()
 	for n in tk.coll.find():
 		db = Database(n["name"])
-		db.load_data()
-		db.export_stats()
+		db.mail_report()
+		
+		
 		
 if __name__ == "__main__":
 	test()
