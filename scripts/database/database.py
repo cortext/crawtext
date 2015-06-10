@@ -427,7 +427,7 @@ class Database(object):
 		self.report.append(date.strftime("- %d/%M/%Y at %H:%M -"))
 		
 		for k in self.stats.keys():
-			self.report.append("#%s:\n%s" %(k.title(), ":".join(zip(self.stats.keys(),self.stats.values()) )
+			self.report.append("#%s:\n%s" %(k.title(), ":".join(zip(self.stats.keys(),self.stats.values()))) )
 		self.report.append("#Monitoring:\n\tName of the database: %s\n\tSize of the database: %d MB" %(self.db_name, (self.db.command('dbStats', 1024)['storageSize'])/1024/1024.))
 		return "\n".join(self.report)
 		
