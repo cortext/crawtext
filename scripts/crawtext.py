@@ -562,7 +562,30 @@ class Crawtext(object):
 			for url in f.readlines():
 				self.upsert_url(url, "file %s") %self.file
 		return self
+	def refresh_queue(self):
+		'''refresh'''
+		try:
+			data = self.queue.find().sort("depth",pymongo.DESCENDING)
+		except pymongo.errors.OperationFailure:
+			#If too big need to create and index file and sort then
+			#self.queue.ensureIndex( {url: 1, depth: pymongo.DESCENDING}, {unique:true, dropDups: true})
+			data = self.queue.find()
+		for item in data:
+			if item["url"] in self.results.distinct("url"):
+				logging.info("in results")
+				self.queue.remove(item)
 
+			if item["url"] in self.logs.distinct("url"):
+				logging.info("in logs")
+				self.queue.remove(item)	
+			try:
+				depth = item["depth"]
+			except KeyError:
+				self.queue.remove(item)
+				
+			
+		return self.queue
+		
 	def crawler(self):
 		logging.info("Crawler activated with query filter %s" %self.target)
 		# if self.sources.nb == 0:
@@ -587,33 +610,12 @@ class Crawtext(object):
 		#print self.queue.list
 
 		while self.queue.count() > 0:
-			
-			try:
-				data = self.queue.find().sort("depth",pymongo.DESCENDING)
-				
-			except pymongo.errors.OperationFailure:
-				#If too big need to create and index file and sort then
-				#self.queue.ensureIndex( {url: 1, depth: pymongo.DESCENDING}, {unique:true, dropDups: true})
-				data = self.queue.find()
-				
-			
-				
-			for item in data:
-				
+			for n in self.refresh_queue():
 				logger.info("url %s depth %d" %(item["url"], item['depth']))
-				if item["url"] in self.results.distinct("url"):
-					logging.info("in results")
-					self.queue.remove(item)
-
-				elif item["url"] in self.logs.distinct("url"):
-					logging.info("in logs")
-					self.queue.remove(item)
-				else:
-					#print "Treating", item["url"], item["depth"]
-					try:
-						p = Page(item["url"], item["source_url"],item["depth"], item["date"], True)
-					except KeyError:
-						p = Page(item["url"], item["source_url"],item["depth"], self.date, True)
+				try:
+					p = Page(item["url"], item["source_url"],item["depth"], item["date"], True)
+				except KeyError:
+					p = Page(item["url"], item["source_url"],item["depth"], self.date, True)
 					if p.download():
 						a = Article(p.url,p.html, p.source_url, p.depth,p.date, True)
 						if a.extract():
@@ -672,14 +674,13 @@ class Crawtext(object):
 
 					self.queue.remove(item)
 					logging.info("Processing %i urls"%self.queue.count())
-				if self.queue.nb == 0:
+					if self.queue.count() == 0:
+						break
+				if self.queue.count() == 0:
 					break
-			if self.queue.nb == 0:
-				break
-			if self.results.count() > 200000:
-				self.queue.drop()
-				break
-
+				if self.results.count() > 200000:
+					self.queue.drop()
+					break
 		return sys.exit(1)
 
 	def stop(self):
