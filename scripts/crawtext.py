@@ -565,26 +565,38 @@ class Crawtext(object):
 	def refresh_queue(self):
 		'''refresh'''
 		try:
-			data = self.queue.find().sort("depth",pymongo.DESCENDING)
+			for item in self.queue.find().sort("depth",pymongo.DESCENDING)
+				if item["url"] in self.results.distinct("url"):
+					logging.info("in results")
+					self.queue.remove(item)
+
+				if item["url"] in self.logs.distinct("url"):
+					logging.info("in logs")
+					self.queue.remove(item)	
+				try:
+					depth = item["depth"]
+				except KeyError:
+					self.queue.remove(item)	
+			return self.queue.find().sort("depth",pymongo.DESCENDING)
 		except pymongo.errors.OperationFailure:
+			logger.warning("Queue DB is too big to sort by depth")
+			for item in self.queue.find():
+				if item["url"] in self.results.distinct("url"):
+					logging.info("in results")
+					self.queue.remove(item)
+
+				if item["url"] in self.logs.distinct("url"):
+					logging.info("in logs")
+					self.queue.remove(item)	
+				try:
+					depth = item["depth"]
+				except KeyError:
+					self.queue.remove(item)	
 			#If too big need to create and index file and sort then
 			#self.queue.ensureIndex( {url: 1, depth: pymongo.DESCENDING}, {unique:true, dropDups: true})
-			data = self.queue.find()
-		for item in data:
-			if item["url"] in self.results.distinct("url"):
-				logging.info("in results")
-				self.queue.remove(item)
-
-			if item["url"] in self.logs.distinct("url"):
-				logging.info("in logs")
-				self.queue.remove(item)	
-			try:
-				depth = item["depth"]
-			except KeyError:
-				self.queue.remove(item)
-				
+			print self.queue.find()
 			
-		return self.queue
+		
 		
 	def crawler(self):
 		logging.info("Crawler activated with query filter %s" %self.target)
@@ -596,11 +608,6 @@ class Crawtext(object):
 			self.project.load_logs()
 		except AttributeError:
 			self.load_project()
-
-
-
-
-
 		#logging.info("Begin crawl with %i active urls"%self.sources.active_nb)
 		self.push_to_queue()
 		logging.info("Processing %i urls"%self.queue.count())
@@ -610,7 +617,7 @@ class Crawtext(object):
 		#print self.queue.list
 
 		while self.queue.count() > 0:
-			for n in self.refresh_queue():
+			for item in self.refresh_queue():
 				logger.info("url %s depth %d" %(item["url"], item['depth']))
 				try:
 					p = Page(item["url"], item["source_url"],item["depth"], item["date"], True)
