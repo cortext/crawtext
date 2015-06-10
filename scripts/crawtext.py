@@ -813,7 +813,7 @@ class Crawtext(object):
 	def clean(self):
 		self.load_project()
 		self.project.load_data()
-		for n in self.project.queue.find({"depth":{"$gt": 1}):
+		for n in self.project.queue.find({"depth":{"$gt": 1}}):
 			self.db.queue_more.insert(n)
 			self.db.queue.remove(n)
 		#~ clean1 = [self.project.queue.remove({"url": item}) for item in self.queue.distinct("url") if item in self.logs.distinct("url")]
