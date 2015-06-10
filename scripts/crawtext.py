@@ -594,7 +594,7 @@ class Crawtext(object):
 					self.queue.remove(item)	
 			#If too big need to create and index file and sort then
 			#self.queue.ensureIndex( {url: 1, depth: pymongo.DESCENDING}, {unique:true, dropDups: true})
-			print self.queue.find()
+			return self.queue.find()
 			
 		
 		
