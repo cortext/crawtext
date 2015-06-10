@@ -813,7 +813,7 @@ class Crawtext(object):
 	def clean(self):
 		self.load_project()
 		self.project.load_data()
-		self.project.create_col("queue_more")
+		self.project.create_coll("queue_more")
 		for n in self.project.queue.find({"depth":{"$gt": 1}}):
 			self.project.queue_more.insert(n)
 			self.project.queue.remove(n)
