@@ -563,9 +563,9 @@ class Crawtext(object):
 				self.upsert_url(url, "file %s") %self.file
 		return self
 	def refresh_queue(self):
-		'''refresh'''
+		'''refresh queue'''
 		try:
-			for item in self.queue.find().sort("depth",pymongo.DESCENDING)
+			for item in self.queue.find().sort("depth",pymongo.DESCENDING):
 				if item["url"] in self.results.distinct("url"):
 					logging.info("in results")
 					self.queue.remove(item)
