@@ -18,34 +18,33 @@ import os, sys
 
 class Database(object):
 	'''Database creation'''
-	def __init__(self, database_name, uri="mongodb://localhost:27017", debug=False):
-		if uri is None and uri != "tcp://localhost:27017":
-			try:
-				uri = os.environ["MONGO-SRV_PORT"]
-			except KeyError:
-				try:
-					addr = os.environ["MONGO-SRV_PORT_27017_TCP_ADDR"]
-				except KeyError:
-					pass
-				try:
-					port = int(os.environ["MONGO-SRV_PORT_27017_TCP_PORT"])
-				except KeyError:
-					pass		
-				uri = "tcp://"+addr+":"+str(port)
+	def __init__(self, database_name, debug=False):
+		try:
+			addr = os.environ["MONGO-SRV_PORT_27017_TCP_ADDR"]		
+		except KeyError:
+			addr = "localhost"
+		try:
+			port = int(os.environ["MONGO-SRV_PORT_27017_TCP_PORT"])
+		except KeyError:
+			port = 27017
+		uri = addr+":"+str(port)
 		
 		try:
+		
 			self.client = pymongo.MongoClient(uri)
+		
 		except pymongo.errors.ConnectionFailure:
-			logging.warning("Unable to connect to database. Switching to defaut db @localhost:27017")
+			logging.warning("Unable to connect using uri %s" %uri)
 			try:
-				self.client = pymongo.MongoClient("localhost", 27017)
-			except pymongo.errors.ConnectionFailure:
-				sys.exit("Unable to connect to MongoDB")
+				self.client = pymongo.MongoClient(addr, port)
+			except:
+				sys.exit("ConnectionFailure : Unable to connect to MongoDB with url %s:%s" %(addr,port))
+			
 		except pymongo.errors.InvalidURI:
 			try:
-				self.client = pymongo.MongoClient("localhost", 27017)
+				self.client = pymongo.MongoClient(addr, port)
 			except pymongo.errors.ConnectionFailure:
-				sys.exit("Unable to connect to MongoDB")
+				sys.exit("InvalidUri : Unable to connect to MongoDB with url %s:%s" %(addr,port))
 		
 		self.version = self.client.server_info()['version']
 		self.t_version = tuple(self.version.split("."))
@@ -117,7 +116,7 @@ class Database(object):
 		return [n for n in self.db[str(coll_name)].find()]
 
 	def create_index(key, coll):
-		return coll.create_index([(key, pymongo.DESCENDING,True,True)])
+		 return coll.create_index([(key, pymongo.DESCENDING,True,True)])
 
 	def drop_dups(self, key, coll):
 		#logger.DEBUG(coll.count())
@@ -271,8 +270,7 @@ class Database(object):
 	#STATS
 	def load_sources(self):
 		logging.info("Loading sources")
-		'''
-		pipeline = [
+		'''pipeline = [
 		          #On déroule les status
 		          {"$unwind": "$status"},
 		          #On les groupes par dernières occurences
@@ -291,9 +289,7 @@ class Database(object):
 		          {"$match": { "status": True }},
 		          #On conserve l\'ordre du  tri
 		          {"$sort": { "_id._id": 1 }}
-		          ]
-		'''
-		#self.sources.aggregate(pipeline)
+		          ]'''
 		self.sources = self.db.sources
 		self.sources.active = self.use_coll("active_sources")
 		self.sources.inactive = self.use_coll("inactive_sources")
@@ -376,25 +372,25 @@ class Database(object):
 		return self
 		
 	def sources_stats(self):
-		self.export_stats()
-		return self.report[3]
+		self.show_stats()
+		return self.template[3]
 
 	def results_stats(self):
-		self.export_stats()
-		return self.report[1]
+		self.show_stats()
+		return self.template[1]
 
 	def logs_stats(self):
-		self.export_stats()
-		return self.report[2]
-	
+		self.show_stats()
+		return self.template[2]
 	def dump_obj(self):
 		pass
 		
 	def build_stats(self):
 		from collections import defaultdict
-		self.load_data()
 		#print dict.fromkeys(["results", "sources", "logs", "queue"])
 		self.stats = dict.fromkeys(["results", "sources", "logs", "queue"], {})
+		
+		
 		for k,v in self.__dict__.items():
 			if k in self.stats.keys():
 				self.stats[k]["nb"] = v.count()
@@ -416,6 +412,9 @@ class Database(object):
 							
 						else:
 							self.stats[k][i] = value
+		
+		
+		
 		return self.stats
 	
 	def export_stats(self):
@@ -459,7 +458,7 @@ class Database(object):
 class TaskDB(Database):
 	def __init__(self):
 		try:
-			Database.__init__(self, TASK_MANAGER_NAME,os.environ["MONGO-SRV_PORT"])
+			Database.__init__(self, TASK_MANAGER_NAME)
 		except KeyError:	
 			Database.__init__(self, TASK_MANAGER_NAME)
 		
@@ -473,9 +472,8 @@ def test():
 	tk = TaskDB()
 	for n in tk.coll.find():
 		db = Database(n["name"])
-		db.mail_report()
-		
-		
+		db.load_data()
+		db.export_stats()
 		
 if __name__ == "__main__":
 	test()
