@@ -117,7 +117,7 @@ class Database(object):
 		return [n for n in self.db[str(coll_name)].find()]
 
 	def create_index(key, coll):
-		 return coll.create_index([(key, pymongo.DESCENDING,True,True)])
+		return coll.create_index([(key, pymongo.DESCENDING,True,True)])
 
 	def drop_dups(self, key, coll):
 		#logger.DEBUG(coll.count())
