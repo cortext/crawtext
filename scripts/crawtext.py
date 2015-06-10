@@ -22,6 +22,7 @@ Usage:
 	crawtext.py (<name>) report [--user=<email>] [--format=<format>] [--debug]
 	crawtext.py (<name>) delete [--debug]
 	crawtext.py -l
+	crawtext.py (<name>) clean
 '''
 #defaut import
 import os, sys, re
@@ -811,6 +812,11 @@ class Crawtext(object):
 
 	def clean(self):
 		self.load_project()
+		self.project.load_data()
+		clean1 = [self.project.queue.remove({"url": item}) for item in self.queue.distinct("url") if item in self.logs.distinct("url")]
+		clean2 = [self.project.queue.remove({"url": item}) for item in self.queue.distinct("url") if item in self.results.find("url")]
+		print self.queue.count()
+			 
 		
 
 if __name__ == "crawtext":
