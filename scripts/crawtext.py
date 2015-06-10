@@ -597,7 +597,7 @@ class Crawtext(object):
 				
 				
 			for item in self.queue.find().sort([("depth", 1)]):
-				logger.info("url %s depth %d" %(item["url"], item['depth'])
+				logger.info("url %s depth %d" %(item["url"], item['depth']))
 				if item["url"] in self.results.distinct("url"):
 					logging.info("in results")
 					self.queue.remove(item)
