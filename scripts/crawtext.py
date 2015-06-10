@@ -303,6 +303,7 @@ class Crawtext(object):
 			setattr(self, str(n), self.project.use_coll(str(n)))
 			logging.info("\t- %s: %i" %(n,self.__dict__[n].count()))
 		return self
+		
 	def stats(self):
 		self.netw_err = range(400, 520)
 		self.spe_err =  [100, 101, 102, 404, 700, 800]
@@ -591,6 +592,7 @@ class Crawtext(object):
 				try:
 					depth = item["depth"]
 				except KeyError:
+					logging.info("no depth removing ...")
 					self.queue.remove(item)	
 			#If too big need to create and index file and sort then
 			#self.queue.ensureIndex( {url: 1, depth: pymongo.DESCENDING}, {unique:true, dropDups: true})
@@ -603,11 +605,10 @@ class Crawtext(object):
 		# if self.sources.nb == 0:
 		# 	sys.exit("Error: no sources found in the project.")
 		try:
-			self.project.load_sources()
-			self.project.load_queue()
-			self.project.load_logs()
+			self.project.load_data()
 		except AttributeError:
 			self.load_project()
+			self.project.load_data()
 		#logging.info("Begin crawl with %i active urls"%self.sources.active_nb)
 		self.push_to_queue()
 		logging.info("Processing %i urls"%self.queue.count())
@@ -808,7 +809,9 @@ class Crawtext(object):
 				self.coll.remove(n)
 		return sys.exit(0)
 
-
+	def clean(self):
+		self.load_project()
+		
 
 if __name__ == "crawtext":
 	#print docopt(__doc__)
