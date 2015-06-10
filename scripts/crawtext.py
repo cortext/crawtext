@@ -593,10 +593,11 @@ class Crawtext(object):
 			except pymongo.errors.OperationFailure:
 				#If too big need to create and index file and sort then
 				self.queue.create_index([("depth", pymongo.DESCENDING)],background=True)
-				data = self.queue.find().sort([("depth", 1)])
 				
 				
-			for item in self.queue.find():
+				
+			for item in self.queue.find().sort([("depth", 1)]):
+				logger.info("url %s depth %d" %(item["url"], item['depth'])
 				if item["url"] in self.results.distinct("url"):
 					logging.info("in results")
 					self.queue.remove(item)
