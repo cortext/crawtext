@@ -592,10 +592,10 @@ class Crawtext(object):
 				
 			except pymongo.errors.OperationFailure:
 				#If too big need to create and index file and sort then
-				self.queue.create_index([("depth", pymongo.DESCENDING)])
-				data = self.queue.find({"depth":1}, {})
+				self.queue.ensureIndex( {url: 1, depth: pymongo.DESCENDING}, {unique:true, dropDups: true})
+				data = self.queue.find().sort([("depth", 1)])
 				
-				
+			print data	
 				
 			for item in data:
 				logger.info("url %s depth %d" %(item["url"], item['depth']))
