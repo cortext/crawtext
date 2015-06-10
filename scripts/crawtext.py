@@ -587,17 +587,19 @@ class Crawtext(object):
 		#print self.queue.list
 
 		while self.queue.count() > 0:
+			
 			try:
-				data = self.queue.find().sort([("depth", 1)])
+				data = self.queue.find().sort("depth",pymongo.DESCENDING)
 				
 			except pymongo.errors.OperationFailure:
 				#If too big need to create and index file and sort then
 				#self.queue.ensureIndex( {url: 1, depth: pymongo.DESCENDING}, {unique:true, dropDups: true})
 				data = self.queue.find()
 				
-			print data	
+			
 				
 			for item in data:
+				
 				logger.info("url %s depth %d" %(item["url"], item['depth']))
 				if item["url"] in self.results.distinct("url"):
 					logging.info("in results")
