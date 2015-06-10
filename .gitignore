@@ -1,5 +1,2 @@
-crawtext/database/database.pyc
-crawtext/database/__init__.pyc
-crawtext/tldextract/__init__.pyc
-crawtext/tldextract/tldextract.pyc
 *.pyc
+projects/*
