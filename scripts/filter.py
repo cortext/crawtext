@@ -94,8 +94,7 @@ class Filter(object):
     def get_list(self):
         return self.index.values()
 		
-    def match(self, url, elementtype=None):
-        
+    def match(self, url, elementtype=None):    
         matchlist = []
         tokens = RE_TOK.split(url)
         for tok in tokens:
@@ -110,9 +109,8 @@ class Filter(object):
         return matchlist
 
 
-'''
+
 if __name__ == '__main__':
     f = Filter(file('easylist.txt'), is_local=True)
     print 'start matching'
     f.match(sys.argv[1])
-'''
