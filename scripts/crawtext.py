@@ -631,12 +631,12 @@ class Crawtext(object):
 		self.push_to_queue()
 		logging.info("Processing %i urls"%self.queue.count())
 
-
+		
 
 		#print self.queue.list
 
 		while self.queue.count() > 0:
-			for item in self.refresh_queue():
+			for item in self.queue.find():
 				logger.info("url %s depth %d" %(item["url"], item['depth']))
 				try:
 					p = Page(item["url"], item["source_url"],item["depth"], item["date"], True)
