@@ -129,10 +129,12 @@ class Page(object):
 	def export(self):
 		return {"url":self.url, "source_url": self.source_url, "depth": self.depth, "html": self.html}
 
-	def download(self):
-		if self.is_valid() and self.fetch():
-			return True
-		return False
+	#~ def download(self):
+		#~ if self.is_valid():
+			 #~ if self.fetch():
+					#~ return True
+		#~ else:
+			#~ return False
 
 
 
@@ -153,6 +155,7 @@ class Article(object):
 		self.msg = ""
 		self.code = 100
 		logging.info("Article init")
+		
 	def extract(self):
 		self.doc = BeautifulSoup(self.html)
 		self.text = clean_text(self.html)
@@ -256,7 +259,6 @@ class Article(object):
 		return False
 
 	def filter(self, query, directory):
-		filter = Filter("complete-list.txt")
 		if self.is_relevant(query, directory):
 			return True
 		else:
@@ -278,8 +280,10 @@ class Article(object):
 
 	def export(self):
 		l = Link(self.url,self.source_url)
+		self.url_id = l.url_id
 		return {
 				"url": l.url,
+				"url_id": self.url_id,
 				"link_id": l.subdomain+"_"+l.domain,
 				"domain": l.domain,
 				"subdomain": l.subdomain,

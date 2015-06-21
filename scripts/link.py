@@ -47,8 +47,7 @@ class Link(object):
 		self.msg = "Ok"
 		self.parse_url(self.url)
 		self.url = "".join(self.clean_url(url, source_url))
-		
-		print self.url_id
+		self.code = 200
 		
 	def clean_url(self, url, source_url):
 		domain = self.get_domain(url)
@@ -81,7 +80,7 @@ class Link(object):
 		self.query = parsed_url.query
 		self.fragment = parsed_url.fragment
 		#filetype:
-		self.filetype = url_to_filetype(self.path)
+		self.filetype = re.split(".", self.netloc)[-1]
 		
 		#subdomain and tld
 		tld_dat = tldextract.extract(url)
@@ -113,60 +112,57 @@ class Link(object):
 		if self.url in ["void", ";"]:
 			self.msg ='Javascript %s' % self.url
 			self.status = False
-			self.code = "804"
+			self.code = 804
 			return False
 		
 		if self.url is None or len(self.url) < 11:
 			self.msg ='Url is too short (less than 11) %s' % self.url
 			self.status = False
-			self.code = "803"
+			self.code = 803
 			return False
-		elif self.url.startswith('javascript'):
+			
+		if self.url.startswith('javascript'):
 			self.msg ='Javascript %s' % self.url
 			self.status = False
-			self.code = "804"
+			self.code = 804
 			return False
 			
 		if self.filter_ads(self.url):
 			return False
 		#invalid protocol
-		if check_scheme(self.scheme) is False:
+		if self.scheme not in ACCEPTED_PROTOCOL:
 			self.msg = 'wrong protocol %s' % self.scheme
 			self.status = False
-			self.code = "804"
+			self.code = 804
 			return False
-		if check_path(self.path) is False:
-			self.msg ='wrong path %s' % self.path
-			self.status = False
-			self.code = "805"
-			return False
-
 		if self.path != "" and not self.path.startswith('/'):
 			self.msg = 'Invalid path for url %s' % self.path
 			self.status = False
-			self.code = "805"
+			self.code = 805
 			return False
 
 		if self.filetype in BAD_TYPES:
 			self.msg = 'Invalid webpage type %s' % self.filetype
 			self.status = False
-			self.code = "806"
+			self.code = 806
 			return False
 
 		if self.domain in BAD_DOMAINS:
 			self.msg = 'bad domain %s' % self.domain
 			self.status = False
-			self.code = "807"
+			self.code = 807
 			return False
-		return True
+		else:
+			return True
 
-	def filter_ads(url):
+	def filter_ads(self, url):
 		if filter.match(url):
 			self.msg = 'Blacklisted url'
 			self.status = False
-			self.code = "808"
+			self.code = 808
 			return False
-		return True
+		else:
+			return True
 		#~ match_date = re.search(DATE_REGEX, self.url)
 		#~ # if we caught the verified date above, it's an article
 		#~ if match_date is not None:
