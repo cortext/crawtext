@@ -20,6 +20,7 @@ from datetime import datetime as dt
 from query import Query
 from link import Link
 from text import clean_text
+from filter2 import filter
 
 import logging
 logger = logging.getLogger(__name__)
@@ -35,8 +36,7 @@ class Page(object):
 	"""Article objects abstract an online news article page
 	"""
 	def __init__(self, url, source_url= None, depth ="",date="", debug= False):
-		"""The **kwargs argument may be filled with config values, which
-		is added into the config object
+		"""
 		"""
 		#logging.info("Page Init")
 		self.debug = debug
@@ -75,10 +75,9 @@ class Page(object):
 			return True
 		else:
 			self.msg = url.msg
-			self.code = "100"
+			self.code = url.code
 			self.step = "Validating page"
 			self.status = False
-			logging.info("No")
 			return False
 
 	def fetch(self):
@@ -257,12 +256,12 @@ class Article(object):
 		return False
 
 	def filter(self, query, directory):
-
+		filter = Filter("complete-list.txt")
 		if self.is_relevant(query, directory):
 			return True
 		else:
 			self.code = 800
-			self.msg = "Article Query: not relevant"
+			self.msg = "Article Query Filter: text not relevant"
 			self.status = False
 			return False
 
@@ -279,16 +278,15 @@ class Article(object):
 
 	def export(self):
 		l = Link(self.url,self.source_url)
-		l = l.parse_url(self.url)
-
 		return {
-				"url": self.url,
+				"url": l.url,
+				"link_id": l.subdomain+"_"+l.domain,
 				"domain": l.domain,
 				"subdomain": l.subdomain,
 				"extension": l.extension,
 				"filetype": l.filetype,
 				"date": [dt.now()],
-				"source": self.source_url,
+				"source_url": self.source_url,
 				"title": self.title,
 				"cited_links": self.links,
 				"cited_links_ids": self.domain_ids,

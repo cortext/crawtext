@@ -500,7 +500,7 @@ class Crawtext(object):
 											"msg":["inserted"],
 											"code": [100],
 											"status": [True],
-											"date": [self.date]
+											"date": [self.date],
 										})
 					except pymongo.errors.DuplicateKeyError:
 						self.sources.update({
