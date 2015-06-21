@@ -20,7 +20,7 @@ from datetime import datetime as dt
 from query import Query
 from link import Link
 from text import clean_text
-from filter2 import filter
+
 
 import logging
 logger = logging.getLogger(__name__)
