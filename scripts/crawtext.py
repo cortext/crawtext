@@ -169,6 +169,8 @@ class Crawtext(object):
 			return True
 		except pymongo.errors.OperationFailure:
 			return False
+		except:
+			return False
 		#~ self.task = self.coll.find_one({"name":name})
 		#~ for k,v in self.task.items():
 			#~ if type(v) == list:
