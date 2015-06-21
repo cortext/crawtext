@@ -580,7 +580,7 @@ class Crawtext(object):
 		nb = []
 		with open(filepath, 'r') as f:
 			for url in f.readlines():
-				self.upsert_url(url, "file %s") %str(self.file)
+				self.upsert_url(url, "file %s" %str(self.file)) 
 		return self
 	def refresh_queue(self):
 		'''refresh queue'''
