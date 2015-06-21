@@ -1,7 +1,7 @@
 from urlparse import (
    urlparse, urljoin, urlsplit, urlunsplit, parse_qs)
 from tldextract import tldextract
-from filter2 import filter
+from filter import filter
 import os, sys, re
 import urllib2 as ul
 
