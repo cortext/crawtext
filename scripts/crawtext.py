@@ -105,7 +105,7 @@ class Crawtext(object):
 			try:
 				return self.update_status(new_task["name"], "created", True,"Ok")
 			except pymongo.errors.OperationFailure:
-				return
+				return sys.exit("Error while updating status")
 		else:
 			logging.info("Project already exists")
 			return self.update()
@@ -147,6 +147,16 @@ class Crawtext(object):
 			logging.info("No parameters has been changed")
 			return self.show()
 	
+	def create_status(self, name, action, status=True, msg="Ok"):
+		u_task = {}
+		u_task["status"] = [status]
+		u_task["date"] = [self.date]
+		u_task["msg"] = [msg]
+		u_task["action"] = [action]
+		u_task["name"] = name
+		self.coll.insert(u_task)
+		return 
+		
 	def update_status(self, name, action, status=True, msg="Ok"):
 		'''updating status for task'''
 		u_task = {}
@@ -156,11 +166,11 @@ class Crawtext(object):
 		u_task["action"] = action
 		print self.coll.update({"name":name}, {"$push":u_task})
 		self.task = self.coll.find_one({"name":name})
-		for k,v in self.task.items():
-			if type(v) == list:
-				print k
-				for item in v:
-					print "\t-", item
+		#~ for k,v in self.task.items():
+			#~ if type(v) == list:
+				#~ print k
+				#~ for item in v:
+					#~ print "\t-", item
 		
 		
 	def show(self):
@@ -174,7 +184,7 @@ class Crawtext(object):
 			try:
 				self.update_status(self.name, "show")
 			except pymongo.errors.OperationFailure:
-				pass
+				sys.exit("Error while updating status")
 			sys.exit(0)
 
 	def show_task(self):
