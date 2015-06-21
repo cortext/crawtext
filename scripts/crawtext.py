@@ -164,8 +164,12 @@ class Crawtext(object):
 		u_task["date"] = self.date
 		u_task["msg"] = msg
 		u_task["action"] = action
-		print self.coll.update({"name":name}, {"$push":u_task})
-		self.task = self.coll.find_one({"name":name})
+		try:
+			self.coll.update({"name":name}, {"$push":u_task})
+			return True
+		except pymongo.errors.OperationFailure:
+			return False
+		#~ self.task = self.coll.find_one({"name":name})
 		#~ for k,v in self.task.items():
 			#~ if type(v) == list:
 				#~ print k
@@ -181,11 +185,11 @@ class Crawtext(object):
 		else:
 			self.show_task()
 			self.show_project()
-			try:
-				self.update_status(self.name, "show")
-			except pymongo.errors.OperationFailure:
-				sys.exit("Error while updating status")
-			sys.exit(0)
+			if self.update_status(self.name, "show"):
+				return sys.exit(0)
+			else:
+				return sys.exit("Error while updating status")
+			
 
 	def show_task(self):
 		logging.info("Show current parameters stored for task")
