@@ -84,6 +84,7 @@ class Crawtext(object):
 				if v is not False and v is not None:
 					action = getattr(self, k)
 		logging.debug(self.__dict__.items())
+		
 		return action()
 
 	def create(self):
@@ -565,6 +566,9 @@ class Crawtext(object):
 
 			return
 	def upsert_file(self):
+		if self.file is None or self.file == "":
+			logging.warning("No file found %s" %str(self.file))
+			return self
 		try:
 			if self.directory is not False:
 				filepath = os.path.join(self.directory, self.file)
