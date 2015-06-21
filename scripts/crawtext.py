@@ -637,7 +637,7 @@ class Crawtext(object):
 
 		while self.queue.count() > 0:
 			for item in self.queue.find().sort('depth', pymongo.ASCENDING):
-				logger.info("url %s depth %d" %(item["url"], item['depth']))
+				#logger.info("url %s depth %d" %(item["url"], item['depth']))
 				try:
 					p = Page(item["url"], item["source_url"],item["depth"], item["date"], True)
 				except KeyError:
@@ -660,7 +660,7 @@ class Crawtext(object):
 												except pymongo.errors.DuplicateKeyError:
 													#self.results.update(a.export())
 													pass
-
+										logging.info("Extracted %s" %a.url_id)
 									else:
 										logging.debug("depth exceeded")
 										self.logs.insert(a.log())
