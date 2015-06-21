@@ -537,8 +537,7 @@ class Crawtext(object):
 			return self
 
 	def push_to_queue(self):
-		for n in self.sources.active.find():
-
+		for n in self.sources.find():
 			try:
 			 	self.queue.insert(n)
 			except pymongo.errors.DuplicateKeyError:
