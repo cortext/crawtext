@@ -114,7 +114,7 @@ class Page(object):
 
 		except Exception as e:
 				logging.warning(e)
-				self.msg = str(e.decode("utf-8"))
+				self.msg = "Problem in fetchuing the link"
 				try:
 					self.code = req.status_code
 				except Exception as e:
