@@ -618,6 +618,7 @@ class Crawtext(object):
 	def controled_crawl(self):
 		while self.queue.count() > 0:
 			for item in self.queue.find().sort('depth', pymongo.ASCENDING):
+				logger.info(item["depth"])
 				#logger.info("url %s depth %d" %(item["url"], item['depth']))
 				
 				p = Page(item["url"], item["source_url"],item["depth"], item["date"], True)
@@ -625,33 +626,30 @@ class Crawtext(object):
 				if p.fetch():
 					a = Article(p.url,p.html, p.source_url, p.depth,p.date, True)
 					if a.extract(): 
-						if a.filter(self.query, self.directory):						
+						logging.info("extracted")
+						if a.filter(self.query, self.directory):
+							logging.info("valid")
 							if a.check_depth(a.depth):
+								
 								a.fetch_links()
 								if len(a.links) > 0:
 									for url, domain in zip(a.links, a.domains):
-										if url not in self.queue.distinct("url") and url not in self.results.distinct("url"):
-											print "insert into queue"
+										if url not in self.queue.distinct("url") and url not in self.results.distinct("url") and url not in self.logs.distinct("url"):
 											self.queue.insert({"url": url, "source_url": item['url'], "depth": int(item['depth'])+1, "domain": domain, "date": a.date})
 											
-											if self.debug: logging.info("\t-inserted %d nexts url" %len(a.links))
+									logging.info("Inserted %d nexts url" %len(a.links))
 								try:
-									print "insert into results"
+									
 									self.results.insert(a.export())
 								except pymongo.errors.DuplicateKeyError:
 									#self.results.update(a.export())
 									pass
-											
-								logging.info("Extracted %s" %a.url_id)
 					else:
 						try:
-							logging.info("into logs")
 							self.logs.insert(a.log())
 						except pymongo.errors.DuplicateKeyError:
-							pass
-							
+							pass		
 				else:
-					print p.msg
 					try:
 						self.logs.insert(p.log())
 					except pymongo.errors.DuplicateKeyError:
@@ -667,39 +665,44 @@ class Crawtext(object):
 				self.queue.drop()
 				break
 	
-	def open_crawl(self):
+	def internal_crawl(self):
 		while self.queue.count() > 0:
 			for item in self.queue.find().sort('depth', pymongo.ASCENDING):
+				logger.info(item["depth"])
 				#logger.info("url %s depth %d" %(item["url"], item['depth']))
-				try:
-					p = Page(item["url"], item["source_url"],item["depth"], item["date"], True)
-				except KeyError:
-					p = Page(item["url"], item["source_url"],item["depth"], self.date, True)
-					if p.download():
-						a = Article(p.url,p.html, p.source_url, p.depth,p.date, True)
-						if a.extract() and a.check_depth(a.depth) and a.fetch_links():
+				
+				p = Page(item["url"], item["source_url"],item["depth"], item["date"], True)
+				
+				if p.fetch():
+					a = Article(p.url,p.html, p.source_url, p.depth,p.date, True)
+					if a.extract(): 
+						logging.info("extracted")
+						
+						if a.check_depth(a.depth):								
+							a.fetch_links()
+							
 							if len(a.links) > 0:
 								for url, domain in zip(a.links, a.domains):
-									if url not in self.queue.distinct("url") and url not in self.results.distinct("url"):
-										print "insert into queue"
-										self.queue.insert({"url": url, "source_url": item['url'], "depth": int(item['depth'])+1, "domain": domain, "date": a.date})
-										
-										if self.debug: logging.info("\t-inserted %d nexts url" %len(a.links))
-									try:
-										print "insert into results"
-										self.results.insert(a.export())
-									except pymongo.errors.DuplicateKeyError:
-										#self.results.update(a.export())
-										print "duplicate"
-										pass
-									logging.info("Extracted %s" %a.url_id)
-						else:
-							logging.info("into logs")
-							self.logs.insert(a.log())
+									if url not in self.queue.distinct("url") and url not in self.results.distinct("url") and url not in self.logs.distinct("url"):
+										if domain == a.domain:
+											self.queue.insert({"url": url, "source_url": item['url'], "depth": int(item['depth'])+1, "domain": domain, "date": a.date})
+								
+							try:				
+								self.results.insert(a.export())
+							except pymongo.errors.DuplicateKeyError:
+								#self.results.update(a.export())
+								pass
 					else:
-						logging.info("into logs")
-						self.logs.insert(a.log())
-					
+						try:
+							self.logs.insert(a.log())
+						except pymongo.errors.DuplicateKeyError:
+							pass		
+				else:
+					try:
+						self.logs.insert(p.log())
+					except pymongo.errors.DuplicateKeyError:
+						pass
+						
 				self.queue.remove(item)
 				logging.info("Processing %i urls"%self.queue.count())
 				if self.queue.count() == 0:
@@ -708,7 +711,53 @@ class Crawtext(object):
 				break
 			if self.results.count() > 200000:
 				self.queue.drop()
-				break	
+				break
+	def open_crawl(self):
+		while self.queue.count() > 0:
+			for item in self.queue.find().sort('depth', pymongo.ASCENDING):
+				logger.info(item["depth"])
+				#logger.info("url %s depth %d" %(item["url"], item['depth']))
+				
+				p = Page(item["url"], item["source_url"],item["depth"], item["date"], True)
+				
+				if p.fetch():
+					a = Article(p.url,p.html, p.source_url, p.depth,p.date, True)
+					if a.extract(): 
+						logging.info("extracted")
+						
+						if a.check_depth(a.depth):								
+							a.fetch_links()
+							if len(a.links) > 0:
+								for url, domain in zip(a.links, a.domains):
+									if url not in self.queue.distinct("url") and url not in self.results.distinct("url") and url not in self.logs.distinct("url"):
+										self.queue.insert({"url": url, "source_url": item['url'], "depth": int(item['depth'])+1, "domain": domain, "date": a.date})
+										
+								logging.info("Inserted %d nexts url" %len(a.links))
+							try:				
+								self.results.insert(a.export())
+							except pymongo.errors.DuplicateKeyError:
+								#self.results.update(a.export())
+								pass
+					else:
+						try:
+							self.logs.insert(a.log())
+						except pymongo.errors.DuplicateKeyError:
+							pass		
+				else:
+					try:
+						self.logs.insert(p.log())
+					except pymongo.errors.DuplicateKeyError:
+						pass
+						
+				self.queue.remove(item)
+				logging.info("Processing %i urls"%self.queue.count())
+				if self.queue.count() == 0:
+					break
+			if self.queue.count() == 0:
+				break
+			if self.results.count() > 200000:
+				self.queue.drop()
+				break
 	
 	def crawler(self):
 		logging.info("Crawler activated with query filter %s" %self.target)

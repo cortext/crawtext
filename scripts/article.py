@@ -208,9 +208,11 @@ class Article(object):
 		self.domains = []
 		self.links = []
 		self.domain_ids = []
+		#self.urls_ids = []
 		links = [n.get('href') for n in self.doc.find_all("a")]
+		
 		links = [n for n in links if n is not None and n != "" and n != "/" and n[0] !="#"]
-
+		
 		for url in links:
 			if url.startswith('mailto'):
 				pass
@@ -218,11 +220,10 @@ class Article(object):
 				pass
 			else:
 				l = Link(url)
-				if l.is_valid():
-					url, domain, domain_id = l.clean_url(url, self.url)
-					self.domains.append(domain)
-					self.links.append(url)
-					self.domain_ids.append(domain_id)
+				url, domain, domain_id = l.clean_url(url, self.url)
+				self.domains.append(domain)
+				self.links.append(url)
+				self.domain_ids.append(domain_id)
 		return (self.links, self.domains, self.domain_ids)
 
 
