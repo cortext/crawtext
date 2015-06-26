@@ -642,18 +642,21 @@ class Crawtext(object):
 									
 									self.results.insert(a.export())
 								except pymongo.errors.DuplicateKeyError:
-									#self.results.update(a.export())
-									pass
+									logging.info("Exists already")
+									
+									
 					else:
 						try:
 							self.logs.insert(a.log())
 						except pymongo.errors.DuplicateKeyError:
-							pass		
+							logging.info("Exists already")
+							
 				else:
 					try:
 						self.logs.insert(p.log())
 					except pymongo.errors.DuplicateKeyError:
-						pass
+						logging.info("Exists already")
+						
 						
 				self.queue.remove(item)
 				logging.info("Processing %i urls"%self.queue.count())

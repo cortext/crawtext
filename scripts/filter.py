@@ -18,7 +18,7 @@ class Filter(object):
 		return self.adblock.should_block(url)
 	
 			
-filter = Filter("complete-list.txt")
+filter = Filter("./complete-list.txt")
 
 #"complete-list.txt"
 
