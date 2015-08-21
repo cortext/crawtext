@@ -17,3 +17,16 @@ six==1.4.1
 tld==0.6.3
 w3lib==1.10.0
 wsgiref==0.1.2
+requests[security]
+
+#pip install requests[security]
+
+#or, install them directly:
+
+#$ pip install pyopenssl ndg-httpsclient pyasn1
+
+#Requests will then automatically inject pyopenssl into urllib3
+
+#If you're on ubuntu, you may run into trouble installing pyopenssl, you'll need these dependencies:
+
+#$ apt-get install libffi-dev libssl-dev

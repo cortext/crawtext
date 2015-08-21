@@ -1,31 +1,15 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-__name__ = "crawtext"
+
 __script_name__ = "crawtext"
-__version__ = "4.3.4"
+__version__ = "4.4.4"
 __author__= "4barbes@gmail.com"
-__doc__ = '''Crawtext.
+__doc__ = '''Crawtext.'''
 
-Description:
-A simple crawler in command line for targeted webcrawl or open crawl.
-See complete doc <https://github.com/cortext/crawtext/blob/master/_documentation_complete_.md>
-
-Usage:
-	crawtext.py (<name>) show [--debug]
-	crawtext.py (<name>) create [--query=<query>] [--file=<file>][--url=<url>][--key=<key>] [--nb=<nb>] [--lang=<lang>] [--user=<email>] [--depth=<depth>] [--debug] [--repeat=<repeat>]
-	crawtext.py (<name>) (update|add) [--query=<query>] [--file=<file>][--url=<url>][--key=<key>] [--nb=<nb>] [--lang=<lang>] [--user=<email>] [--depth=<depth>] [--debug] [--repeat=<repeat>]
-	crawtext.py (<name>) start [--debug]
-	crawtext.py (<name>) restart [--debug]
-	crawtext.py (<name>) stop [--debug]
-	crawtext.py (<name>) export [--data=<data>] [--format=<format>] [--debug]
-	crawtext.py (<name>) report [--user=<email>] [--format=<format>] [--debug]
-	crawtext.py (<name>) delete [--debug]
-	crawtext.py -l
-'''
 #defaut import
 import os, sys, re
-from copy import copy
+import inspect
 from collections import defaultdict
 from docopt import docopt
 from datetime import datetime as dt
@@ -33,13 +17,13 @@ import datetime
 import hashlib
 #requirements
 import requests
-import pymongo
+import pymongo #3.0.3
 
 #internal import
 from report import send_mail, generate_report
 from database import *
-from article import Article, Page
-from logger import *
+from article import Page
+#from #logger import *
 
 
 ABSPATH = os.path.dirname(os.path.abspath(sys.argv[0]))
@@ -51,865 +35,514 @@ DEPTH = 100
 
 
 class Crawtext(object):
-	def __init__(self, name, user_input, debug):
-		self.name = name
-		self.debug = debug
-		dt1 = dt.today()
-		self.date = dt1.replace(minute=0, second=0, microsecond=0)
-		self.task_db = TaskDB()
-		self.coll = self.task_db.coll
-		self.task = self.coll.find_one({"name":self.name})
-		
-		if self.name is not None:
-			self.project_path = os.path.join(RESULT_PATH, name)
-			self.dispatch_action(user_input)
-		else:
-			self.list_projects()
+    def __init__(self, name, user_input=None):
+        #logger.debug("_init_")
+        self.name = name
+        dt1 = dt.today()
+        self.date = dt1.replace(minute=0, second=0, microsecond=0)
+        self.task_db = TaskDB()
+        self.coll = self.task_db.coll
+        
+        if type(user_input) != dict :
+             sys.exit("Wrong format args")
+        
+        self.task = self.coll.find_one({"name": self.name})
+        if self.task is None:
+            #Project doesn't exits
+            logger.info("No project %s found. Creating the project" %self.name)
+            if self.create(user_input) is False:
+                sys.exit("Fail to create a new project")
+            
+        else:
+            logger.info("Project %s found. Udpating the project" %self.name)
+            if self.update(user_input) is False:
+                logger.info("No parameters to update")
+                
+        self.load_data()
+        if self.add_seeds() is False:
+            sys.exit("No seeds found ")
+        
+        if self.queue.count() > 0:
+            self.global_crawl()
+        else:
+            sys.exit("All urls has been treated")
+        
+        
+    def load_data(self):
+        logger.info("Loading data from project db")
+        self.project = Database(self.name)
+        self.data = self.project.set_coll("data", "url")
+        self.queue = self.project.set_coll("queue", "url")
+        print "%i urls in data" %(self.data.count())
+        print "%i urls to treat" %(self.queue.count())
+        return self
+        
+    def add_seeds(self):
+        
+        self.sources = self.data.find({"depth":0})
+        self.logs = self.data.find({"type":"log"})
+        self.results = self.data.find({"type": "page"})
+        
+        print "Sources nb", self.sources.count()
+        #Si pas de sources
+        
+        if self.sources.count() == 0:
+            logger.info("No sources found ")
+            params = [k for k, v in self.task.items() if k in ["file", "url", "key"] and v is not False]
+            #ajouter
+            self.add_sources(params)
+        
+        
+        if self.queue == 0:
+            logger.info("No sources to crawl")
+            logger.info("Adding %i sources to crawl" %self.sources.count())
+            for doc in self.data.find({"depth":0}):
+                print doc["status"][-1]
+                if doc["status"][-1]:
+                    try:
+                        self.queue.insert_one(doc)
+                    except pymongo.errors.DuplicateKeyError:
+                        pass
+            
+        
+        if self.queue.count() == 0:
+            logger.warning("No source to crawl")
+            return False
+        else:
+            logger.warning("%i sources url to crawl" %self.queue.count())
+            return True
+            
+    def load_defaut_config(self):
+        """
+        Load a defaut dict of params 
+        configuring params the crawl (set to False):
+        - name: project name given
+        - query: a query for filtering content
+        - file: a file that contains urls as seeds
+        - url: an url as seed
+        - key: an api key to search seeds on BING
+        - search_nb: max results of seeds while searching on BING (set to 1000)
+        - filter_lang: a lang for filtering only content of this langage
+        - user: an email for sending report
+        - max_depth: stopping crawl after x steps (set to 100)
+        - repeat: repeat the task every day, week, month or year
+        - data: specific collection to export
+        - format: specific format to export csv/json
+        - project_path: the dedicated directory for this path
+        
+        """
+        #logger.debug("Load default project")
+        #params
+        params = {"name": self.name}
+        for k in ["query", "file", "url", "key", "search_nb", "filter_lang", "user", "max_depth", "repeat", "data", "format", "short_export"]:
+            params[k] = False
+        
+        #loading defaut
+        params["max_depth"] = 100
+        params["search_nb"] = 1000
+        
+        params["directory"]= self.create_dir()
+        for n in ["status", "msg", "action", "date", "error"]:
+            params[n] = []
+        return params
+    
+    def create_dir(self):
+        self.directory = os.path.join(RESULT_PATH, self.name)
+        if not os.path.exists(self.directory):
+            os.makedirs(self.directory)
+            index = os.path.join(self.directory, 'index')
+            try:
+                self.index_dir = os.makedirs('index')
+            except:
+                pass
+            #logger.debug("A specific directory has been created to store your projects\n Location:%s"   %(self.directory))
+        return self.directory    
+    
+        
+        
+    def create(self, user_input):
+        logger.debug("Create project %s" %self.name)
+        default_project = self.load_defaut_config()
+        #check if some parameters are given by the user
+        keys2add = set(default_project.keys()) & set(user_input.keys())
+        params = {}
+        for k in keys2add:
+            if user_input[k] != default_project[k]:
+                default_project[k] = user_input[k]
+                params[k] = user_input[k]
+        
+        if len(params.items()) == 0:
+            logger.debug("Project %s has no parameters.Please add some parameters to activate the crawl" %self.name)
+            return False
+        else:
+            if default_project["query"] is not False:
+                default_project["filter"] = True
+        updated_values = " & ".join(params.keys())
+        self.coll.insert_one(default_project)
+        #logger.debug("Project %s has been created with the specified parameters: %s" %(self.name, updated_values))
+        self.coll.update_one({"name": self.name}, {"$push": {"status": True, "code":100, "msg": "created", "date": self.date}})
+        self.task = self.coll.find_one({"name": self.name})
+        params = [k for k,v in self.task.items() if v is not False and k in ["file", "url", "key"]]
+        self.add_seeds(params)
+        return True
+    
+    def update(self, user_input):
+        '''updated project params config'''
+        logger.debug("Update")
+        params = {}
+        default_project = self.load_defaut_config()
+        for k,v in user_input.items():
+           if k in default_project.keys():
+                if user_input[k] != self.task[k]:
+                    self.task[k] = user_input[k]
+                    params[k] = user_input[k]
+        
+        if len(params.items()) == 0:
+            logger.debug("No change in project %s" %self.name)
+            self.task = self.coll.find_one({"name":self.name})
+            return False
+        else:
+            if default_project["query"] is not False:
+                default_project["filter"] = True
+            self.coll.update_one({"name":self.name}, {"$set":params, "$push": {"status": True, "code":100, "msg": "updated", "date": self.date}})
+            self.task = self.coll.find_one({"name":self.name})
+            params = [k for k,v in params.items() if v is not False and k in ["file", "url", "key"]]
+            if len(params) != 0:
+                self.add_sources(params)
+            elif params["repeat"] is not False:
+                params = [k for k,v in self.task.items() if v is not False and k in ["file", "url", "key"]]
+                self.add_sources(params)
+            else:
+                pass
+            
+            return True
+        
+    #~ def load_data(self):
+        #~ '''Load data from projet crawl'''
+        #~ 
+        #~ self.project = Database(self.name)
+        #~ self.data = self.project.set_coll("data", "url")
+        #~ self.queue = self.project.set_coll("data", "url")
+        #~ 
+        #~ self.sources = [n for n in self.data.find({"type":"source", "depth":0})]
+        #~ self.logs = [n for n in self.data.find({"type":"log"})]
+        #~ 
+        #~ self.results = [n for n in self.data.find({"type": {"$nin":["log","source"]}}, { "_id": 0})]
+        #~ self.actives_sources = [n for n in self.sources if n["status"][-1] is not False]
+        #~ print "%i urls in queue" %(self.queue.count())
+        #~ print "%i urls in data" %(self.data.count())
+        #~ print "%i urls as sources" %(self.data.count({"type":"source", "depth":0}))
+        #~ print "%i urls as results" %(self.data.count({"type":"page"}))
+        #~ print "%i urls as logs" %(self.data.count({"type":"log"}))
+        #~ return self
+    
+    def insert_url(self,url):
+        "insert url directly into data and next_url to seeds"
+        info = Page({"url": url, "source_url": "url", "depth": 0}, self.task)
+        info.process(False)
+        try:
+            self.data.insert_one(info.set_data())
+        except pymongo.errors.DuplicateKeyError:
+            date = self.date.replace(hour=0)
+            p_date = (info.date[-1]).replace(hour=0)
+            if p_date == date:
+                print "Already treated today"
+                self.queue.delete_one({"url":p.url})
+                return self.queue
+            else:
+                self.data.update_one({"url":url, "depth":0}, {"$push":info.add_data()})
+        self.data.update_one({"url":url}, {"$inc":{"crawl_nb":1}})
+        self.data.update_one({"url":url}, {"$set":{"type":"source"}})
+        if info.status:
+            for link in info.outlinks:
+                
+                try:
+                    self.queue.insert_one(link)
+                except pymongo.errors.DuplicateKeyError:
+                    continue
+        return self.queue
+                
+                            
+        
+    def add_sources(self, to_update):
+        
+        for k in to_update:
+            
+            if k == "url":
+                print "Adding source from", k, self.task[k]
+                #logger.debug("Adding url %s from manual insert" %self.task[k])
+                url = self.task[k]
+                self.insert_url(url)
+                    
+            elif k == "file":
+                if self.task["directory"] is not False:
+                    url_file = os.path.join(self.task["directory"],self.task[k])
+                else:
+                    url_file = self.task[k]
+                    
+                #logger.debug("Adding url from file %s" %url_file)
+                with open(url_file, 'r') as f:
+                    for url in f.readlines():
+                        print "Adding source from", url_file, url
+                        self.insert_url(url)
+            else:
+                if self.task["query"] is False:
+                    logger.warning("Please add a query to activate search")
+                    continue
+                else:
+                    print "Adding source from search with query", self.task['query']
+                    web_results = self.search(self.task["key"], self.task["query"], self.task["search_nb"])
+                    logger.debug("\t> inserting %s urls from search on %s " %(len(web_results), self.task["query"]))
+                    for nb,url in enumerate(web_results):
+                        self.insert_url(url)
+        
+        return self
+        
+        
+    def search(self, key, query, nb):
+        
+        #logger.debug("Bing is searching %s urls" %nb)
+        if nb > 1000:
+            #logger.warning("Maximum of search results is 1000 urls")
+            nb = 1000
+        
+        web_results = []
+        for i in range(0,nb, 50):
 
-	def dispatch_action(self,user_input):
-		for k,v in user_input.items():
-			if k == "debug" and self.debug is True:
-				#forcing to consider first the debug of the program
-				pass
-			if k.startswith("<"):
-				# key = re.sub("<|>", "", k)
-				# setattr(self,key,v)
-				pass
-			elif k.startswith("--"):
-				key = re.sub("--", "", k)
-				if v is None:
-					v = False
-				setattr(self,key,v)
-			else:
-				if v is not False and v is not None:
-					action = getattr(self, k)
-		logging.debug(self.__dict__.items())
-		
-		return action()
+            #~ try:
+            r = requests.get('https://api.datamarket.azure.com/Bing/Search/v1/Web',
+                params={'$format' : 'json',
+                    '$skip' : i,
+                    '$top': 50,
+                    'Query' : '\'%s\'' %query,
+                    },auth=(key, key)
+                    )
 
-	def create(self):
-		'''create a new task with user params and store it into db'''
-		if self.task is None:
-			new_task = copy(self.__dict__)
-			logging.info(self.create.__doc__)
-			#contextual action for update
-			new_task["status"] = []
-			new_task["date"] = []
-			new_task["msg"] = []
-			new_task["action"] = []
-			del new_task['task']
-			del new_task['task_db']
-			del new_task['coll']
-			self.coll.insert(new_task)
-			self.task =  self.coll.find_one({"name": new_task["name"]})
-			logging.info("Sucessfully created")
-			try:
-				return self.update_status(new_task["name"], "created", True,"Ok")
-			except pymongo.errors.OperationFailure:
-				return sys.exit("Error while updating status")
-		else:
-			logging.info("Project already exists")
-			return self.update()
+            ##logger.debug(r.status_code)
 
-	def update(self):
-		'''udpating parameters of the project'''
-		logging.info(self.update.__doc__)
-		new_task = copy(self.__dict__)
-		self.task  = self.coll.find_one({"name": self.name})
-		print self.name
-		updated = []
-		for k,v in new_task.items():
-			try:
-				if v is None and v is False:
-					pass
-				elif k == "date": 
-					del new_task[k]
-				elif self.task[k] == v:
-					pass
-				else:
-					print "Updating", k
-					updated.append("%s:%s"%(k,v))
-					
-			except KeyError:
-				del new_task[k]
-				
-			except TypeError:
-				del new_task[k]
-		
-		if len(updated) > 0:
-			self.coll.update({"name":self.task["name"]}, new_task, upsert=True)
-			try:
-				self.update_status(self.task["name"], "updated : %s" %(",".join(updated)))
-			except pymongo.errors.OperationFailure:
-				pass
-			logging.info("Sucessfully updated %s" %self.task["name"])
-			sys.exit(0)
-		else:
-			logging.info("No parameters has been changed")
-			return self.show()
-	
-	def create_status(self, name, action, status=True, msg="Ok"):
-		u_task = {}
-		u_task["status"] = [status]
-		u_task["date"] = [self.date]
-		u_task["msg"] = [msg]
-		u_task["action"] = [action]
-		u_task["name"] = name
-		self.coll.insert(u_task)
-		return 
-		
-	def update_status(self, name, action, status=True, msg="Ok"):
-		'''updating status for task'''
-		u_task = {}
-		u_task["status"] = status
-		u_task["date"] = self.date
-		u_task["msg"] = msg
-		u_task["action"] = action
-		try:
-			self.coll.update({"name":name}, {"$push":u_task})
-			return True
-		except pymongo.errors.OperationFailure:
-			return False
-		except:
-			return False
-		#~ self.task = self.coll.find_one({"name":name})
-		#~ for k,v in self.task.items():
-			#~ if type(v) == list:
-				#~ print k
-				#~ for item in v:
-					#~ print "\t-", item
-		
-		
-	def show(self):
-		'''showing the task parameters'''
-		self.task = self.coll.find_one({"name": self.name})
-		if self.task is None:
-			sys.exit("Project doesn't exists.")
-		else:
-			self.show_task()
-			self.show_project()
-			if self.update_status(self.name, "show"):
-				return sys.exit(0)
-			else:
-				return sys.exit("Error while updating status")
-			
+            #msg = r.raise_for_status()
+            #if msg is None:
+                
+            for e in r.json()['d']['results']:
+                #print e["Url"]
+                web_results.append(e["Url"])
 
-	def show_task(self):
-		logging.info("Show current parameters stored for task")
-		self.task = self.coll.find_one({"name": self.name})
-		for k, v in self.task.items():
-			if type(v) == list:
-				print "*", k,":"
-				for item in v:
-					if type(item) == list:
-						for n in item:
-							print "\t\t-", n
-					else:
-						print "\t", item
-			else:
-				print "*", k,":", v
-		return
-	'''
-	def show_project(self):
-		self.load_project()
+        if len(web_results) == 0:
+            return False
+        return web_results
 
-		try:
-			print "********\n"
-			print "SOURCES:"
-			print "- Nb Sources indexées: %i" %self.sources.unique
-			print "\t- pertinentes: %i" %self.sources.active.nb
-			print "\t- non-pertinentes: %i" %self.sources.inactive.nb
-			print "RESULTS:"
-			print "- Nb Pages indexées: %i" %self.results.unique
-			print "ERRORS:"
-			print "- Nb Pages non-indexées: %i" %self.logs.unique
-			print "PROCESSING"
-			print "- Nb Pages en cours de traitement: %i" %self.queue.unique
-			print "********\n"
-			return self
-		except AttributeError:
-			print "********\n"
-			print "No data loaded into project"
-			print "********\n"
-			return self
-			'''
+    
+    def global_crawl(self):
+        logger.debug("***************CRAWL********")
+        while self.queue.count() > 0:
+            print "%i urls in process" %self.queue.count()
+            print "in which %i sources in process" %self.queue.count({"depth":0})
+            for item in self.queue.find({"depth":{"$gt":0}}).sort([('depth', pymongo.ASCENDING), ('crawl_nb', pymongo.ASCENDING)]):
+                
+                print "%i urls in process" %self.queue.count()
+                
+                #~ #Once a day
+                #~ if self.task["repeat"] is False:
+                    #~ date = self.date.replace(hour=0)
+                    #~ p_date = p.date[-1].replace(hour=0)
+                    #~ if p_date == date:
+                        #~ print "Already treated today"
+                        #~ self.queue.delete_one({"url":p.url})
+                        #~ continue
+                  
+                #si c'est une source
+                #~ if item["depth"] == 0:
+                    #~ print "is source"
+                    #~ self.queue.delete_one({"url": item["url"]})
+                    #~ continue
+                #~ else:
+                
+                    
+                page = Page(item, self.task)
+                #pertinence
+                page.process()                    
+                try:
+                    
+                    #on cree et insere la page
+                    self.data.insert_one(page.set_data())
+                    self.data.update_one({"url":item["url"]}, {"$inc":{"crawl_nb":1}})
+                    if page.status:
+                        for outlink in page.outlinks:
+                            try:
+                               self.queue.insert_one(page.outlinks)
+                            except pymongo.errors.DuplicateKeyError:
+                                continue
+                        self.data.update_one({"url":item["url"]}, {"$set":{"type":"page"}})
+                    else:
+                        self.data.update_one({"url":item["url"]}, {"$set":{"type":"log"}})
+                    self.queue.delete_one({"url": item["url"]})
+                    continue
+                    
+                except pymongo.errors.DuplicateKeyError:
+                    print "Exists"
+                    date = self.date.replace(hour=0)
+                    p_date = page.date[-1]
+                    p_date = (p_date).replace(hour=0, day=p_date.day+1)
+                    print p_date, date
+                    if p_date == date:
+                        print "Already treated today"
+                        self.queue.delete_one({"url":item['url']})
+                        continue
+                    else:
+                        if page.status:
+                            for outlink in page.outlinks:
+                                try:
+                                   self.queue.insert_one(outlink)
+                                except pymongo.errors.DuplicateKeyError:
+                                    continue
+                            #if self.has_modification():
+                            #~ self.data.update_one({"url":item["url"]}, {"$push": page.add_info(), "$inc":{"crawl_nb":1}})
+                        #~ else:
+                            #~ self.data.update_one({"url":item["url"]}, {"$push": page.get_status(), "$inc":{"crawl_nb":1}})
+                            #raise NotImplementedError
+                        self.data.update_one({"url":item["url"]}, {"$push": page.add_data(), "$inc":{"crawl_nb":1}})
+                        self.queue.delete_one({"url": item["url"]})
+                        continue
+                except Exception as e:
+                    self.data.update_one({"url":item["url"]}, {"$push": {"msg":str(e), "status":False, "code":909, "date": self.date }})
+                    self.queue.delete_one({"url": item["url"]})
+                    continue
+                    
+    def has_modification(self, url, page):
+        #~ ref = self.data.find_one({"url":url})
+        #~ if page.status is True and ref["status"][-1] is False:
+            #~ print "status has been relevant", ref["msg"][-1]
+            #~ return True
+        #~ elif page.status is False and ref["status"][-1] is True:
+            #~ print "status is not  relevant anymore", ref["msg"][-1]
+            #~ return True
+        #~ if ref["text"][-1] == page.text:
+            #~ return False
+        #~ elif set(ref[
+        raise NotImplementedError
+        
+    def stop(self):
+        import subprocess, signal
+        p = subprocess.Popen(['ps', 'ax'], stdout=subprocess.PIPE)
+        out, err = p.communicate()
+        cmd = "crawtext.py %s start" %self.name
+        for line in out.splitlines():
+            if cmd in line:
+                pid = int([n for n in line.split(" ") if n != ""][0])
+                #pid = int(line.split(" ")[0])
+                #logger.warning("Current crawl project %s killed" %self.name)
+                os.kill(pid, signal.SIGKILL)
+        try:
+            self.update_status(self.task["name"], "stop")
+        except pymongo.errors.OperationFailure:
+            pass
+                    
+    def report(self):
+        #logger.debug("Report")
+        self.load_project()
+        #self.load_data()
+        self.create_dir()
+        if self.user is None or self.user is False:
+            self.user = __author__
+        #data = self.show_project()
+        if send_mail(self.user, self.project) is True:
+            #logger.debug("A report email has been sent to %s\nCheck your mailbox!" %self.user)
+            try:
+                self.update_status(self.task['name'], "report : mail")
+            except pymongo.errors.OperationFailure:
+                pass
+        else:
+            #logger.debug("Impossible to send mail to %s\nCheck your email!" %self.user)
+            try:
+                self.update_status(self.task['name'], "report : mail", False)
+            except pymongo.errors.OperationFailure:
+                pass
+            
+        if generate_report(self.task, self.project, self.directory):
+            #self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"report: document", "status": True, "date": self.date, "msg": "Ok"}})
+            try:
+                self.update_status(self.task['name'], "report : doc")
+            except pymongo.errors.OperationFailure:
+                pass
+            #logger.debug("Report sent and stored!")
+            return sys.exit(0)
+        else:
+            #self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"report: document", "status": False, "date": self.date, "msg": "Unable to create report document"}})
+            try:
+                self.update_status(self.task['name'], "report : doc", False)
+            except pymongo.errors.OperationFailure:
+                pass
+            return sys.exit("Report failed")
+    
+    '''def export(self):
+        self.load_project()
+        self.create_dir()
 
-	def start(self):
-		if self.task is None:
-			sys.exit("Project doesn't exists.")
-		else:
-			print self.coll.find_one({"name":self.name})
-			logging.info("Loading task parameters")
-			self.load_task()
-			try:
-				self.update_status(self.task["name"], "config crawl")
-			except pymongo.errors.OperationFailure:
-				pass
-			self.config_crawl()
-			try:
-				self.update_status(self.task["name"], "running")
-			except pymongo.errors.OperationFailure:
-				pass
-			self.crawler()
-			try:
-				self.update_status(self.task["name"], "executed")
-			except pymongo.errors.OperationFailure:
-				pass
-			return self.show()
+        #logger.debug("Export")
+        from export import generate
+        if generate(self.name, self.data, self.format, self.directory):
+            try:
+                self.update_status(self.task['name'], "export")
+            except pymongo.errors.OperationFailure:
+                pass
+            #logger.debug("Export done!")
+            return sys.exit()
+        else:
+            try:
+                self.update_status(self.task['name'], "export", False)
+            except pymongo.errors.OperationFailure:
+                pass
+            return sys.exit("Failed to export")
+    '''
+    
+    def delete(self):
+        self.task = self.coll.find_one({"name": self.name})
+        if self.task is None:
+            sys.exit("Project %s doesn't exist" %self.name)
+        else:       
+            self.delete_db()
+            self.delete_dir()
+            self.coll.remove({"_id": self.task['_id']})
+            #logger.debug("Project %s: sucessfully deleted"%(self.name))
+            sys.exit()
+       
 
+    def delete_dir(self):
+        import shutil
+        directory = os.path.join(RESULT_PATH, self.name)
+        if os.path.exists(directory):
+            shutil.rmtree(directory)
+            #logger.debug("Directory %s: %s sucessfully deleted"    %(self.name,directory))
+            return True
+        else:
+            #logger.debug("No directory found for crawl project %s" %(str(self.name)))
+            return False
 
+    def delete_db(self):
+        db = Database(self.name)
+        db.drop_db()
+        #logger.debug("Database %s: sucessfully deleted" %self.name)
+        return True
+        
+    def list_projects(self):
+        for n in self.coll.find():
+            try:
+                print "-", n["name"]
+            except KeyError:
+                self.coll.remove(n)
+        return sys.exit(0)
 
-
-	def mapp_ui(self, ui):
-		'''Mapping user parameters'''
-		logging.info(self.load_ui.__doc__)
-		for k, v in ui.items():
-			k = re.sub("--|<|>", "", k)
-
-			if type(v) == list:
-				for item in v:
-					if type(item) == list:
-						#if it's a list we just map the last value
-						if item[-1] is not None:
-							setattr(self, k, item[-1])
-						else:
-							setattr(self, k, False)
-					else:
-						if item is None:
-							setattr(self, k, False)
-						else:
-							setattr(self, k, item)
-			else:
-				if v is None or v is False:
-					setattr(self, k, False)
-				else:
-					setattr(self, k, v)
-		return self
-	def load_task(self):
-		logging.info("Loading task from TaskDB")
-		for k, v in self.task.items():
-			if k == "debug" and self.debug is True:
-				#forcing to consider first the debug of the program
-				pass
-
-			if type(v) == list:
-				for item in v:
-					if type(item) == list:
-						#if it's a list we just map the last value
-						if item[-1] is not None:
-							setattr(self, k, item[-1])
-						else:
-							setattr(self, k, False)
-					else:
-						if item is None:
-							setattr(self, k, False)
-						else:
-							setattr(self, k, item)
-			elif v is None:
-				setattr(self, k, False)
-			elif v is False:
-				setattr(self, k, False)
-			else:
-				setattr(self, k, v)
-		return self
-
-	def load_project(self):
-		logging.info("Loading Project DB")
-		self.project = Database(self.name)
-		for n in self.project.create_colls(["results", "sources", "logs", "queue"]):
-			setattr(self, str(n), self.project.use_coll(str(n)))
-			logging.info("\t- %s: %i" %(n,self.__dict__[n].count()))
-		return self
-	def stats(self):
-		self.netw_err = range(400, 520)
-		self.spe_err =  [100, 101, 102, 404, 700, 800]
-
-		self.all_err = self.spe_err + self.netw_err
-		stats = dict.fromkeys(self.project.colls,dict())
-		stats['sources'] = {'active':self.sources.active.count()}
-		stats['sources'].update({'inactive':self.sources.inactive.count()})
-
-		errortype = sorted(self.logs.distinct("code"))
-		for code in self.logs.distinct("code"):
-			stats["logs"]= {"err_list": [[{"code": k[0], "nb":k[1], "msg" :k[2]}] for k in zip(
-										self.logs.distinct("code"),
-										[self.logs.find({"code":code}).count() for code in self.logs.distinct("code")],
-										[self.logs.find_one({"code":code})['msg'] for code in self.logs.distinct("code")]
-										)]
-										}
-
-		for k in stats.keys():
-			stats[k]= {	"nb":self.__dict__[k].count()}
-			if len(self.__dict__[k].distinct("depth")) > 0:
-				stats[k] = {"max_depth":max(self.__dict__[k].distinct("depth"))}
-			else:
-				stats[k] = {"max_depth":0}
-
-			if self.__dict__[k].count() > 0:
-				for i in range(0, stats[k]['max_depth']+1):
-					stats[k]["depth_"+str(i)] = self.__dict__[k].count({"depth": i})
-
-
-													# "msg":self.logs.find_one({"code":code})['msg']),
-													# }})
-		return stats
-
-
-
-	def show_project(self):
-		self.load_project()
-		self.project.load_data()
-		self.project_stats = self.stats()
-		for k,v in self.project_stats.items():
-			print k.upper()
-			print "=" *len(k)
-			for i,j in sorted(v.items()):
-
-				if type(j) != list:
-					print "\t-", i, j
-					pass
-				else:
-					for err in j:
-						for l,m in err[0].items():
-							print "\t\t#",l,":", m
-
-	def create_dir(self):
-		try:
-			self.directory = getattr(self,"directory")
-		except AttributeError:
-			self.directory = os.path.join(RESULT_PATH, self.name)
-			if not os.path.exists(self.directory):
-				os.makedirs(self.directory)
-				index = os.path.join(self.directory, 'index')
-				try:
-					self.index_dir = os.makedirs('index')
-				except:
-					pass
-				logging.info("A specific directory has been created to store your projects\n Location:%s"	%(self.directory))
-		return self.directory
-
-	def filter_last_items(self, field="status", filter="True"):
-		filter_active = [
-		  {"$unwind": "$"+filter},
-		  {"$group": {
-		    "_id": '$_id',
-		    "url" : { "$first": '$url' },
-		    "source_url" : { "$first": '$source_url' },
-		    "depth" : { "$first": '$depth' },
-		   	field :  { "$last": "$"+field },
-		    "date" :  { "$last": '$date' },
-		    }},
-		  {"$match": { field: filter }},
-		  ]
-
-		return filter_active
-
-	def config_crawl(self):
-		''' set configuration for crawler: filter with the query or open
-		if project has no query and at least one seed (file or url)
-			then the filter is off
-			and the crawl insert the seed into sources
-		elif the project has a query:
-			then the filter is on
-			and the crawl insert the seed into sources
-		'''
-		logging.info("Set crawler: Activating parameters and adding seeds to sources")
-		self.create_dir()
-
-		if any([self.key, self.url, self.file]) is False:
-			#logging.info("Invalid parameters task should have at least one seed (file, url or API key for search)")
-			return sys.exit("Invalid parameters task should have at least one seed (file, url or API key for search)")
-
-		elif self.query is False:
-			self.target = False
-			if self.key is True:
-				logging.warning("Search for seeds with an API key will not work unless you provide a query")
-				return sys.exit("Please provide a query")
-		else:
-			#mapping project values
-			self.load_project()
-			#Attention un petit hack en cas de pb avec le srv mongo
-
-			self.target = True
-			if len(self.queue.distinct("url")) > 0:
-				#do not update sources
-				return self
-			if self.url is not False:
-				print "Adding url"
-				self.upsert_url(self.url, "manual")
-			if self.file is not False:
-				print "Adding urls in file"
-				self.upsert_file()
-			if self.key is not False:
-				print "Adding urls from search"
-				self.get_seeds()
-				#if self.sources.unique == 0:
-				#	self.get_seeds()
-				# elif self.repeat is not False:
-				# 	self.update_seeds()
-			return self
-	def update_crawl(self):
-		raise NotImplementedError
-
-	def bing_search(self):
-		# dt = datetime.datetime.now()
-		#petit hack pour éviter les projets qui ont l'historique activé et cexu qui ne l'ont pas avant de le réimplémenter
-		if type(self.task["date"]) == list:
-			self.task["date"] = self.task["date"][-1]
-		if (dt.day, dt.month, dt.year, dt.hour) == (self.task['date'].day, self.task['date'].month, self.task['date'].year, self.task['date'].hour) :
-			logging.info("Search already done today in less than 1h ")
-		# 	return False
-		logging.info("bing is searching %s urls" %self.nb)
-		web_results = []
-		for i in range(0,self.nb, 50):
-
-			#~ try:
-			r = requests.get('https://api.datamarket.azure.com/Bing/Search/v1/Web',
-				params={'$format' : 'json',
-					'$skip' : i,
-					'$top': 50,
-					'Query' : '\'%s\'' %self.query,
-					},auth=(self.key, self.key)
-					)
-
-			#logging.info(r.status_code)
-
-			msg = r.raise_for_status()
-			if msg is None:
-				for e in r.json()['d']['results']:
-					#print e["Url"]
-					web_results.append(e["Url"])
-
-		if len(web_results) == 0:
-			return False
-		return web_results
-
-	def get_seeds(self):
-		logging.info("Get_seeds")
-		try:
-			if self.nb is False:
-				self.nb = MAX_RESULTS
-		except AttributeError:
-			self.nb = MAX_RESULTS
-
-		if self.nb > MAX_RESULTS:
-			logging.warning("Maximum search results is %d results." %MAX_RESULTS)
-			self.nb = MAX_RESULTS
-			logging.warning("Maximum search results has been set to %d results." %MAX_RESULTS)
-
-		if self.nb%50 != 0:
-			logging.warning("Maximum search results has to be a multiple of 50 ")
-			self.nb = self.nb - (self.nb%50)
-			logging.warning("Maximum search results has been set to %d results." %self.nb)
-
-		bing_sources =  self.bing_search()
-		if bing_sources is not False:
-			total_bing_sources = len(bing_sources)
-			logging.info("Search into Bing got %i results" %total_bing_sources)
-			for i,url in enumerate(bing_sources):
-					try:
-						self.sources.insert({
-											"url":url,
-											"source_url": "search",
-											"depth": 0,
-											"nb":[i],
-											"total":[total_bing_sources],
-											"msg":["inserted"],
-											"code": [100],
-											"status": [True],
-											"date": [self.date],
-										})
-					except pymongo.errors.DuplicateKeyError:
-						self.sources.update({
-											"url":url},
-											{"$push":
-											{"nb":i,
-											"total":total_bing_sources,
-											"msg":"updated",
-											"code": 101,
-											"status": True,
-											"date": self.date
-											}})
-			logging.info("%i urls from BING search inserted" %i)
-			return self
-		else:
-			logging.warning("Bing search for source failed.")
-			return self
-
-	def push_to_queue(self):
-		for n in self.sources.find():
-			try:
-			 	self.queue.insert(n)
-			except pymongo.errors.DuplicateKeyError:
-				pass
-		return self.queue
-
-	def upsert_url(self, url, source_url):
-		try:
-			self.sources.insert({"url":url,
-											"source_url": source_url,
-											"depth": 0,
-											"msg":["inserted"],
-											"code": [100],
-											"status": [True],
-											"date": [self.date],
-											})
-		except pymongo.errors.DuplicateKeyError:
-			self.sources.update({"url":url},
-											{"$push":{
-													"msg":"updated",
-													"code": 100,
-													"status": True,
-													"date": self.date
-													}})
-
-			return
-	def upsert_file(self):
-		if self.file is None or self.file == "":
-			logging.warning("No file found %s" %str(self.file))
-			return self
-		try:
-			if self.directory is not False:
-				filepath = os.path.join(self.directory, self.file)
-			else:
-				filepath = os.path.join(self.project_path, self.file)
-		except AttributeError:
-			filepath = os.path.join(PROJECT_PATH, self.file)
-
-		nb = []
-		with open(filepath, 'r') as f:
-			for url in f.readlines():
-				self.upsert_url(url, "file %s" %str(self.file)) 
-		return self
-	def refresh_queue(self):
-		'''refresh queue'''
-		try:
-			for item in self.queue.find().sort("depth",pymongo.DESCENDING):
-				if item["url"] in self.results.distinct("url"):
-					logging.info("in results")
-					self.queue.remove(item)
-
-				if item["url"] in self.logs.distinct("url"):
-					logging.info("in logs")
-					self.queue.remove(item)	
-				try:
-					depth = item["depth"]
-				except KeyError:
-					self.queue.remove(item)	
-			return self.queue.find().sort("depth",pymongo.DESCENDING)
-		except pymongo.errors.OperationFailure:
-			logger.warning("Queue DB is too big to sort by depth")
-			for item in self.queue.find():
-				if item["url"] in self.results.distinct("url"):
-					logging.info("in results")
-					self.queue.remove(item)
-
-				if item["url"] in self.logs.distinct("url"):
-					logging.info("in logs")
-					self.queue.remove(item)	
-				try:
-					depth = item["depth"]
-				except KeyError:
-					self.queue.remove(item)	
-			#If too big need to create and index file and sort then
-			#self.queue.ensureIndex( {url: 1, depth: pymongo.DESCENDING}, {unique:true, dropDups: true})
-			return self.queue.find()
-			
-	def controled_crawl(self):
-		while self.queue.count() > 0:
-			for item in self.queue.find().sort('depth', pymongo.ASCENDING):
-				logger.info(item["depth"])
-				#logger.info("url %s depth %d" %(item["url"], item['depth']))
-				
-				p = Page(item["url"], item["source_url"],item["depth"], item["date"], True)
-				
-				if p.fetch():
-					a = Article(p.url,p.html, p.source_url, p.depth,p.date, True)
-					if a.extract(): 
-						logging.info("extracted")
-						if a.filter(self.query, self.directory):
-							logging.info("valid")
-							if a.check_depth(a.depth):
-								
-								a.fetch_links()
-								if len(a.links) > 0:
-									for url, domain in zip(a.links, a.domains):
-										if url not in self.queue.distinct("url") and url not in self.results.distinct("url") and url not in self.logs.distinct("url"):
-											self.queue.insert({"url": url, "source_url": item['url'], "depth": int(item['depth'])+1, "domain": domain, "date": a.date})
-											
-									logging.info("Inserted %d nexts url" %len(a.links))
-								try:
-									
-									self.results.insert(a.export())
-								except pymongo.errors.DuplicateKeyError:
-									logging.info("Exists already")
-									
-									
-					else:
-						try:
-							self.logs.insert(a.log())
-						except pymongo.errors.DuplicateKeyError:
-							logging.info("Exists already")
-							
-				else:
-					try:
-						self.logs.insert(p.log())
-					except pymongo.errors.DuplicateKeyError:
-						logging.info("Exists already")
-						
-						
-				self.queue.remove(item)
-				logging.info("Processing %i urls"%self.queue.count())
-				if self.queue.count() == 0:
-					break
-			if self.queue.count() == 0:
-				break
-			if self.results.count() > 200000:
-				self.queue.drop()
-				break
-	
-	def internal_crawl(self):
-		while self.queue.count() > 0:
-			for item in self.queue.find().sort('depth', pymongo.ASCENDING):
-				logger.info(item["depth"])
-				#logger.info("url %s depth %d" %(item["url"], item['depth']))
-				
-				p = Page(item["url"], item["source_url"],item["depth"], item["date"], True)
-				
-				if p.fetch():
-					a = Article(p.url,p.html, p.source_url, p.depth,p.date, True)
-					if a.extract(): 
-						logging.info("extracted")
-						
-						if a.check_depth(a.depth):								
-							a.fetch_links()
-							
-							if len(a.links) > 0:
-								for url, domain in zip(a.links, a.domains):
-									if url not in self.queue.distinct("url") and url not in self.results.distinct("url") and url not in self.logs.distinct("url"):
-										if domain == a.domain:
-											self.queue.insert({"url": url, "source_url": item['url'], "depth": int(item['depth'])+1, "domain": domain, "date": a.date})
-								
-							try:				
-								self.results.insert(a.export())
-							except pymongo.errors.DuplicateKeyError:
-								#self.results.update(a.export())
-								pass
-					else:
-						try:
-							self.logs.insert(a.log())
-						except pymongo.errors.DuplicateKeyError:
-							pass		
-				else:
-					try:
-						self.logs.insert(p.log())
-					except pymongo.errors.DuplicateKeyError:
-						pass
-						
-				self.queue.remove(item)
-				logging.info("Processing %i urls"%self.queue.count())
-				if self.queue.count() == 0:
-					break
-			if self.queue.count() == 0:
-				break
-			if self.results.count() > 200000:
-				self.queue.drop()
-				break
-	def open_crawl(self):
-		while self.queue.count() > 0:
-			for item in self.queue.find().sort('depth', pymongo.ASCENDING):
-				logger.info(item["depth"])
-				#logger.info("url %s depth %d" %(item["url"], item['depth']))
-				
-				p = Page(item["url"], item["source_url"],item["depth"], item["date"], True)
-				
-				if p.fetch():
-					a = Article(p.url,p.html, p.source_url, p.depth,p.date, True)
-					if a.extract(): 
-						logging.info("extracted")
-						
-						if a.check_depth(a.depth):								
-							a.fetch_links()
-							if len(a.links) > 0:
-								for url, domain in zip(a.links, a.domains):
-									if url not in self.queue.distinct("url") and url not in self.results.distinct("url") and url not in self.logs.distinct("url"):
-										self.queue.insert({"url": url, "source_url": item['url'], "depth": int(item['depth'])+1, "domain": domain, "date": a.date})
-										
-								logging.info("Inserted %d nexts url" %len(a.links))
-							try:				
-								self.results.insert(a.export())
-							except pymongo.errors.DuplicateKeyError:
-								#self.results.update(a.export())
-								pass
-					else:
-						try:
-							self.logs.insert(a.log())
-						except pymongo.errors.DuplicateKeyError:
-							pass		
-				else:
-					try:
-						self.logs.insert(p.log())
-					except pymongo.errors.DuplicateKeyError:
-						pass
-						
-				self.queue.remove(item)
-				logging.info("Processing %i urls"%self.queue.count())
-				if self.queue.count() == 0:
-					break
-			if self.queue.count() == 0:
-				break
-			if self.results.count() > 200000:
-				self.queue.drop()
-				break
-	
-	def crawler(self):
-		logging.info("Crawler activated with query filter %s" %self.target)
-		# if self.sources.nb == 0:
-		# 	sys.exit("Error: no sources found in the project.")
-		try:
-			self.project.load_sources()
-			self.project.load_queue()
-			self.project.load_logs()
-		except AttributeError:
-			self.load_project()
-		#logging.info("Begin crawl with %i active urls"%self.sources.active_nb)
-		self.push_to_queue()
-		logging.info("Processing %i urls"%self.queue.count())
-		if self.target:
-			self.controled_crawl()
-			self.update_status(self.name, "finished")
-			return sys.exit(0)
-		else:
-			self.open_crawl()
-			self.update_status(self.name, "finished")
-			return sys.exit(0)
-
-	def stop(self):
-		import subprocess, signal
-		p = subprocess.Popen(['ps', 'ax'], stdout=subprocess.PIPE)
-		out, err = p.communicate()
-		cmd = "crawtext.py %s start" %self.name
-		for line in out.splitlines():
-			if cmd in line:
-				pid = int([n for n in line.split(" ") if n != ""][0])
-				#pid = int(line.split(" ")[0])
-				logging.warning("Current crawl project %s killed" %self.name)
-				os.kill(pid, signal.SIGKILL)
-		try:
-			self.update_status(self.task["name"], "stop")
-		except pymongo.errors.OperationFailure:
-			pass
-		      		
-	def report(self):
-		logging.info("Report")
-		self.load_project()
-		#self.load_data()
-		self.create_dir()
-		if self.user is None or self.user is False:
-			self.user = __author__
-		#data = self.show_project()
-		if send_mail(self.user, self.project) is True:
-			logging.info("A report email has been sent to %s\nCheck your mailbox!" %self.user)
-			try:
-				self.update_status(self.task['name'], "report : mail")
-			except pymongo.errors.OperationFailure:
-				pass
-		else:
-			logging.info("Impossible to send mail to %s\nCheck your email!" %self.user)
-			try:
-				self.update_status(self.task['name'], "report : mail", False)
-			except pymongo.errors.OperationFailure:
-				pass
-			
-		if generate_report(self.task, self.project, self.directory):
-			#self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"report: document", "status": True, "date": self.date, "msg": "Ok"}})
-			try:
-				self.update_status(self.task['name'], "report : doc")
-			except pymongo.errors.OperationFailure:
-				pass
-			logging.info("Report sent and stored!")
-			return sys.exit(0)
-		else:
-			#self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"report: document", "status": False, "date": self.date, "msg": "Unable to create report document"}})
-			try:
-				self.update_status(self.task['name'], "report : doc", False)
-			except pymongo.errors.OperationFailure:
-				pass
-			return sys.exit("Report failed")
-	
-	def export(self):
-		self.load_project()
-		self.create_dir()
-
-		logging.info("Export")
-		from export import generate
-		if generate(self.name, self.data, self.format, self.directory):
-			try:
-				self.update_status(self.task['name'], "export")
-			except pymongo.errors.OperationFailure:
-				pass
-			logging.info("Export done!")
-			return sys.exit()
-		else:
-			try:
-				self.update_status(self.task['name'], "export", False)
-			except pymongo.errors.OperationFailure:
-				pass
-			return sys.exit("Failed to export")
-	def delete(self):
-		self.task = self.coll.find_one({"name": self.name})
-		if self.task is None:
-			sys.exit("Project %s doesn't exist" %self.name)
-		else:       
-			self.delete_db()
-			self.delete_dir()
-			self.coll.remove({"_id": self.task['_id']})
-			logging.info("Project %s: sucessfully deleted"%(self.name))
-			sys.exit()
-	   
-
-	def delete_dir(self):
-		import shutil
-		directory = os.path.join(RESULT_PATH, self.name)
-		if os.path.exists(directory):
-			shutil.rmtree(directory)
-			logging.info("Directory %s: %s sucessfully deleted"    %(self.name,directory))
-			return True
-		else:
-			logging.info("No directory found for crawl project %s" %(str(self.name)))
-			return False
-
-	def delete_db(self):
-		db = Database(self.name)
-		db.drop_db()
-		logging.info("Database %s: sucessfully deleted" %self.name)
-		return True
-		
-	def list_projects(self):
-		for n in self.coll.find():
-			try:
-				print "-", n["name"]
-			except KeyError:
-				self.coll.remove(n)
-		return sys.exit(0)
-
-		
-	def list_projects(self):
-		for n in self.coll.find():
-			try:
-				print "-", n["name"]
-			except KeyError:
-				self.coll.remove(n)
-		return sys.exit(0)
+    def list_projects(self):
+        for n in self.coll.find():
+            try:
+                print "-", n["name"]
+            except KeyError:
+                self.coll.remove(n)
+        return sys.exit(0)
 
 
 
-if __name__ == "crawtext":
-	#print docopt(__doc__)
-	c = Crawtext(docopt(__doc__)["<name>"],docopt(__doc__), True)
-
-	# if c.active:
-	# 	c.show_task()
-	#  	c.show_project()
-	# 	c.set_crawler()
-	# 	sys.exit(0)
+if __name__ == "__main__":
+    dict_params = {"key":"J8zQNrEwAJ2u3VcMykpouyPf4nvA6Wre1019v/dIT0o","query":"(COP21) OR (COP 21)", "lang": "fr", "repeat": True}
+    c = Crawtext("COP21_2015_08", dict_params)
+    
