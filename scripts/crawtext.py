@@ -373,14 +373,14 @@ class Crawtext(object):
                     if page.status:
                         cpt = 0
                         for outlink in page.outlinks:
-                            if outlink["url_id"] not in self.data.distinct("url_id"):
+                            if outlink["url"] not in self.data.distinct("url"):
                                 try:
                                    cpt = cpt+1
                                    self.queue.insert_one(outlink)
                                 except pymongo.errors.DuplicateKeyError:
                                     continue
                             else: continue
-                        print "adding %i new urls in queue  with depth %i" %(cpt, p.depth+1)
+                        print "adding %i new urls in queue  with depth %i" %(cpt, page.depth+1)
                         #self.data.update_one({"url":item["url"]}, {"$set":{"type":"page"}})
                     #else:
                         #self.data.update_one({"url":item["url"]}, {"$set":{"type":"log"}})
