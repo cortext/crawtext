@@ -435,7 +435,6 @@ class Page(object):
         data = {}
         for k in ["status", "date", "code", "msg"]:
             data[k] = self.__dict__[k]
-            
         return data
         
                 
