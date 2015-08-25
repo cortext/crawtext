@@ -20,7 +20,7 @@ import requests
 import pymongo #3.0.3
 
 #internal import
-from report import send_mail, generate_report
+#from report import send_mail, generate_report
 from database import *
 from article import Page
 #from #logger import *
@@ -35,7 +35,7 @@ DEPTH = 100
 
 
 class Crawtext(object):
-    def __init__(self, name, user_input=None):
+    def __init__(self, name):
         #logger.debug("_init_")
         self.name = name
         dt1 = dt.today()
@@ -43,6 +43,9 @@ class Crawtext(object):
         self.task_db = TaskDB()
         self.coll = self.task_db.coll
         
+        
+                
+    def start(self, user_input=None):
         if type(user_input) != dict :
              sys.exit("Wrong format args")
         
@@ -58,12 +61,12 @@ class Crawtext(object):
             if self.update(user_input) is False:
                 logger.info("No parameters to update")
                 
-        self.load_data()
         if self.add_seeds() is False:
             sys.exit("No seeds found ")
         
         if self.queue.count() > 0:
             self.global_crawl()
+            return True
         else:
             sys.exit("All urls has been treated")
         
@@ -78,7 +81,7 @@ class Crawtext(object):
         return self
         
     def add_seeds(self):
-        
+        self.load_data()
         self.sources = self.data.find({"depth":0})
         self.logs = self.data.find({"type":"log"})
         self.results = self.data.find({"type": "page"})
@@ -182,8 +185,8 @@ class Crawtext(object):
         #logger.debug("Project %s has been created with the specified parameters: %s" %(self.name, updated_values))
         self.coll.update_one({"name": self.name}, {"$push": {"status": True, "code":100, "msg": "created", "date": self.date}})
         self.task = self.coll.find_one({"name": self.name})
-        params = [k for k,v in self.task.items() if v is not False and k in ["file", "url", "key"]]
-        self.add_seeds(params)
+        #params = [k for k,v in self.task.items() if v is not False and k in ["file", "url", "key"]]
+        self.add_seeds()
         return True
     
     def update(self, user_input):
@@ -360,53 +363,68 @@ class Crawtext(object):
                     
                 page = Page(item, self.task)
                 #pertinence
-                page.process()                    
+                status = page.process()                    
                 try:
                     
                     #on cree et insere la page
                     self.data.insert_one(page.set_data())
                     self.data.update_one({"url":item["url"]}, {"$inc":{"crawl_nb":1}})
-                    if page.status:
+                    print item["url"], p.status, page.msg
+                    if p.status:
+                        cpt = 0
                         for outlink in page.outlinks:
-                            try:
-                               self.queue.insert_one(page.outlinks)
-                            except pymongo.errors.DuplicateKeyError:
-                                continue
-                        self.data.update_one({"url":item["url"]}, {"$set":{"type":"page"}})
-                    else:
-                        self.data.update_one({"url":item["url"]}, {"$set":{"type":"log"}})
+                            if outlink["url_id"] not in self.data.distinct("url_id"):
+                                try:
+                                   cpt = cpt+1
+                                   self.queue.insert_one(outlink)
+                                except pymongo.errors.DuplicateKeyError:
+                                    continue
+                            else: continue
+                        print "adding %i new urls in queue  with depth %i" %(cpt, p.depth+1)
+                        #self.data.update_one({"url":item["url"]}, {"$set":{"type":"page"}})
+                    #else:
+                        #self.data.update_one({"url":item["url"]}, {"$set":{"type":"log"}})
                     self.queue.delete_one({"url": item["url"]})
                     continue
                     
                 except pymongo.errors.DuplicateKeyError:
-                    print "Exists"
-                    date = self.date.replace(hour=0)
-                    p_date = page.date[-1]
-                    p_date = (p_date).replace(hour=0, day=p_date.day+1)
-                    print p_date, date
-                    if p_date == date:
-                        print "Already treated today"
-                        self.queue.delete_one({"url":item['url']})
-                        continue
-                    else:
-                        if page.status:
-                            for outlink in page.outlinks:
-                                try:
-                                   self.queue.insert_one(outlink)
-                                except pymongo.errors.DuplicateKeyError:
-                                    continue
-                            #if self.has_modification():
-                            #~ self.data.update_one({"url":item["url"]}, {"$push": page.add_info(), "$inc":{"crawl_nb":1}})
-                        #~ else:
-                            #~ self.data.update_one({"url":item["url"]}, {"$push": page.get_status(), "$inc":{"crawl_nb":1}})
-                            #raise NotImplementedError
-                        self.data.update_one({"url":item["url"]}, {"$push": page.add_data(), "$inc":{"crawl_nb":1}})
-                        self.queue.delete_one({"url": item["url"]})
-                        continue
-                except Exception as e:
-                    self.data.update_one({"url":item["url"]}, {"$push": {"msg":str(e), "status":False, "code":909, "date": self.date }})
                     self.queue.delete_one({"url": item["url"]})
                     continue
+                    #check_last_modif
+                    #####################"
+                    #check_last_crawl
+                    ########################
+                    #~ date = self.date.replace(hour=0)
+                    #~ p_date = page.date[-1]
+                    #~ p_date = (p_date).replace(hour=0, day=p_date.day+1)
+                    #~ print p_date, date
+                    #~ if p_date == date:
+                        #~ print "Already treated today"
+                        #~ self.queue.delete_one({"url":item['url']})
+                        #~ continue
+                    #~ else:
+                        #check_last_modif
+                        #####################"
+                        #~ #if self.has_modification():
+                            #~ if page.status:
+                                #diff btw page.outlinks and last_page.outlinks
+                            
+                                #~ for outlink in page.outlinks:
+                                    #~ try:
+                                        #~ self.queue.insert_one(outlink)
+                                    #~ except pymongo.errors.DuplicateKeyError:
+                                        #~ continue
+                            
+                            #~ self.data.update_one({"url":item["url"]}, {"$push": page.add_info(), "$inc":{"crawl_nb":1}})
+                        #~ else:
+                           #~ pass
+                        #~ self.data.update_one({"url":item["url"]}, {"$push": page.add_data(), "$inc":{"crawl_nb":1}})
+                        #~ self.queue.delete_one({"url": item["url"]})
+                        #~ continue
+                #~ except Exception as e:
+                    #~ self.data.update_one({"url":item["url"]}, {"$push": {"msg":str(e), "status":False, "code":909, "date": self.date }})
+                    #~ self.queue.delete_one({"url": item["url"]})
+                    #~ continue
                     
     def has_modification(self, url, page):
         #~ ref = self.data.find_one({"url":url})
@@ -495,13 +513,14 @@ class Crawtext(object):
             return sys.exit("Failed to export")
     '''
     
-    def delete(self):
+    def delete(self, with_dir=False):
         self.task = self.coll.find_one({"name": self.name})
         if self.task is None:
             sys.exit("Project %s doesn't exist" %self.name)
         else:       
             self.delete_db()
-            self.delete_dir()
+            if with_dir:
+                self.delete_dir()
             self.coll.remove({"_id": self.task['_id']})
             #logger.debug("Project %s: sucessfully deleted"%(self.name))
             sys.exit()
@@ -543,6 +562,5 @@ class Crawtext(object):
 
 
 if __name__ == "__main__":
-    dict_params = {"key":"J8zQNrEwAJ2u3VcMykpouyPf4nvA6Wre1019v/dIT0o","query":"(COP21) OR (COP 21)", "lang": "fr", "repeat": True}
-    c = Crawtext("COP21_2015_08", dict_params)
+    pass
     

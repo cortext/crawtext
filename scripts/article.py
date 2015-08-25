@@ -12,6 +12,9 @@ import glob
 import re
 from bs4 import BeautifulSoup
 import requests
+import errno
+
+import signal
 
 #from url import Link
 from utils import encodeValue
@@ -29,7 +32,7 @@ import logging
 logger = logging.getLogger(__name__)
 FORMAT = "[%(filename)s:%(lineno)s - %(funcName)20s() ] %(message)s"
 logging.basicConfig(file="quickanddirty.log", format=FORMAT, level=logging.DEBUG)
-#logging.getLogger("requests").setLevel(logging.WARNING)
+logging.getLogger("requests").setLevel(logging.WARNING)
 
 def check_status(f):
     def wrapper(*args):
@@ -163,6 +166,7 @@ class Page(object):
     
     @check_status
     #@debug
+    
     def fetch(self):
         '''downloading page'''
         try:
@@ -220,6 +224,11 @@ class Page(object):
                 self.status = False
                 return self.status
 
+        #except TimeoutError:
+        #    self.msg = "Timeout Error streaming or something"            
+        #    self.code = 400
+        #    self.status = False
+        #    return self.status
         except Exception as e:
             #logger.warning(e)
             self.msg = "Incorrect link url"
@@ -342,7 +351,7 @@ class Page(object):
                 self.lang = detect(self.title)
                 if self.filter_lang is not False:
                     if self.lang == self.filter_lang:
-                        
+            
                         return self.status
                     else:
                         self.status = False
@@ -397,7 +406,7 @@ class Page(object):
                     if self.depth == "0":
                         data["type"] = "source"
                     else:
-                        if self.status:
+                        if self.status is True:
                             data["type"] = "page"
                         else:
                             data["type"] = "log"

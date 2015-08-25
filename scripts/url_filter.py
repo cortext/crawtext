@@ -24,6 +24,6 @@ BAD_TYPES = [
 ALLOWED_TYPES = ['html', 'htm', 'md', 'rst', 'aspx', 'jsp', 'rhtml', 'cgi',
                 'xhtml', 'jhtml', 'asp', 'php', None]
 
-
-BAD_DOMAINS = ['amazon', 'doubleclick', 'twitter', 'facebook', 'streaming', 'stream', "proxy"]
+#tricheries
+BAD_DOMAINS = ['amazon', 'doubleclick', 'twitter', 'facebook', 'streaming', 'stream', "proxy", "titrespresse", 'tribunedelyon.fr']
 

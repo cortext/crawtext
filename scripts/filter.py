@@ -1,5 +1,6 @@
 from adblockparser import AdblockRules
-
+import os
+ABSOLUTE_PATH = os.getcwd()
 class Filter(object):
 	def __init__(self, filename):
 		self.rules = []
@@ -18,7 +19,7 @@ class Filter(object):
 		return self.adblock.should_block(url)
 	
 			
-filter = Filter("./complete-list.txt")
+filter = Filter(os.path.join(ABSOLUTE_PATH, "complete-list.txt"))
 
 #"complete-list.txt"
 
