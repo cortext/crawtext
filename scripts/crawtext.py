@@ -250,7 +250,7 @@ class Crawtext(object):
             p_date = (info.date[-1]).replace(hour=0)
             if p_date == date:
                 print "Already treated today"
-                self.queue.delete_one({"url":p.url})
+                self.queue.delete_one({"url":info.url})
                 return self.queue
             else:
                 self.data.update_one({"url":url, "depth":0}, {"$push":info.add_data()})
@@ -369,8 +369,8 @@ class Crawtext(object):
                     #on cree et insere la page
                     self.data.insert_one(page.set_data())
                     self.data.update_one({"url":item["url"]}, {"$inc":{"crawl_nb":1}})
-                    print item["url"], p.status, page.msg
-                    if p.status:
+                    
+                    if page.status:
                         cpt = 0
                         for outlink in page.outlinks:
                             if outlink["url_id"] not in self.data.distinct("url_id"):
