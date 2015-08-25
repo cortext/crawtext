@@ -11,6 +11,7 @@ import os
 import glob
 import re
 from bs4 import BeautifulSoup
+from readability.readability import Document
 import requests
 import errno
 
@@ -33,6 +34,7 @@ logger = logging.getLogger(__name__)
 FORMAT = "[%(filename)s:%(lineno)s - %(funcName)20s() ] %(message)s"
 logging.basicConfig(file="quickanddirty.log", format=FORMAT, level=logging.DEBUG)
 logging.getLogger("requests").setLevel(logging.WARNING)
+logging.getLogger("readability").setLevel(logging.WARNING)
 
 def check_status(f):
     def wrapper(*args):
@@ -84,6 +86,7 @@ class Page(object):
         self.check_depth()
         self.valid_url()
         self.fetch()
+        self.clean_article()
         self.extract()
         self.check_lang()
         if filter:
@@ -165,8 +168,6 @@ class Page(object):
         
     
     @check_status
-    #@debug
-    
     def fetch(self):
         '''downloading page'''
         try:
@@ -189,46 +190,27 @@ class Page(object):
                 else:
                     
                     try:
-                        #Parsing HTML
-                        #~ parser = etree.HTMLParser()
-                        #~ tree   = etree.parse(StringIO(self.html), parser)
-                        #self.tree = etree.HTML(self.html)
+                        self.html = self.html
                         
                         self.tree = lxml.html.document_fromstring(self.html)
-                        #Not working :(
-                        #~ try:
-                            #~ self.tree = autolink_html(self.tree)
-                        #~ except Exception as e:
-                            #~ #logger.debug(str(e))
-                            #~ pass
+                        #cleaning with lxml it's fun!
                         self.tree = cleaner.clean_html(self.tree)
                         self.tree.make_links_absolute(self.url)
                         self.doc = lxml.html.tostring(self.tree)
-                        self.parser = "lxml"
                         return self.status
+                        
                     except Exception as e:
-                        logging.warning("Error parsing request answer with LXML %s" %str(e))
-                        try:
-                            self.parser = "bs"
-                            self.doc = bs(self.html)
-                            logging.warning("Activate beautifulSoup %s" %str(e))
-                        except Exception as e:
-                            self.msg = "Error parsing request answer with BeautifulSoup: "+str(e)
-                            self.code = 405
-                            self.status = False
-                            return self.status
+                        self.msg = "Error loading HTML: "+str(e)
+                        self.code = 405
+                        self.status = False
+                        return self.status
 
             except Exception as e:
                 self.msg = "Requests: answer was not understood %s" %e
                 self.code = 400
                 self.status = False
                 return self.status
-
-        #except TimeoutError:
-        #    self.msg = "Timeout Error streaming or something"            
-        #    self.code = 400
-        #    self.status = False
-        #    return self.status
+                
         except Exception as e:
             #logger.warning(e)
             self.msg = "Incorrect link url"
@@ -240,58 +222,35 @@ class Page(object):
                 self.code = 400
                 self.status = False
                 return self.status
-            
-                
+    @check_status
+    def clean_article(self):
+        try:
+            self.clean_doc = Document(self.doc,url = self.url, positive_keywords= "entry-content,post, main, content, container", negative_keywords="like*,ad*,comment.*,comments,comment-body,author,access,navigation, sidebar.*?,share.*?,relat.*?,widget.*?")
+            self.article = self.clean_doc.summary()
+            self.text = re.sub("\r|\n|\t|  ", " ", bs(self.article).get_text())
+            self.title = self.clean_doc.short_title()
+            return self
+        except AttributeError as e:
+            self.msg = "Error loading HTML: %s" %str(e)
+            self.code = 400
+            self.status = False
+            return self.status
+        
     @check_status
     #@debug
     def extract(self):
         '''extracting info from page'''
         if self.doc is not None:
-            if self.parser == "lxml":
-            #~ try:
-                self.doc = bs(str(self.doc))
-                self.full_doc = bs(self.html)
-                self.text = re.sub(notalpha, " ", self.doc.find("body").text)
-                links = list(set([n.get('href') for n in self.doc.find_all("a")]))
-            else:
-                
-                self.full_doc = self.doc
-                self.doc = clean_html(self.doc)
-                links = make_links_absolute(self.doc, self.url)
-            try:
-                self.text = self.doc.get_text()
-            except AttributeError:
-                self.text = get_text(self.doc)
-                
-            self.title = get_title(self.full_doc)
             
+            links = list(set([n.get('href') for n in bs(self.article).find_all("a")]))
+            links = [n for n in links if n != self.url]
             #get links, cited_links, cited_links_ids, cited_domains
             self.outlinks = self.parse_outlinks(links)
-            
-            self.generators = []
-            self.meta = {}
-            for n in self.doc.find_all("meta"): 
-                name = n.get("name")
-                prop = n.get("property")
-                content = n.get("content")
-                if name is not None and name not in ["type", "viewport"]:
-                    if name == "Generator" or name == "generator":
-                        self.generators.append(content)
-                    else:
-                        
-                        self.meta[re.sub("og:|DC.", "", name)] = content
-                    
-                if prop is not None:
-                    self.meta[re.sub("og:|DC.", "", prop)] = content
-            try:
-                self.keywords = self.meta["keywords"]
-            except KeyError:
-                self.keywords = ""
-            
+            self.get_meta()
             return self.status
         else:
-            #self.msg = str(#logger.debug("ParserError"))
-            self.msg = "Parser Error"
+            #~ #self.msg = str(#logger.debug("ParserError"))
+            self.msg = "Extract Error"
             self.code = 700
             self.status = False
             return self.status
@@ -309,7 +268,11 @@ class Page(object):
             link[k] = getattr(tld_dat,k)
         #~ link["subdomain"] = tld_dat.subdomain
         #~ link["domain"] = tld_dat.domain.lower()
-        link["url_id"] = link["subdomain"]+"_"+link["domain"]
+        if link["subdomain"] not in ["www", "ww1", "ww2", ""]:
+            link["url_id"] = link["subdomain"]+"_"+link["domain"]
+        else:
+            link["url_id"] = link["domain"]
+            
         link["extension"] =  link["suffix"]
         del link["suffix"]
         link["chunks"] = [x for x in link["path"].split('/') if len(x) > 0]
@@ -325,11 +288,29 @@ class Page(object):
         self.cited_links = [n["url"] for n in self.links]
         self.cited_links_ids = [n["url_id"] for n in self.links]
         self.cited_domains = [n["domain"] for n in self.links]
-        self.outlinks = [{"url": n["url"], "source_url": self.url, "depth": self.depth+1, "type":"page"} for n in self.links]
+        self.outlinks = [{"url": n["url"], "url_id":n["url_id"], "source_url": self.url, "depth": self.depth+1, "type":"page"} for n in self.links]
         return self.outlinks
         
-    
-
+    def get_meta(self):
+        self.generators = []
+        self.meta = {}
+        for n in bs(self.doc).find_all("meta"): 
+            name = n.get("name")
+            prop = n.get("property")
+            content = n.get("content")
+            if name is not None and name not in ["type", "viewport"]:
+                if name.lower() in ["generator"]:
+                    self.generators.append(content)
+                else:
+                    self.meta[re.sub("og:|DC.", "", name)] = content
+                #~ 
+            if prop is not None:
+                self.meta[re.sub("og:|DC.", "", prop)] = content
+        try:
+            self.keywords = self.meta["keywords"]
+        except KeyError:
+            self.keywords = [""]
+        return self.meta 
     
     
 
@@ -422,6 +403,7 @@ class Page(object):
             else:
                 try:
                     data[n] = [self.__dict__[n]]
+                    
                 except KeyError:
                     data[n] = [None]
         #meta_data
@@ -438,6 +420,14 @@ class Page(object):
             except KeyError:
                 data[n] = None
             
+        return data
+        
+    def set_last(self):
+        for n in ["cited_links_ids", "title", "text", "status", "code", "msg", "date"]:
+            try:
+                data["last_"+n] = self.__dict__[n]
+            except KeyError:
+                data["last_"+n] = None
         return data
         
                 
@@ -457,4 +447,9 @@ class Page(object):
 
     
 if __name__ == "__main__":
-    pass    
+    #test
+    item = {"url":"http://leblogdejeudi.fr/category/ecologie-2/cop21/", "source_url":"", "depth":0, "type":"source"}
+    config = {'filter_lang':"fr","max_depth":10, "query": "(COP 21 OR COP21)", "filter":True, "directory":"./projects/COP21/"}
+    a = Page(item, config)
+    a.process()
+    print a.status, a.msg
