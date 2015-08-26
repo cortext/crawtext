@@ -11,6 +11,7 @@ sudo apt-get install -y mongodb-org
 #pip install -r ./requirements.pip
 #sudo apt-get install zip unzip
 #wget https://github.com/cortext/crawtext/archive/V5.zip
+sudo apt-get install libxml2-dev libxslt1-dev python-dev
 sudo apt-get install git
 echo "Cloning repo"
 git clone https://github.com/cortext/crawtext crawtext
