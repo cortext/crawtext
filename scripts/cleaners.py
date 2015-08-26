@@ -31,9 +31,12 @@ import urlparse as url_parse
 def make_links_absolute(soup, url):
     links = []
     for tag in soup.findAll('a', href=True):
-        tag['href'] = url_parse.urljoin(url, tag['href'])
-        print tag["href"]
-        links.append(tag["href"])
+        try:
+            tag['href'] = url_parse.urljoin(url, tag['href'])
+            links.append(tag["href"])
+        except ValueError:
+            continue
+            
     return links
 def clean_html(soup):
     try:

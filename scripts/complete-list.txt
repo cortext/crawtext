@@ -59732,3 +59732,10 @@ youporn.com###adblock_1
 @@||fonts.gstatic.com^$domain=google.com|thechive.com
 @@||googleapis.com/ajax/libs/webfont/$script,domain=builtinchicago.org|roadsandkingdoms.com|rockstargames.com|readwrite.com|egotastic.com|egotasticallstars.com
 @@||use.typekit.net^$domain=carbonads.net|readwrite.com|egotastic.com|egotasticallstars.com
+!
+! Custom
+!
+||tribunedelyon.fr/*?
+||titrespresse.com/
+||wp-*
+||?share=

@@ -119,11 +119,11 @@ class Crawtext(object):
         """
         Load a defaut dict of params 
         configuring params the crawl (set to False):
-        - name: project name given
-        - query: a query for filtering content
-        - file: a file that contains urls as seeds
-        - url: an url as seed
-        - key: an api key to search seeds on BING
+        - name: project name given (str)
+        - query: a query for filtering content (regex or XPR/False)
+        - file: a file that contains urls as seeds (file_name)
+        - url: an url as seed (url)
+        - key: an api key to search seeds on BING (key/False)
         - search_nb: max results of seeds while searching on BING (set to 1000)
         - filter_lang: a lang for filtering only content of this langage
         - user: an email for sending report
@@ -132,12 +132,13 @@ class Crawtext(object):
         - data: specific collection to export
         - format: specific format to export csv/json
         - project_path: the dedicated directory for this path
-        
+        - next: ["month", "week", "day", "year"]
+        - short_export: a short version of results without sources (True/False)
         """
         #logger.debug("Load default project")
         #params
         params = {"name": self.name}
-        for k in ["query", "file", "url", "key", "search_nb", "filter_lang", "user", "max_depth", "repeat", "data", "format", "short_export"]:
+        for k in ["query", "file", "url", "key", "search_nb", "filter_lang", "user", "max_depth", "repeat", "data", "format", "short_export", "next"]:
             params[k] = False
         
         #loading defaut
@@ -220,24 +221,6 @@ class Crawtext(object):
             
             return True
         
-    #~ def load_data(self):
-        #~ '''Load data from projet crawl'''
-        #~ 
-        #~ self.project = Database(self.name)
-        #~ self.data = self.project.set_coll("data", "url")
-        #~ self.queue = self.project.set_coll("data", "url")
-        #~ 
-        #~ self.sources = [n for n in self.data.find({"type":"source", "depth":0})]
-        #~ self.logs = [n for n in self.data.find({"type":"log"})]
-        #~ 
-        #~ self.results = [n for n in self.data.find({"type": {"$nin":["log","source"]}}, { "_id": 0})]
-        #~ self.actives_sources = [n for n in self.sources if n["status"][-1] is not False]
-        #~ print "%i urls in queue" %(self.queue.count())
-        #~ print "%i urls in data" %(self.data.count())
-        #~ print "%i urls as sources" %(self.data.count({"type":"source", "depth":0}))
-        #~ print "%i urls as results" %(self.data.count({"type":"page"}))
-        #~ print "%i urls as logs" %(self.data.count({"type":"log"}))
-        #~ return self
     
     def insert_url(self,url):
         "insert url directly into data and next_url to seeds"
@@ -368,7 +351,7 @@ class Crawtext(object):
                     
                     #on cree et insere la page
                     self.data.insert_one(page.set_data())
-                    self.data.update_one({"url":item["url"]}, {"$inc":{"crawl_nb":1}})
+                    self.data.update_one({"url":item["url"]}, {"$set":page.set_last(), "$inc":{"crawl_nb":1}})
                     
                     if page.status:
                         cpt = 0
@@ -415,7 +398,7 @@ class Crawtext(object):
                                     #~ except pymongo.errors.DuplicateKeyError:
                                         #~ continue
                             
-                            #~ self.data.update_one({"url":item["url"]}, {"$push": page.add_info(), "$inc":{"crawl_nb":1}})
+                            #~ self.data.update_one({"url":item["url"]}, {"$push": page.add_info(),"$set":page.set_last(), "$inc":{"crawl_nb":1}})
                         #~ else:
                            #~ pass
                         #~ self.data.update_one({"url":item["url"]}, {"$push": page.add_data(), "$inc":{"crawl_nb":1}})
@@ -425,6 +408,11 @@ class Crawtext(object):
                     #~ self.data.update_one({"url":item["url"]}, {"$push": {"msg":str(e), "status":False, "code":909, "date": self.date }})
                     #~ self.queue.delete_one({"url": item["url"]})
                     #~ continue
+        logger.debug("***************END********")
+        #s = Stats(self.name)
+        s.show(self)
+        return True
+        
                     
     def has_modification(self, url, page):
         #~ ref = self.data.find_one({"url":url})
@@ -460,7 +448,7 @@ class Crawtext(object):
         self.load_project()
         #self.load_data()
         self.create_dir()
-        if self.user is None or self.user is False:
+        if self.user is False:
             self.user = __author__
         #data = self.show_project()
         if send_mail(self.user, self.project) is True:

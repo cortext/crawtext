@@ -18,7 +18,7 @@ import errno
 import signal
 
 #from url import Link
-from utils import encodeValue
+#from utils import encodeValue
 
 from datetime import datetime as dt
 from query import Query
@@ -38,7 +38,7 @@ logging.getLogger("readability").setLevel(logging.WARNING)
 
 def check_status(f):
     def wrapper(*args):
-        if args[0].status:
+        if args[0].status is not False:
             return f(*args)
         
     return wrapper        
@@ -47,7 +47,6 @@ def debug(f):
         print f.__name__
         print f.__doc__
         return f(*args)
-        
     return wrapper    
 class Page(object):
     """
@@ -55,6 +54,7 @@ class Page(object):
     """
     def __init__(self, item, config):
         """
+        Mapping item and config
         """
         for k, v in item.items():
             if k in ["url", "source_url", "depth", "type"]:
@@ -64,7 +64,7 @@ class Page(object):
         for k, v in config.items():
             if k in ['filter_lang','max_depth', "query", "directory", "filter", "short_export", "date"]:
                 setattr(self, k, v) 
-        
+            
         ##logger.debug("Page Init")
         
         self.status = True
@@ -81,15 +81,21 @@ class Page(object):
 
         
     
-    def process(self, filter=True):
+    def process(self, filter_text=True):
         
         self.check_depth()
+        
         self.valid_url()
+        
         self.fetch()
+        
         self.clean_article()
+        
         self.extract()
+        
         self.check_lang()
-        if filter:
+        
+        if filter_text:
             if self.filter is not False:
                 self.filter_text()
         return self.status
@@ -100,14 +106,15 @@ class Page(object):
         '''checking depth'''
         if self.depth is False or self.depth is None:
             self.depth = 0
-        
+            
         #logger.debug("Page check depth")
         if self.depth > self.max_depth:
-            self.step = "Validating url"
             self.code = "102"
-            self.msg = "Depth of this page is %d and > %d" %(self.depth, self.max_depth)
+            self.msg = "Depth exceed max_depth for page" %(self.max_depth)
             self.status = False
-        return self.status
+            return self.status
+        else:
+            return self
     
     @check_status
     #@debug
@@ -164,7 +171,7 @@ class Page(object):
             self.code = 808
             return self.status
 
-        return self.status
+        return self
         
     
     @check_status
@@ -188,16 +195,27 @@ class Page(object):
                     self.status = False
                     return self.status
                 else:
-                    
+                    if self.html == "" or self.html is None:
+                        self.msg = "Error loading HTML from request"
+                        self.code = 405
+                        self.status = False
+                        return self.status
                     try:
                         self.html = self.html
-                        
                         self.tree = lxml.html.document_fromstring(self.html)
                         #cleaning with lxml it's fun!
                         self.tree = cleaner.clean_html(self.tree)
                         self.tree.make_links_absolute(self.url)
                         self.doc = lxml.html.tostring(self.tree)
-                        return self.status
+                        self.doc = (self.doc).replace(unichr(160), " ")
+                        self.doc = re.sub(re.compile("\r+|\n+|\t+|\s+")," ",self.doc)
+                        if self.doc == "" or self.doc is None:
+                            self.msg = "Error loading HTML from request"
+                            self.code = 405
+                            self.status = False
+                            return self.status
+                        else:
+                            return self
                         
                     except Exception as e:
                         self.msg = "Error loading HTML: "+str(e)
@@ -224,11 +242,19 @@ class Page(object):
                 return self.status
     @check_status
     def clean_article(self):
+        
         try:
-            self.clean_doc = Document(self.doc,url = self.url, positive_keywords= "entry-content,post, main, content, container", negative_keywords="like*,ad*,comment.*,comments,comment-body,author,access,navigation, sidebar.*?,share.*?,relat.*?,widget.*?")
+            self.clean_doc = Document(self.doc,url = self.url, positive_keywords= "entry-content,post,main,content,container,blog,article*,post,entry", negative_keywords="like*,ad*,comment.*,comments,comment-body,about,access,navigation, sidebar.*?,share.*?,relat.*?,widget.*?")
             self.article = self.clean_doc.summary()
-            self.text = re.sub("\r|\n|\t|  ", " ", bs(self.article).get_text())
+            self.text = re.sub("  |\t", " ",bs(self.article).get_text())
             self.title = self.clean_doc.short_title()
+            if self.text == "" or self.text == u'':
+                self.msg = "Error extracting Article and cleaning it"
+                self.code = 700
+                self.status = False
+                return self.status
+            if self.title == '':
+                self.title = u''
             return self
         except AttributeError as e:
             self.msg = "Error loading HTML: %s" %str(e)
@@ -247,11 +273,11 @@ class Page(object):
             #get links, cited_links, cited_links_ids, cited_domains
             self.outlinks = self.parse_outlinks(links)
             self.get_meta()
-            return self.status
+            return self
         else:
             #~ #self.msg = str(#logger.debug("ParserError"))
             self.msg = "Extract Error"
-            self.code = 700
+            self.code = 701
             self.status = False
             return self.status
     
@@ -261,7 +287,10 @@ class Page(object):
         
         parsed_url = urlparse(url)
         for k in ["scheme", "netloc", "path", "params", "query", "fragment"]:
-            link[k] = getattr(parsed_url,k)
+            if k == "query":
+                link["url_query"] = getattr(parsed_url,k)
+            else:
+                link[k] = getattr(parsed_url,k)
                 
         tld_dat = tldextract.extract(url)
         for k in ["domain", "subdomain", "suffix"]:
@@ -320,57 +349,43 @@ class Page(object):
         '''checking lang'''
         try:
             self.lang = detect(self.text)
-            if self.filter_lang is not False:
-                if self.lang == self.filter_lang:
-                    return self.status
-                else:
-                    self.status = False
-                    return self.status
         except Exception as e:
-            logging.warning("No lang detected")
+            logging.warning("No lang detected in article")
             try:
                 self.lang = detect(self.title)
-                if self.filter_lang is not False:
-                    if self.lang == self.filter_lang:
-            
-                        return self.status
-                    else:
-                        self.status = False
-                        return self.status
             except Exception as e:
-                logging.warning("No lang detected using title %s" %str(e))
-                print "lang_detect", e
-                if self.extension in ["fr", "en", "es", "de", "nl"]:
-                    self.lang = self.extension
-                    if self.filter_lang is not False:
-                        if self.lang == self.filter_lang:
-                            return self.status
-                        else:
-                            self.status = False
+                logging.warning("No lang detected in title")
+                self.lang = None
                 
-        return self.status
+        if self.filter_lang is not False:
+            if self.lang == self.filter_lang:
+                return self
+            else:
+                self.status = False
+                return self.status
+
     
     @check_status
     #@debug
     def filter_text(self):
         '''filter_text: checking relevancy'''
+        
         q = Query(self.query, self.directory)
         #print "Debug query", q.query
-        url = self.chunks.extend([self.domain, self.subdomain])
-        doc = {"content": encodeValue(self.text), "title": encodeValue(self.title)}
+                
+        doc = {"content": self.text, "title": self.title}
         
         relevant = q.match(doc)
         
-        if not relevant:
+        if relevant is False:
         
             self.code = 800
             self.msg = "Article Query Filter: text not relevant"
             self.status = False
-        
+            return self.status
         else:
-            self._match = relevant
             self.status = True
-        return self.status
+            return self
     
     def format_export(self):
         '''format export'''
@@ -393,7 +408,7 @@ class Page(object):
                             data["type"] = "log"
                 else:        
                     try:
-                        data[n] = self.__dict__[n]
+                        data[n] = unicode(self.__dict__[n])
                     except KeyError:
                         if n in ["crawl_nb", "depth"]:
                             data[n] = 0
@@ -423,6 +438,7 @@ class Page(object):
         return data
         
     def set_last(self):
+        data = {}
         for n in ["cited_links_ids", "title", "text", "status", "code", "msg", "date"]:
             try:
                 data["last_"+n] = self.__dict__[n]
@@ -434,7 +450,10 @@ class Page(object):
     def get_status(self):
         data = {}
         for k in ["status", "date", "code", "msg"]:
-            data[k] = self.__dict__[k]
+            try:
+                data[k] = self.__dict__[k]
+            except KeyError:
+                data[k] = None
         return data
         
                 
@@ -447,8 +466,9 @@ class Page(object):
     
 if __name__ == "__main__":
     #test
-    item = {"url":"http://leblogdejeudi.fr/category/ecologie-2/cop21/", "source_url":"", "depth":0, "type":"source"}
-    config = {'filter_lang':"fr","max_depth":10, "query": "(COP 21 OR COP21)", "filter":True, "directory":"./projects/COP21/"}
-    a = Page(item, config)
-    a.process()
-    print a.status, a.msg
+    #~ item = {"url":"http://www.ifpeb.fr/", "source_url":"", "depth":0, "type":"source"}
+    #~ config = {'filter_lang':"fr","max_depth":10, "query": "(COP 21) OR (COP21)", "filter":True, "directory":"./projects/COP21/"}
+    #~ a = Page(item, config)
+    #~ a.process()
+    #~ print a.get_status()
+    pass

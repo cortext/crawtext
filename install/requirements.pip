@@ -24,3 +24,7 @@ requests==2.7.0
 #Requests will then automatically inject pyopenssl into urllib3
 #If you're on ubuntu, you may run into trouble installing pyopenssl, you'll need these dependencies:
 #$ apt-get install libffi-dev libssl-dev
+
+#if error installing LXML 
+#command 'x86_64-linux-gnu-gcc' failed with exit status 1
+#apt-get install libxml2-dev libxslt1-dev python-dev
