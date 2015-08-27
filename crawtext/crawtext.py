@@ -355,7 +355,6 @@ class Crawtext(object):
             print "in which %i sources in process" %self.queue.count({"depth":0})
             self.report.report("mail")
             for item in self.queue.find(no_cursor_timeout=True).sort([('depth', pymongo.ASCENDING)]):
-                self.report.report("mail")
                 print "%i urls in process" %self.queue.count()
                 
                 #~ #Once a day
