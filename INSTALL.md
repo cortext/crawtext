@@ -1,19 +1,19 @@
 INSTALL INSTRUCTIONS
-=
+==
 
 Installing CrawText V5 
-==
+====
 OSX and Debian Distributions
-=== 
+====== 
 
 Previous recommandations 
-====
+========
 1. Activate your new virtual env (no mandatory)
 2. Make sure you have git installed
 ``` apt-get install git ```
 
 Install V5 
-=====
+==========
 1. Clone the repo
 ``` git clone https://github.com/cortext/crawtext ```
 
@@ -35,9 +35,9 @@ Install V5
 ``` ./mac-install.sh```
 
 Windows distribution 
-===
+======
 Previous recommandations 
-=====
+==========
 As Crawtext is not compatible with MS-DOS version
 you will have to install a Virtual Machine  and Docker
 
@@ -51,7 +51,7 @@ Your machine must be running Windows 7.1, 8/8.1 or newer to run Docker. Windows 
 Follow the step on [https://docs.docker.com/installation/windows/]
 
 Install V5 
-=====
+==========
 
 1. Create the environnement for CrawText
 ```docker build -t crawtext ./install```
@@ -62,15 +62,15 @@ Install V5
 
 
 Start a crawl 
-===
+======
 
 For the moment you only have two options
 * Create a small python script into the current dir
     nano new_project.py
     ```
     from crawtext import Crawtext
-    params = {"key":"","query":"(mottanai) OR (motanai)", "lang": "fr", "repeat": True, "max_depth":2}
-    c = Crawtext("mottanai")
+    params == {"key":"","query":"(mottanai) OR (motanai)", "lang": "fr", "repeat": True, "max_depth":2}
+    c == Crawtext("mottanai")
     c.start(params)
     ```
     you can see also the [example.py] file
