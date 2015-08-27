@@ -1,3 +1,4 @@
 include README.md LICENCE
 include *.py
 recursive-include crawtext *
+recursive_include install *
