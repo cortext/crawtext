@@ -11,7 +11,7 @@ __doc__ = '''Crawtext.'''
 import os, sys, re
 import inspect
 from collections import defaultdict
-from docopt import docopt
+#from docopt import docopt
 from datetime import datetime as dt
 import datetime
 import hashlib
@@ -130,7 +130,7 @@ class Crawtext(object):
         - max_depth: stopping crawl after x steps (set to 100)
         - repeat: repeat the task every day, week, month or year
         - data: specific collection to export
-        - format: specific format to export csv/json
+        - format: specific format to export csv/json/mysql/mongo
         - project_path: the dedicated directory for this path
         - next: ["month", "week", "day", "year"]
         - short_export: a short version of results without sources (True/False)
@@ -315,7 +315,14 @@ class Crawtext(object):
 
         if len(web_results) == 0:
             return False
-        return web_results
+        #resultats capés pour éviter les variations de résultats
+        if nb == 1000:
+            return web_results[:900]
+        else:
+            
+            return web_results
+        
+            
 
     
     def global_crawl(self):
@@ -355,15 +362,16 @@ class Crawtext(object):
                     
                     if page.status:
                         cpt = 0
-                        for outlink in page.outlinks:
-                            if outlink["url"] not in self.data.distinct("url"):
-                                try:
-                                   cpt = cpt+1
-                                   self.queue.insert_one(outlink)
-                                except pymongo.errors.DuplicateKeyError:
-                                    continue
-                            else: continue
-                        print "adding %i new urls in queue  with depth %i" %(cpt, page.depth+1)
+                        if page.depth+1 < page.max_depth:
+                            for outlink in page.outlinks:
+                                if outlink["url"] not in self.data.distinct("url"):
+                                    try:
+                                       cpt = cpt+1
+                                       self.queue.insert_one(outlink)
+                                    except pymongo.errors.DuplicateKeyError:
+                                        continue
+                                else: continue
+                            print "adding %i new urls in queue  with depth %i" %(cpt, page.depth+1)
                         #self.data.update_one({"url":item["url"]}, {"$set":{"type":"page"}})
                     #else:
                         #self.data.update_one({"url":item["url"]}, {"$set":{"type":"log"}})
