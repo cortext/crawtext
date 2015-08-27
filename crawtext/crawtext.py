@@ -24,7 +24,7 @@ import requests
 from database import *
 from article import Page
 from logger import *
-
+from report import Stats
 
 ABSPATH = os.path.dirname(os.path.abspath(sys.argv[0]))
 RESULT_PATH = os.path.join(ABSPATH, "projects")
@@ -203,6 +203,10 @@ class Crawtext(object):
         self.task = self.coll.find_one({"name": self.name})
         #params = [k for k,v in self.task.items() if v is not False and k in ["file", "url", "key"]]
         self.add_seeds()
+        s = Stats(self.name)
+        s.show()
+        
+        s.send_mail(self, user, html, txt)
         return True
     
     def update(self, user_input):
@@ -351,7 +355,7 @@ class Crawtext(object):
         while self.queue.count() > 0:
             print "%i urls in process" %self.queue.count()
             print "in which %i sources in process" %self.queue.count({"depth":0})
-            for item in self.queue.find({"depth":{"$gt":0}}).sort([('depth', pymongo.ASCENDING), ('crawl_nb', pymongo.ASCENDING)]):
+            for item in self.queue.find().sort([('depth', pymongo.ASCENDING), ('crawl_nb', pymongo.ASCENDING)]):
                 
                 print "%i urls in process" %self.queue.count()
                 
@@ -439,7 +443,7 @@ class Crawtext(object):
                     #~ continue
         logger.debug("***************END********")
         #s = Stats(self.name)
-        s.show(self)
+        #s.show(self)
         return True
         
                     
