@@ -36,8 +36,9 @@
 
     (Remember: to leave the virtual env):
     
-    ```(crawtext_env) user@computer_name:/home/user deactivate 
-        user@computer_name:/home/user
+    ```
+    (crawtext_env) user@computer_name:/home/user deactivate 
+    user@computer_name:/home/user
     ```
 
 - [ ] Make sure you have git installed:
