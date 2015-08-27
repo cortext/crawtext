@@ -42,6 +42,7 @@ class Crawtext(object):
         self.date = dt1.replace(minute=0, second=0, microsecond=0)
         self.task_db = TaskDB()
         self.coll = self.task_db.coll
+        self.report = Stats(self.name)
         
         
                 
@@ -63,14 +64,12 @@ class Crawtext(object):
                 
         if self.add_seeds() is False:
             sys.exit("No seeds found ")
-        
-        if self.queue.count() > 0:
+        else:
+            
+            self.report.report_start()
             self.global_crawl()
             return True
-        else:
-            sys.exit("All urls has been treated")
-        
-        
+                
     def load_data(self):
         logger.info("Loading data from project db")
         self.project = Database(self.name)
@@ -102,7 +101,7 @@ class Crawtext(object):
                 
                     #putting the sources again in queue
                     for doc in self.data.find({"depth":0}):
-                        print doc
+                        #print doc
                     #print doc["status"][-1]
                         if doc["last_status"] is True:
                             try:
@@ -199,14 +198,12 @@ class Crawtext(object):
         updated_values = " & ".join(params.keys())
         self.coll.insert_one(default_project)
         #logger.debug("Project %s has been created with the specified parameters: %s" %(self.name, updated_values))
-        self.coll.update_one({"name": self.name}, {"$push": {"status": True, "code":100, "msg": "created", "date": self.date}})
+        self.coll.update_one({"name": self.name}, {"$push": {"status": True, "code":100, "msg": "created", "date": self.date, "action": "create"}})
         self.task = self.coll.find_one({"name": self.name})
         #params = [k for k,v in self.task.items() if v is not False and k in ["file", "url", "key"]]
         self.add_seeds()
-        s = Stats(self.name)
-        s.show()
         
-        s.send_mail(self, user, html, txt)
+        self.report.report_start("mail")
         return True
     
     def update(self, user_input):
@@ -237,7 +234,8 @@ class Crawtext(object):
                 self.add_sources(params)
             else:
                 pass
-            
+            self.coll.update_one({"name": self.name}, {"$push": {"status": True, "code":100, "msg": "udpated", "date": self.date}, "action": "updated"})
+            self.report.report_start("mail")
             return True
         
     
@@ -355,8 +353,9 @@ class Crawtext(object):
         while self.queue.count() > 0:
             print "%i urls in process" %self.queue.count()
             print "in which %i sources in process" %self.queue.count({"depth":0})
-            for item in self.queue.find().sort([('depth', pymongo.ASCENDING), ('crawl_nb', pymongo.ASCENDING)]):
-                
+            self.report.report("mail")
+            for item in self.queue.find(no_cursor_timeout=True).sort([('depth', pymongo.ASCENDING)]):
+                self.report.report("mail")
                 print "%i urls in process" %self.queue.count()
                 
                 #~ #Once a day
@@ -441,9 +440,12 @@ class Crawtext(object):
                     #~ self.data.update_one({"url":item["url"]}, {"$push": {"msg":str(e), "status":False, "code":909, "date": self.date }})
                     #~ self.queue.delete_one({"url": item["url"]})
                     #~ continue
+            s.report("mail")
+                    
         logger.debug("***************END********")
         #s = Stats(self.name)
         #s.show(self)
+        self.report.report("mail")
         return True
         
                     
