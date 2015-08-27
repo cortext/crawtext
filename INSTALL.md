@@ -22,45 +22,56 @@
 
     ``` pip install --user virtualenv ```
 
-    create virtualenv with the correct python version
+    create virtualenv with the correct python version:
+    
     ``` virtualenv -p /usr/bin/python2.7 /home/user/crawtext_env ```
 
-    activate
+    activate:
+    
     ``` source /home/user/crawtext_env ```
 
-    You will be using a brand new and clean environnement as show in terminal
+    You will be using a brand new and clean environnement as show in terminal:
+    
     ```(crawtext_env) user@computer_name:/home/user ```
 
-    (Remember: to leave the virtual env)
-        ```(crawtext_env) user@computer_name:/home/user deactivate 
+    (Remember: to leave the virtual env):
+    
+    ```(crawtext_env) user@computer_name:/home/user deactivate 
         user@computer_name:/home/user
     ```
 
-- [ ] Make sure you have git installed
+- [ ] Make sure you have git installed:
 
     ``` apt-get install git ```
 
 #### Install V5 
 
-- [ ] Clone the repo
-``` git clone https://github.com/cortext/crawtext ```
+- [ ] Clone the repo:
 
-- [ ] Move into crawtext directory
-``` cd crawtext  ```
+    ``` git clone https://github.com/cortext/crawtext ```
 
-- [ ] switch to V5 branch
+- [ ] Move into crawtext directory:
 
-``` git checkout V5 ```
+    ``` cd crawtext  ```
+
+- [ ] switch to V5 branch:
+
+    ``` git checkout V5 ```
 
 - [ ] Run the installer for your OS:
 
-* debian-based distrib
-``` chmod+x  deb-install.sh```
-``` ./deb-install.sh```
+    * debian-based distrib
+        ``` 
+        chmod+x  deb-install.sh
+        ./deb-install.sh
+        ```
 
-* MAC OS-X distrib
-``` chmod+x  mac-install.sh```
-``` ./mac-install.sh```
+    * MAC OS-X distrib
+        
+        ``` 
+        chmod+x  mac-install.sh
+        ./mac-install.sh
+        ```
 
 ###Windows distribution 
 
