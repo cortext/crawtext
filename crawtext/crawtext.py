@@ -232,8 +232,8 @@ class Crawtext(object):
             date = self.date.replace(hour=0)
             p_date = (info.date[-1]).replace(hour=0)
             if p_date == date:
-                print "Already treated today"
-                self.queue.delete_one({"url":info.url})
+                print "Already in processing queue today"
+                #self.queue.delete_one({"url":info.url})
                 return self.queue
             else:
                 self.data.update_one({"url":url, "depth":0}, {"$push":info.add_data()})
