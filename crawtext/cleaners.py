@@ -3,7 +3,7 @@ from lxml import etree
 from lxml.html.clean import autolink_html
 from lxml.html.clean import Cleaner
 from urlparse import urlparse
-from tldextract import tldextract
+from packages.tldextract import tldextract
 
 #LXML PARSER
 cleaner = Cleaner()
