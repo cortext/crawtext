@@ -16,14 +16,14 @@ from datetime import datetime as dt
 import datetime
 import hashlib
 #requirements
-import requests
-import pymongo #3.0.3
 
+import pymongo #3.0.3
+import requests
 #internal import
 #from report import send_mail, generate_report
 from database import *
 from article import Page
-#from #logger import *
+from logger import *
 
 
 ABSPATH = os.path.dirname(os.path.abspath(sys.argv[0]))
@@ -82,14 +82,14 @@ class Crawtext(object):
         
     def add_seeds(self):
         self.load_data()
-        self.sources = self.data.find({"depth":0})
+        self.sources_nb = self.data.count({"depth":0})
         self.logs = self.data.find({"type":"log"})
         self.results = self.data.find({"type": "page"})
         
-        print "Sources nb", self.sources.count()
+        print "Sources nb", self.sources_nb
         #Si pas de sources
         
-        if self.sources.count() == 0:
+        if self.sources_nb == 0:
             logger.info("No sources found ")
             params = [k for k, v in self.task.items() if k in ["file", "url", "key"] and v is not False]
             #ajouter
@@ -97,11 +97,11 @@ class Crawtext(object):
         
         
         if self.queue == 0:
-            logger.info("No sources to crawl")
-            logger.info("Adding %i sources to crawl" %self.sources.count())
+            logger.info("No url awaiting  to be crawled")
+            logger.info("Adding %i sources to queue" %self.sources_nb)
             for doc in self.data.find({"depth":0}):
-                print doc["status"][-1]
-                if doc["status"][-1]:
+                #print doc["status"][-1]
+                if doc["status"][-1] is True:
                     try:
                         self.queue.insert_one(doc)
                     except pymongo.errors.DuplicateKeyError:
@@ -232,9 +232,10 @@ class Crawtext(object):
             date = self.date.replace(hour=0)
             p_date = (info.date[-1]).replace(hour=0)
             if p_date == date:
-                print "Already in processing queue today"
+                print "Already in processing queue today. No need to update then!"
                 #self.queue.delete_one({"url":info.url})
-                return self.queue
+                #return self.queue
+                pass
             else:
                 self.data.update_one({"url":url, "depth":0}, {"$push":info.add_data()})
         self.data.update_one({"url":url}, {"$inc":{"crawl_nb":1}})

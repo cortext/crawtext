@@ -32,7 +32,7 @@
 
     You will be using a brand new and clean environnement as show in terminal:
     
-    ```(crawtext_env) user@computer_name:/home/user ```
+    ```(crawtext_env) user@computer_name:/home/user/crawtext_env/bin/activate ```
 
     (Remember: to leave the virtual env):
     
@@ -63,8 +63,8 @@
 
     * debian-based distrib
         ``` 
-        chmod+x  deb-install.sh
-        ./deb-install.sh
+        chmod +x  ./install/deb-install.sh
+        ./install/deb-install.sh
         ```
 
     * MAC OS-X distrib
