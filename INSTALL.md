@@ -24,15 +24,15 @@
 
     create virtualenv with the correct python version:
     
-    ``` virtualenv -p /usr/bin/python2.7 /home/user/crawtext_env ```
+    ``` virtualenv -p /usr/bin/python2.7 /usr/bin/crawtext_env ```
 
     activate:
     
-    ``` source /home/user/crawtext_env ```
+    ``` source /usr/bin/crawtext_env/bin/activate```
 
     You will be using a brand new and clean environnement as show in terminal:
     
-    ```(crawtext_env) user@computer_name:/home/user/crawtext_env/bin/activate ```
+    ```(crawtext_env) user@computer_name:/home/user/ ```
 
     (Remember: to leave the virtual env):
     

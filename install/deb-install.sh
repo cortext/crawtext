@@ -17,6 +17,7 @@ echo "Installing python dependencies"
 #~ git checkout V5
 cd install
 sudo pip install -r requirements.pip
+sudo pip install requests[security]
 cd ../
 echo "**********************"
 echo "Install of crawtext is completed!"
