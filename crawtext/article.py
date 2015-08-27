@@ -127,7 +127,7 @@ class Page(object):
                 setattr(self, k, "")
             else:
                 setattr(self, k, v)
-                
+        print self.path, self.query
         
         try:
             if self.scheme not in ACCEPTED_PROTOCOL:
@@ -164,7 +164,16 @@ class Page(object):
         except Exception as e:
             logging.warning("%s" %str(e))
             pass
-        
+        try:
+            if self.path in BAD_PATHS:
+                self.msg = 'URL: Bad path %s' % self.path
+                self.status = False
+                self.code = 807
+                return self.status
+        except Exception as e:
+            logging.warning("%s" %str(e))
+            pass
+            
         if filter.match(self.url):
             self.msg = 'URL: Blacklisted url'
             self.status = False
