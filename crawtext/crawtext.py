@@ -226,6 +226,7 @@ class Crawtext(object):
         "insert url directly into data and next_url to seeds"
         info = Page({"url": url, "source_url": "url", "depth": 0}, self.task)
         info.process(False)
+        
         try:
             self.data.insert_one(info.set_data())
         except pymongo.errors.DuplicateKeyError:
@@ -238,6 +239,10 @@ class Crawtext(object):
                 pass
             else:
                 self.data.update_one({"url":url, "depth":0}, {"$push":info.add_data()})
+        except pymongo.errors.WriteError:
+            print info.query, info.path, info.domain
+            return self.queue
+
         self.data.update_one({"url":url}, {"$inc":{"crawl_nb":1}})
         self.data.update_one({"url":url}, {"$set":{"type":"source"}})
         if info.status:
