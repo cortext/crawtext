@@ -8,8 +8,33 @@ OSX and Debian Distributions
 
 Previous recommandations 
 ========
-1. Activate your new virtual env (no mandatory)
-2. Make sure you have git installed
+1. Install Python 2.7
+
+Crawtext is running with "Python 2.7":
+
+Please make sure you have the correct version enable
+``` sudo apt-get python2.7 ```
+
+2. Create and activate a brand new virtual env (no mandatory)
+
+install virtualenv
+``` pip install --user virtualenv ```
+
+create virtualenv with the correct python version
+``` virtualenv -p /usr/bin/python2.7 /home/user/crawtext_env ```
+
+activate
+``` source /home/user/crawtext_env ```
+
+You will be using a brand new and clean environnement as show in terminal
+```(crawtext_env) user@computer_name:/home/user ```
+
+(Remember: to deactivate and leave this cosy box)
+```(crawtext_env) user@computer_name:/home/user deactivate 
+    user@computer_name:/home/user
+```
+
+3. Make sure you have git installed
 ``` apt-get install git ```
 
 Install V5 
