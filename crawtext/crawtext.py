@@ -81,39 +81,54 @@ class Crawtext(object):
         return self
         
     def add_seeds(self):
+        '''adding seeds to queue verify that have queue processing'''
         self.load_data()
-        self.sources_nb = self.data.count({"depth":0})
-        self.logs = self.data.find({"type":"log"})
-        self.results = self.data.find({"type": "page"})
-        
-        print "Sources nb", self.sources_nb
-        #Si pas de sources
-        
-        if self.sources_nb == 0:
-            logger.info("No sources found ")
-            params = [k for k, v in self.task.items() if k in ["file", "url", "key"] and v is not False]
-            #ajouter
-            self.add_sources(params)
-        
-        
-        if self.queue == 0:
-            logger.info("No url awaiting  to be crawled")
-            logger.info("Adding %i sources to queue" %self.sources_nb)
-            for doc in self.data.find({"depth":0}):
-                #print doc["status"][-1]
-                if doc["status"][-1] is True:
-                    try:
-                        self.queue.insert_one(doc)
-                    except pymongo.errors.DuplicateKeyError:
-                        pass
-            
-        
+        #url waiting for process?
         if self.queue.count() == 0:
-            logger.warning("No source to crawl")
-            return False
+            logger.info("No url awaiting to be crawled")
+            if self.data.count() == 0:
+                logger.info("No data in project")
+                #adding sources for first time in queue
+                params = [k for k, v in self.task.items() if k in ["file", "url", "key"] and v is not False]
+                self.add_sources(params)
+                
+            else:
+                if self.task["repeat"] is True:
+                    #doing again the search
+                    params = [k for k, v in self.task.items() if k in ["file", "url", "key"] and v is not False]
+                    self.add_sources(params)
+                
+                if self.data.count({"type":"source"}) != 0:
+                
+                    #putting the sources again in queue
+                    for doc in self.data.find({"depth":0}):
+                        print doc
+                    #print doc["status"][-1]
+                        if doc["last_status"] is True:
+                            try:
+                                self.queue.insert_one(doc)
+                            except pymongo.errors.DuplicateKeyError:
+                                pass
+            if self.queue.count() != 0:
+                return True
+            else:
+               return False
+                    
         else:
-            logger.warning("%i sources url to crawl" %self.queue.count())
-            return True
+            #already queue awaiting to be processed
+            crawl_date = self.coll.find_one({"name": self.name})["date"][-1]
+            date = self.date.replace(hour=0)
+            crawl_date = (crawl_date).replace(hour=0)
+            if crawl_date == date:
+                return True
+            else:
+                #redo research
+                params = [k for k, v in self.task.items() if k in ["file", "url", "key"] and v is not False]
+                self.add_sources(params)
+            if self.queue.count() != 0:
+                return True
+            else:
+               return False
             
     def load_defaut_config(self):
         """
@@ -239,19 +254,19 @@ class Crawtext(object):
                 pass
             else:
                 self.data.update_one({"url":url, "depth":0}, {"$push":info.add_data()})
-        except pymongo.errors.WriteError:
-            print info.query, info.path, info.domain
-            return self.queue
-
-        self.data.update_one({"url":url}, {"$inc":{"crawl_nb":1}})
-        self.data.update_one({"url":url}, {"$set":{"type":"source"}})
+        
+        if self.task["repeat"]:
+            self.data.update_one({"url":url}, {"$inc":{"crawl_nb":1}})
+            
         if info.status:
             for link in info.outlinks:
-                
                 try:
                     self.queue.insert_one(link)
                 except pymongo.errors.DuplicateKeyError:
                     continue
+                except pymongo.errors.WriteError:
+                    print "Error", link
+                    pass
         return self.queue
                 
                             
@@ -564,5 +579,7 @@ class Crawtext(object):
 
 
 if __name__ == "__main__":
-    pass
+    dict_params = {"key":"J8zQNrEwAJ2u3VcMykpouyPf4nvA6Wre1019v/dIT0o","query":"(COP21) OR (COP 21)", "user":"4barbes@gmail.com", "max_depth":"3"}
+    c = Crawtext("COP_23_test")
+    c.start(dict_params)
     

@@ -121,7 +121,6 @@ class Page(object):
     def valid_url(self):
         '''checking url format and validity'''
         for k, v in self.parse_link(self.url).items():
-            print k,v 
             if k is None:
                 continue
             
@@ -131,7 +130,7 @@ class Page(object):
             else:
                 setattr(self, k, v)
                 
-        print self.path, self.url_query
+        
         
         try:
             if self.scheme not in ACCEPTED_PROTOCOL:

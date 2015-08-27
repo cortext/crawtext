@@ -27,5 +27,6 @@ ALLOWED_TYPES = ['html', 'htm', 'md', 'rst', 'aspx', 'jsp', 'rhtml', 'cgi',
 
 BAD_DOMAINS = ['amazon', 'doubleclick', 'twitter', 'facebook', 'streaming', 'stream', "proxy"]
 
-BAD_PATHS = ['mailto']
-BAD_QUERY = ["search", "mailto", "share"]
+BAD_PATHS = ['mailto', "share="]
+
+BAD_QUERY = ["mailto", "share"]
