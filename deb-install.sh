@@ -15,9 +15,10 @@ echo "**********************"
 echo "Installing python dependencies"
 #~ git clone https://github.com/cortext/crawtext crawtext
 #~ git checkout V5
-cd crawtext/install
+cd install
 sudo pip install -r ./requirements.pip
 cd ../
 echo "**********************"
-echo "Install of crawtext is completed!\n Have fun!"
+echo "Install of crawtext is completed!"
+echo "Have fun!"
 exit 0
