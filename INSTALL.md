@@ -1,23 +1,26 @@
 INSTALL INSTRUCTIONS
-==
+====
 
 Installing CrawText V5 
-====
+======
 OSX and Debian Distributions
-====== 
+======== 
 
 Previous recommandations 
-========
+==========
+
 1. Install Python 2.7
 
 Crawtext is running with "Python 2.7":
 
-Please make sure you have the correct version enable
-``` sudo apt-get python2.7 ```
+Please make sure you have the correct version installed:
+
+``` sudo apt-get install python2.7 ```
 
 2. Create and activate a brand new virtual env (no mandatory)
 
-install virtualenv
+install virtualenv:
+
 ``` pip install --user virtualenv ```
 
 create virtualenv with the correct python version
@@ -29,27 +32,28 @@ activate
 You will be using a brand new and clean environnement as show in terminal
 ```(crawtext_env) user@computer_name:/home/user ```
 
-(Remember: to deactivate and leave this cosy box)
-```(crawtext_env) user@computer_name:/home/user deactivate 
-    user@computer_name:/home/user
-```
+(Remember: to leave the virtual env)
+    ```(crawtext_env) user@computer_name:/home/user deactivate 
+        user@computer_name:/home/user
+    ```
 
 3. Make sure you have git installed
+
 ``` apt-get install git ```
 
 Install V5 
-==========
+===========
 1. Clone the repo
 ``` git clone https://github.com/cortext/crawtext ```
 
-2. Moove into crawtext directory
+2. Move into crawtext directory
 ``` cd crawtext  ```
 
-2. switch to V5 branch
+3. switch to V5 branch
 
 ``` git checkout V5 ```
 
-3. Run the installer for your OS:
+4. Run the installer for your OS:
 
 * debian-based distrib
 ``` chmod+x  deb-install.sh```
@@ -60,9 +64,9 @@ Install V5
 ``` ./mac-install.sh```
 
 Windows distribution 
-======
+========
 Previous recommandations 
-==========
+============
 As Crawtext is not compatible with MS-DOS version
 you will have to install a Virtual Machine  and Docker
 
@@ -76,7 +80,7 @@ Your machine must be running Windows 7.1, 8/8.1 or newer to run Docker. Windows 
 Follow the step on [https://docs.docker.com/installation/windows/]
 
 Install V5 
-==========
+============
 
 1. Create the environnement for CrawText
 ```docker build -t crawtext ./install```
@@ -87,7 +91,7 @@ Install V5
 
 
 Start a crawl 
-======
+=====
 
 For the moment you only have two options
 * Create a small python script into the current dir
