@@ -31,106 +31,129 @@ RESULT_PATH = os.path.join(ABSPATH, "projects")
 class Stats(object):
     def __init__(self, name, params = None):
         self.name = name
-        self.required_keys = ["format", "lang", "max_depth", "data", "date", "short_export", "user"]
-        if params is None:
-            for k in self.required_keys:
-                setattr(self,k, False)
-            
-        elif type(params) == dict:
-            #for debug
-            self.added_keys = params.keys()
-            self.required_keys = ["format", "lang", "max_depth", "data", "date", "short_export"]
-            for k in self.required_keys:
-                try:
-                    setattr(self,k, params[k])
-                except Exception as AttributeError:
-                    if k == "max_depth":
-                        setattr(self,k, 10)
-                    setattr(self,k, False)
-            
-        else:
-            return sys.exit("Error in calling Stats object")
-        
-        if self.date is False:
-            self.date = datetime.now()
-        elif type(self.date) == list:
-            self.date = self.date[-1]
-        self.date = self.date.strftime("%Y-%B-%d")
-        self.project = name
+        self.data_info = None
         self.c = Database(name)
         self.data = self.c.set_coll("data")
         self.queue = self.c.set_coll("queue")
         
-    def get_completed_level(self):
+        self.date = datetime.now()
+        self.project = name
+        if params is not None and type(params) is dict:
+            self.params = params
+        self.get_task()
         
-        if self.max_depth is False:
-            self.max_depth = 10
-        for n in range(0,self.max_depth):
+    def get_task(self):
+        ''' here the parameters of the project'''
+        #loading the parameters
+        db = TaskDB()
+        task = db.coll.find_one({"name":self.project})
+        params_values = []
+        if task is None:
+            return sys.exit("No Project found")
+        for k, v in task.items():
+            if type(v) == list:
+                try:
+                    if type(v[-1]) == datetime:
+                        setattr(self, "last_date", v[-1].strftime("%d %B %Y %H:%M"))
+                    else:
+                        setattr(self, "last_"+k, v[-1])
+                    params_values.append("last_"+k)
+                except IndexError:
+                    pass
+            elif k == "data":
+                continue
+            else:
+                setattr(self, k, v)
+                params_values.append(k)
+        try:
+            setattr(self, "created_at", task["date"][0].strftime("%d %B %Y %H:%M"))
+            setattr(self, "now",self.date.strftime("%d %B %Y %H:%M"))
+            params_values.extend(["created_at", "now"])
+            return params_values
+        except IndexError:
+            return params_values
+        except KeyError:
+            return params_values
             
-            to_treat = self.queue.count({"depth":n})
-            inserted = self.data.count({"depth":n})
-            if to_treat != 0 and inserted != 0:
-                self.completed_level = n-1
-                return self.completed_level
-            
-        
-    def build(self):
-        self.count= {}
+    def get_sources(self):
+        #here bizarrerie
+        return {"results":self.data.count({"depth":0, "last_status": True}), "logs":self.data.count({"depth":0, "last_status": False}) ,"total": self.data.count({"depth":0})}
+    
+    def get_total(self):
         self.results = self.data.find({"last_status":True})
         self.logs = self.data.find({"last_status":False})
-        
-        self.count["data"] = {"treated": self.data.count(), "results": self.results.count(), "logs": self.logs.count(), "queue": self.queue.count()}
-        
-        self.count["sources"] = {"results":self.data.count({"depth":0, "last_status": True}), "logs":self.data.count({"depth":0, "last_status": False}) ,"total": self.data.count({"depth":0})}
-        
+        return {"treated": self.data.count(), "results": self.results.count(), "logs": self.logs.count(), "queue": self.queue.count()}
+            
+    def get_completed_level(self):
         if self.max_depth is False:
             self.max_depth = 10
+        for n in range(0,int(self.max_depth)):
+            to_treat = self.queue.count({"depth":n})
+            
+            inserted = self.data.count({"depth":n})
+            if (to_treat,inserted) != (0,0):
+                self.cur = n
+                self.completed_level = n-1
+                
+                return self.completed_level
+        return n
         
-        for n in range(0, self.max_depth):
-            #~ 
-            queue = self.queue.count({"depth":n})
-            treated = self.data.count({"depth":n})
-            logs = self.data.count({"depth":n, "last_status": False})
-            results = self.data.count({"depth":n, "last_status": True})
-            total_logs = self.data.count({"depth":{"$lte":n}, "last_status": False})
-            total_results = self.data.count({"depth":{"$lte":n}, "last_status": True})
-            self.count["depth_"+str(n) ] = {"queue":queue, "treated": treated, "results":results, "logs":logs, "total_logs":total_logs,"total_results":total_results, "depth":n}
-            if queue == 0 and treated != 0:
-                self.count["last"] = self.count["depth_"+str(n)]
-            if queue != 0 and treated !=0:
-                self.count["current"] = self.count["depth_"+str(n)]
-                break
-            else:
-                self.count["last"] = self.count["depth_0"]
-                self.count["current"] = self.count["depth_0"]
-        return self.count
+    def get_depth(self, n):
+        queue = self.queue.count({"depth":n})
+        treated = self.data.count({"depth":n})
+        logs = self.data.count({"depth":n, "last_status": False})
+        results = self.data.count({"depth":n, "last_status": True})
+        cumul_logs = self.data.count({"depth":{"$lte":n}, "last_status": False})
+        cumul_results = self.data.count({"depth":{"$lte":n}, "last_status": True})
+        return {"queue":queue, "treated": treated, "results":results, "logs":logs, "cumul_logs":cumul_logs,"cumul_results":cumul_results, "depth":n}
+        
+    def get_process(self):
+        process = []
+        if self.max_depth is False:
+            self.max_depth = 10
+        current = self.get_completed_level()        
+        if current <= 0:
+            process.append({0: self.get_depth(0)})
+            return process
+        else:
+            for i in range(0, current):
+                process.append({i: self.get_depth(i)})
+        return process
+    
+    def get_short_stats(self):
+        ''' here the stats of the crawl '''
+        stats = {}
+        for k in  self.get_params():
+            if self.__dict__[k] is not False:
+                stats["params"] = {k:v}
+        stats["sources"] = self.get_sources()
+        stats["total"] = self.get_total()
+        return stats
+        
+    def get_full_stats(self):
+        ''' here the stats of the crawl '''
+        stats = {}
+        stats["process"] = self.get_process()
+        stats["total"] = self.get_total()
+        return  stats
+        
     
     def text(self):
         '''Showing stats of current project in shell'''
+        
         text = []
+        sources = self.get_sources()
+        total = self.get_total()
+        
         text.append("Stats for %s" %self.project)
         text.append("**************************")
-        try:
-            count = self.count
-        except AttributeError:
-            count = self.build()
+        text.append("**SOURCES**")
         
-        for k,v in count.items():
-            
-            if k == "processing":
-                text.append("*"+k)
-                for x,y in v.items():
-                    text.append("\t - %s" %x)
-                    for z,a in y.items():
-                        text.append("\t\t- %s: %s"%(z, a)) 
-            else:
-                text.append("*"+k)
-                try:
-                    for x,y in v.items():
-                        text.append("\t- %s:%s"%(x, y))
-                except: 
-                    text.append( "\t- %s" %v)
-                
+        for k, v in sources.items():
+            text.append("\t- %s: %s" %(k,v))
+        text.append("**TOTAL**")
+        for k, v in total.items():
+            text.append("\t- %s: %s" %(k,v))
         text.append("**************************")
         return "\n".join(text)
         
@@ -139,29 +162,33 @@ class Stats(object):
         print self.text()
         return
     
-    def report(self, format="mail"):
+    def report(self, type=["crawl","action"], format="mail",):
         '''Create canvas for report'''
-        try:
-            count = self.count.items()
-        except AttributeError:
-            count = self.build()
+        if self.data is None:
+            self.build()
+            
         if format in ["shell", "print", "debug", "terminal"]:
             return self.show()
         elif format in ["mail", "email", "html"]:
-            env = Environment(loader=PackageLoader('crawtext', './'))
-            template = env.get_template('./template.html')
-            html = template.render(date = self.date, name=self.project, count=self.count, project_url= "http://playlab.paris/projects/users/report")
-            html = transform(html)
-            text = self.text()
             if format in ["mail", "email"]:
-                if self.user is False:
-                    self.user = __author__
-                self.send_mail(self.user, html, text)
-                return True
+                for t in type:
+                    if t == "crawl":
+                        if self.user is False:
+                            send_mail(__author__, "crawl", self.data)
+                        else:
+                            send_mail([self.user,__author__], "crawl", self.data)
+                    else:
+                        if self.user is False:
+                            
+                            send_mail(__author__, "action", self.data.update({"params":self.params_report()}))
+                        else:
+                            send_mail([self.user,__author__], "action", self.data.update({"params":self.params_report()}))
+                            
             elif format in ["html"]:
                 raise NotImplementedError
         else:
             raise NotImplementedError
+    
     def report_start(self, format = "mail"):
         db = TaskDB()
         task = db.coll.find_one({"name":self.project})
@@ -186,58 +213,23 @@ class Stats(object):
             return True
         else:
             raise NotImplementedError
-            
-    def send_mail(self, user, html, txt):
-        from packages.format_email import createhtmlmail
-        from packages.private import username, passw
-        import smtplib
-
-        fromaddrs = "crawlex@playlab.paris"
-        toaddrs  = user
-        subject = "PLAYERLAB - REPORT from Crawl %s" %str(self.name)
-        msg = createhtmlmail(html, txt, subject, fromaddrs)
-        # The actual mail send
-        server = smtplib.SMTP('smtp.gmail.com:587')
-        server.starttls()
-        server.login(username,passw)
-        server.sendmail(fromaddrs, toaddrs, msg)
-        server.quit()
-        return True
-
-    def generate_report(self):
-        #~ date = dt.now()
-        #~ date = date.strftime('%d-%m-%Y_%H-%M')
-        #~ di
-        rectory = os.path.join(directory, 'reports')
-        #~ if not os.path.exists(directory):
-            #~ os.makedirs(directory)
-        #~ filename = "%s/%s.txt" %(directory, date)
-#~ 
-        #~ with open(filename, 'w') as f:
-            #~ f.write("\n======PROJECT PARAMS======\n")
-            #~ for k, v in task.items():
-                #~ if k not in ["action", "status","msg", "date", "creation_date", "_id"]:
-                    #~ if k == "date":
-                        #~ v = task[k].strftime('%d-%m-%Y@%H:%M:%S')
-                        #~ f.write(str(k)+": "+str(v)+"\n")
-#~ 
-                    #~ try:
-                        #~ f.write(str(k)+": "+str(v)+"\n")
-                    #~ except Exception:
-                        #~ pass
-#~ 
-            #~ f.write(db.export_stats())
-#~ 
-            #~ f.write("\n\n======HISTORY OF THE PROJECT======\n")
-#~ 
-            #~ #date_list = [n.strftime('%d-%m-%Y %H-%M-%S') for n in task["date"]]
-#~ 
-            #~ # status_list = list(zip(task["status"],task["msg"]))
-            #~ # for msg in status_list:
-            #~ #   f.write("\n-"+str(msg))
-        #~ logging.info("Your report is ready!\nCheck here: %s" %(filename))
-        #~ return True
-        return
+    
+    def report(self, type=["crawl", "action"]):
+        for n in type:
+            if n == "crawl":
+                if self.user is None:
+                    send_mail(__author__, n, self.get_full_stats())
+                else:
+                    send_mail(self.user, n, self.get_full_stats())
+            else:
+                if self.user is None:
+                    send_mail(__author__, n, self.get_short_stats())
+                else:
+                    send_mail(self.user, n, self.get_short_stats())
+                        
+    
+        
+    
 
     def export(self, format ="json", directory="", depth_limit = None):
         
@@ -309,8 +301,20 @@ class Stats(object):
 
 if __name__=="__main__":
     #test
-    #~ new_project = "COP21_2015_08"
-    #~ s1 = Stats(new_project)
-    #~ s1.report("mail")
+    new_project = "RRI"
+    s1 = Stats(new_project)
+    print s1.get_full_stats()
+    #~ if queue == 0 and treated != 0:
+                #~ self.data_info["last"] = self.data_info["depth_"+str(n)]
+                #~ 
+            #~ elif queue != 0 and treated !=0:
+                #~ self.data_info["current"] = self.data_info["depth_"+str(n)]
+                #~ break
+            #~ else:
+                #~ self.data_info["current"] = {"queue":queue, "treated": total_results, "logs":total_logs,"depth":n}
+                #~ self.data_info["last"] = {"queue":queue, "treated": total_results, "logs":total_logs,"depth":n}
+                #~ continue
+            #~ 
+    
     #s1.export(format="mongodb")
     pass

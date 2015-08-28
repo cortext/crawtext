@@ -1,3 +1,7 @@
+from jinja2 import Template
+from jinja2 import Environment, PackageLoader
+from premailer import transform
+
 def createhtmlmail(html, text, subject, fromEmail):
     """Create a mime-message that will render HTML in popular
     MUAs, text in better ones"""
@@ -51,4 +55,44 @@ def createhtmlmail(html, text, subject, fromEmail):
     out.close()
     return msg
 
+    
+def mail_it(title, msg, user, fromaddrs ="crawlbot@playlab.paris"):
+    msg = createhtmlmail(html, txt, title, fromaddrs)
+    # The actual mail send
+    server = smtplib.SMTP('smtp.gmail.com:587')
+    server.starttls()
+    server.login(username,passw)
+    if type(user) == list:
+        for u in user: 
+            server.sendmail(fromaddrs, u, msg)
+    else:
+        server.sendmail(fromaddrs, user, msg)
+    server.quit()
+    return True
 
+def send_mail(user, template_name, values):
+    fromaddrs = "crawlbot@playlab.paris"
+    
+    env = Environment()
+    env.get_template("./"+template_name+".html")
+    html = template.render(**values)
+    html = transform(html)
+    text = "\n".join(values.items())
+    if template_name == "crawl":
+        title = "CrawText | %s | Crawl StatS" %values["project_name"]
+    
+    else:
+        title = "CrawText | %s |%s Report" %(values["project_name"], template_name)
+        
+    msg = createhtmlmail(html, txt, title, fromaddrs)
+    # The actual mail send
+    server = smtplib.SMTP('smtp.gmail.com:587')
+    server.starttls()
+    server.login(username,passw)
+    if type(user) == list:
+        for u in user: 
+            server.sendmail(fromaddrs, u, msg)
+    else:
+        server.sendmail(fromaddrs, user, msg)
+    server.quit()
+    return True

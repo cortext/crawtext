@@ -217,46 +217,64 @@ ul li, ol li {
             <table>
                 <tr>
                     <td>
-                        <span>Report generated at {{now}}</span>
-                        <h3>Project : '<b>{{project_name}}</b>'</h3>
-                        <p>Created at :{{task["creation_date"}} </p>
-                        <p>Updated at :{{params["date"][-1]}} </p>
-                        <p> <ul>with the following parameters:
-                            {% for k, v in stats["params"].items() %}
-                            <li>{{k}} : {{v}}</li>
-                            {% endfor %}
-                            </ul>
-                        <p>
+                        <p>Crawl Stats Report for {{date}}</p>
+                        <h1>Stats for the current crawl : '<b>{{project_name}}</b>'</h1>
+                        
                         <table>
                             <thead>
-                                <h2>{{params["project_name"]}}</h2>
-                                <h5>{{params["action"]}}</h5>
-                            
+                            <tr>
+                                <h2>Report Stats</h2>
+                                
+                            </tr>
                             </thead>
                             <tbody>
                             <tr>
-                            <h3>Parameters</h3>
+                            <h3>Total Overview</h3>
                             </tr>
                             <tr class="padding">
-                            {% for k, v in params.items() %}
-                            
-                            
                                 
+                                 {'queue': 2790, 'treated': 889, 'results': 0, 'logs': 0}}
                                 <td>
-                                    <em>{{k}}</em>:{{v}}
+                                    <p class="btn-green">{{data["total"]["results"]}} pages</p>
                                 </td>
-                            {% endfor %}
+                                <td><p class="btn-red">{{data["total"]["logs"]}} logs</p></td>
+                                <td><p class="btn-blue">{{data["data"]["treated"]}} crawled</p> </td>
+                                <td><p class="btn-orange">{{data["data"]["queue"]}} processing</p> <b></b></td>
+                                
+                            </tr>
+                            {% if data["current"]["depth"] == 0 %}
+                            <tr>
+                                CrawText is currently <b>adding seeds </b> to the project 
                             </tr>
                             <tr>
-                            <h3>Overview of the project!</h3>
+                                <td><p class="btn-yellow">Step O </p></td>
+                                <td><p class="btn-blue"> {data["sources"]["total"] sources</td>
+                                <td><p class="btn-green">{{results}} pages</p></td>
+                                <td><p class="btn-red">{{data["sources"]["logs"]}} logs</p></td>
+                            <tr>
+                                
+                                
+                            {%else%}
+                                
+                            <h4>Currently working on:</h4>
                             </tr>
                             <tr>
-                                <td><a class="btn-blue">Consult your project</a></td>
-                                <td><a class="btn-orange">Stop crawl</a></td>
-                                <td><a class="btn-green">Export crawl</a></td>
-                                <td><a class="btn-red" href="">Get rid of this stupid email</a></td>
+                                <td><p class="btn-yellow">Step {{data["current"]["depth"]}} </p></td>
+                                <td></td>
+                                <td><p class="btn-blue">{{data["current"]["treated"]}} crawled</p></td>
+                                <td><p class="btn-orange">{{data["current"]["queue"]}} processing</p></td>
+                                
                             </tr>
-                            
+                            <tr >
+                            <h4>Finished work:</h4>
+                            </tr>
+                            <tr>
+                                <td><p class="btn-yellow">Step {{data["last"]["depth"]}} </p></td>
+                                <td></td>
+                                <td><p class="btn-green">{{data["last"]["total_results"]}} results </p> </td>
+                                <td><p class="btn-red">{{data["last"]["total_logs"]}} logs</p></td>
+                            </tr>
+                            {%endif%}
                             </table>
                         
                         <table>
@@ -264,10 +282,10 @@ ul li, ol li {
                             <h3>Get back to your project!</h3>
                             </tr>
                             <tr>
-                                <td><a class="btn-blue">Consult your project</a></td>
-                                <td><a class="btn-orange">Stop crawl</a></td>
-                                <td><a class="btn-green">Export crawl</a></td>
-                                <td><a class="btn-red" href="">Get rid of this stupid email</a></td>
+                                <td><a class="btn-blue">View</a></td>
+                                <td><a class="btn-orange">Stop</a></td>
+                                <td><a class="btn-green">Export</a></td>
+                                <td><a class="btn-red" href="">Stop SPAM!</a></td>
                             </tr>
                         </table>
                         
