@@ -207,7 +207,7 @@ ul li, ol li {
 <body bgcolor="#f6f6f6">
 
 <!-- body -->
-<table class="body-wrap" bgcolor="#f6f6f6">
+<table class="body-wrap" bgcolor="#fefefe">
     <tr>
         <td></td>
         <td class="container" bgcolor="#FFFFFF">
@@ -216,78 +216,41 @@ ul li, ol li {
             <div class="content">
             <table>
                 <tr>
+                    Sources:
+                    {%for k, v in stats["sources"].items()%}
                     <td>
-                        <p>Crawl Stats Report for {{date}}</p>
-                        <h1>Stats for the current crawl : '<b>{{project_name}}</b>'</h1>
-                        
-                        <table>
-                            <thead>
-                            <tr>
-                                <h2>Report Stats</h2>
-                                
-                            </tr>
-                            </thead>
-                            <tbody>
-                            <tr>
-                            <h3>Total Overview</h3>
-                            </tr>
-                            <tr class="padding">
-                                
-                                 {'queue': 2790, 'treated': 889, 'results': 0, 'logs': 0}}
-                                <td>
-                                    <p class="btn-green">{{data["total"]["results"]}} pages</p>
-                                </td>
-                                <td><p class="btn-red">{{data["total"]["logs"]}} logs</p></td>
-                                <td><p class="btn-blue">{{data["data"]["treated"]}} crawled</p> </td>
-                                <td><p class="btn-orange">{{data["data"]["queue"]}} processing</p> <b></b></td>
-                                
-                            </tr>
-                            {% if data["current"]["depth"] == 0 %}
-                            <tr>
-                                CrawText is currently <b>adding seeds </b> to the project 
-                            </tr>
-                            <tr>
-                                <td><p class="btn-yellow">Step O </p></td>
-                                <td><p class="btn-blue"> {data["sources"]["total"] sources</td>
-                                <td><p class="btn-green">{{results}} pages</p></td>
-                                <td><p class="btn-red">{{data["sources"]["logs"]}} logs</p></td>
-                            <tr>
-                                
-                                
-                            {%else%}
-                                
-                            <h4>Currently working on:</h4>
-                            </tr>
-                            <tr>
-                                <td><p class="btn-yellow">Step {{data["current"]["depth"]}} </p></td>
-                                <td></td>
-                                <td><p class="btn-blue">{{data["current"]["treated"]}} crawled</p></td>
-                                <td><p class="btn-orange">{{data["current"]["queue"]}} processing</p></td>
-                                
-                            </tr>
-                            <tr >
-                            <h4>Finished work:</h4>
-                            </tr>
-                            <tr>
-                                <td><p class="btn-yellow">Step {{data["last"]["depth"]}} </p></td>
-                                <td></td>
-                                <td><p class="btn-green">{{data["last"]["total_results"]}} results </p> </td>
-                                <td><p class="btn-red">{{data["last"]["total_logs"]}} logs</p></td>
-                            </tr>
-                            {%endif%}
-                            </table>
-                        
-                        <table>
-                            <tr>
-                            <h3>Get back to your project!</h3>
-                            </tr>
-                            <tr>
-                                <td><a class="btn-blue">View</a></td>
-                                <td><a class="btn-orange">Stop</a></td>
-                                <td><a class="btn-green">Export</a></td>
-                                <td><a class="btn-red" href="">Stop SPAM!</a></td>
-                            </tr>
-                        </table>
+                        {{k}}: {{v}}
+                    </td>
+                    {%endfor%}
+                </tr>
+                <tr>
+                    Total:
+                    {%for k, v in stats["total"].items()%}
+                    <td>
+                        {{k}}: {{v}}
+                    </td>
+                    {%endfor%}
+                </tr>
+                <tr>
+                    Detailled process:
+                    {%for k, v in stats["process"].items()%}
+                    <td>
+                        {{k}}: {{v}}
+                    </td>
+                    {%endfor%}
+                </tr>
+            </table>
+            <table>
+                <tr>
+                <h3>Get back to your project!</h3>
+                </tr>
+                <tr>
+                    <td><a class="btn-blue">View</a></td>
+                    <td><a class="btn-orange">Stop</a></td>
+                    <td><a class="btn-green">Export</a></td>
+                    <td><a class="btn-red" href="">Stop SPAM!</a></td>
+                </tr>
+            </table>
                         
                         <p>Have a lovely day!</p>
                         <p><a href="http://playlab.paris/contact">Playlab Team</a></p>

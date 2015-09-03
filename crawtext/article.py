@@ -407,11 +407,11 @@ class Page(object):
     def set_data(self):
         '''Set data : creating default page info'''
         data = {}
-        for n in ["url", "url_id","url", "cited_links", "cited_links_ids","source_url", "cited_domains", "title", "text", "keywords", "generators", "extension", "filetype", "depth", "crawl_nb", "status", "msg", "date", "code", "lang"]:
+        for n in ["date", "url", "url_id","url", "cited_links", "cited_links_ids","source_url", "cited_domains", "title", "text","html", "keywords", "generators", "extension", "filetype", "depth", "crawl_nb", "status", "msg", "date", "code", "lang"]:
             #unique info
             if n in ["url_id","url","extension", "filetype", "depth", "crawl_nb", "source_url", "type", "lang"]:
                 if n in ["type"]:
-                    if self.depth == "0":
+                    if self.depth == 0:
                         data["type"] = "source"
                     else:
                         if self.status is True:
@@ -420,7 +420,8 @@ class Page(object):
                             data["type"] = "log"
                 else:        
                     try:
-                        data[n] = unicode(self.__dict__[n])
+                        #conserver le type de donnée
+                        data[n] = self.__dict__[n]
                     except KeyError:
                         if n in ["crawl_nb", "depth"]:
                             data[n] = 0
@@ -437,27 +438,19 @@ class Page(object):
         #~ for k, v in self.meta.items():
             #~ data["meta_"+k] = v
         return data
+    
     #@debug
     def add_data(self):
         '''Add data : updating values of page_info adding contextual info to existing'''
         data = {}
-        for n in ["cited_links", "cited_links_ids", "cited_domains", "title", "text", "keywords", "generators", "status", "code", "msg", "date"]:
+        for n in ["cited_links", "cited_links_ids", "cited_domains", "title", "text","html", "keywords", "generators", "status", "code", "msg", "date"]:
             try:
-                data[n] = self.__dict__[n]
+                data[n] = {"$each":[self.__dict__[n]], "$position":0}
+            
             except KeyError:
-                data[n] = None
+                data[n] = {"$each":[None], "$position":0}
             
         return data
-        
-    def set_last(self):
-        data = {}
-        for n in ["cited_links_ids", "title", "text", "status", "code", "msg", "date"]:
-            try:
-                data["last_"+n] = self.__dict__[n]
-            except KeyError:
-                data["last_"+n] = None
-        return data
-        
                 
     def get_status(self):
         data = {}
@@ -482,5 +475,7 @@ if __name__ == "__main__":
     #~ config = {'filter_lang':"fr","max_depth":10, "query": "(COP 21) OR (COP21)", "filter":True, "directory":"./projects/COP21/"}
     #~ a = Page(item, config)
     #~ a.process()
-    #~ print a.get_status()
+    #~ a.set_data()
+    #~ a.add_data()
+    
     pass

@@ -23,7 +23,7 @@ import requests
 #from report import send_mail, generate_report
 from database import *
 from article import Page
-from logger import *
+
 from report import Stats
 
 ABSPATH = os.path.dirname(os.path.abspath(sys.argv[0]))
@@ -33,27 +33,31 @@ MAX_RESULTS = 1000
 #max depth
 DEPTH = 100
 
+#import logging
+
+
 
 class Crawtext(object):
     def __init__(self, name):
-        #logger.debug("_init_")
         self.name = name
         dt1 = dt.today()
         self.date = dt1.replace(minute=0, second=0, microsecond=0)
         self.task_db = TaskDB()
         self.coll = self.task_db.coll
-        self.report = Stats(self.name)
-        
+        #report
+        #self.report = Stats(self.name)
+        self.stats = None
         
                 
     def start(self, user_input=None):
+        '''starting project'''
         if type(user_input) != dict :
              sys.exit("Wrong format args")
         
         self.task = self.coll.find_one({"name": self.name})
         if self.task is None:
             #Project doesn't exits
-            logger.info("No project %s found. Creating the project" %self.name)
+            print("No project %s found. Creating the project" %self.name)
             if self.create(user_input) is False:
                 sys.exit("Fail to create a new project")
             
@@ -65,12 +69,12 @@ class Crawtext(object):
         if self.add_seeds() is False:
             sys.exit("No seeds found ")
         else:
-            
             self.report.report_start()
             self.global_crawl()
             return True
                 
     def load_data(self):
+        '''Load the data store of the projects'''
         logger.info("Loading data from project db")
         self.project = Database(self.name)
         self.data = self.project.set_coll("data", "url")
@@ -103,7 +107,7 @@ class Crawtext(object):
                     for doc in self.data.find({"depth":0}):
                         #print doc
                     #print doc["status"][-1]
-                        if doc["last_status"] is True:
+                        if doc["status.0"] is True:
                             try:
                                 self.queue.insert_one(doc)
                             except pymongo.errors.DuplicateKeyError:
@@ -149,7 +153,7 @@ class Crawtext(object):
         - next: ["month", "week", "day", "year"]
         - short_export: a short version of results without sources (True/False)
         """
-        #logger.debug("Load default project")
+        logger.debug("Load default project")
         #params
         params = {"name": self.name}
         for k in ["query", "file", "url", "key", "search_nb", "filter_lang", "user", "max_depth", "repeat", "data", "format", "short_export", "next"]:
@@ -190,7 +194,7 @@ class Crawtext(object):
                 params[k] = user_input[k]
         
         if len(params.items()) == 0:
-            logger.debug("Project %s has no parameters.Please add some parameters to activate the crawl" %self.name)
+            logger.debug("Project %s has no parameters. Please add some parameters to activate the crawl" %self.name)
             return False
         else:
             if default_project["query"] is not False:
@@ -381,7 +385,7 @@ class Crawtext(object):
                     
                     #on cree et insere la page
                     self.data.insert_one(page.set_data())
-                    self.data.update_one({"url":item["url"]}, {"$set":page.set_last(), "$inc":{"crawl_nb":1}})
+                    #self.data.update_one({"url":item["url"]}, {"$set":page.set_last(), "$inc":{"crawl_nb":1}})
                     
                     if page.status:
                         cpt = 0
@@ -395,13 +399,22 @@ class Crawtext(object):
                                         continue
                                 else: continue
                             print "adding %i new urls in queue  with depth %i" %(cpt, page.depth+1)
-                        #self.data.update_one({"url":item["url"]}, {"$set":{"type":"page"}})
-                    #else:
-                        #self.data.update_one({"url":item["url"]}, {"$set":{"type":"log"}})
+                            self.data.update_one({"url":item["url"]}, {"$set":{"type": "page"}})
+                    else:
+                        self.data.update_one({"url":item["url"]}, {"$set":{"type": "log"}})
+                    
+                    self.data.update_one({"url":item["url"]}, {"$push":page.add_data()})
                     self.queue.delete_one({"url": item["url"]})
                     continue
                     
                 except pymongo.errors.DuplicateKeyError:
+                    #~ if page.status:
+                        #~ self.data.update_one({"url":item["url"]}, {"$set":{"type": "page"})
+                    #~ else:
+                        #~ self.data.update_one({"url":item["url"]}, {"$set":{"type": "log"})
+                    #self.data.update_one({"url":item["url"]}, {"$push":page.add_data()}
+                    
+                        
                     self.queue.delete_one({"url": item["url"]})
                     continue
                     #check_last_modif
@@ -417,6 +430,7 @@ class Crawtext(object):
                         #~ self.queue.delete_one({"url":item['url']})
                         #~ continue
                     #~ else:
+                    
                         #check_last_modif
                         #####################"
                         #~ #if self.has_modification():
@@ -478,62 +492,13 @@ class Crawtext(object):
             pass
                     
     def report(self):
-        #logger.debug("Report")
-        self.load_project()
-        #self.load_data()
-        self.create_dir()
-        if self.user is False:
-            self.user = __author__
-        #data = self.show_project()
-        if send_mail(self.user, self.project) is True:
-            #logger.debug("A report email has been sent to %s\nCheck your mailbox!" %self.user)
-            try:
-                self.update_status(self.task['name'], "report : mail")
-            except pymongo.errors.OperationFailure:
-                pass
-        else:
-            #logger.debug("Impossible to send mail to %s\nCheck your email!" %self.user)
-            try:
-                self.update_status(self.task['name'], "report : mail", False)
-            except pymongo.errors.OperationFailure:
-                pass
-            
-        if generate_report(self.task, self.project, self.directory):
-            #self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"report: document", "status": True, "date": self.date, "msg": "Ok"}})
-            try:
-                self.update_status(self.task['name'], "report : doc")
-            except pymongo.errors.OperationFailure:
-                pass
-            #logger.debug("Report sent and stored!")
-            return sys.exit(0)
-        else:
-            #self.coll.update({"_id": self.task['_id']}, {"$push": {"action":"report: document", "status": False, "date": self.date, "msg": "Unable to create report document"}})
-            try:
-                self.update_status(self.task['name'], "report : doc", False)
-            except pymongo.errors.OperationFailure:
-                pass
-            return sys.exit("Report failed")
+        self.stats = Stats(self.name)
+        print stats.get_full_stats()
+        #return sys.exit("Report failed")
     
-    '''def export(self):
-        self.load_project()
-        self.create_dir()
-
-        #logger.debug("Export")
-        from export import generate
-        if generate(self.name, self.data, self.format, self.directory):
-            try:
-                self.update_status(self.task['name'], "export")
-            except pymongo.errors.OperationFailure:
-                pass
-            #logger.debug("Export done!")
-            return sys.exit()
-        else:
-            try:
-                self.update_status(self.task['name'], "export", False)
-            except pymongo.errors.OperationFailure:
-                pass
-            return sys.exit("Failed to export")
-    '''
+    def export(self):
+        if self.stats is None:
+            self.stats = Stats(self.name)
     
     def delete(self, with_dir=False):
         self.task = self.coll.find_one({"name": self.name})
@@ -585,6 +550,11 @@ class Crawtext(object):
 
 if __name__ == "__main__":
     dict_params = {"key":"J8zQNrEwAJ2u3VcMykpouyPf4nvA6Wre1019v/dIT0o","query":"(COP21) OR (COP 21)", "user":"4barbes@gmail.com", "max_depth":"3"}
-    c = Crawtext("COP_23_test")
-    c.start(dict_params)
+    c = Crawtext("COP_24_test")
+    #c.start(dict_params)
+    c.report()
+    #c.start(dict_params)
+    #s = Stats("COP_23_test2")
+    #COP_23_testprint s.get_full_stats()
+    #c.start(dict_params)
     

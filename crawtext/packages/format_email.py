@@ -1,6 +1,9 @@
 from jinja2 import Template
 from jinja2 import Environment, PackageLoader
+from jinja2 import FileSystemLoader
 from premailer import transform
+import smtplib
+from private import username, passw
 
 def createhtmlmail(html, text, subject, fromEmail):
     """Create a mime-message that will render HTML in popular
@@ -70,15 +73,15 @@ def mail_it(title, msg, user, fromaddrs ="crawlbot@playlab.paris"):
     server.quit()
     return True
 
-def send_mail(user, template_name, values):
+def send_mail(user, template_name, values, txt):
     fromaddrs = "crawlbot@playlab.paris"
-    
-    env = Environment()
-    env.get_template("./"+template_name+".html")
-    html = template.render(**values)
+    #env = Environment(loader=FileSystemLoader('./'))
+    env = Environment(loader=PackageLoader('packages', 'templates'))
+    tpl = "./"+template_name
+    template = env.get_template(tpl)
+    html = template.render(stats=values)
     html = transform(html)
-    text = "\n".join(values.items())
-    if template_name == "crawl":
+    if template_name == "crawl.html":
         title = "CrawText | %s | Crawl StatS" %values["project_name"]
     
     else:
