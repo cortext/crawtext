@@ -49,31 +49,10 @@ class Stats(object):
         params_values = []
         if task is None:
             return sys.exit("No Project found")
-        for k, v in task.items():
-            if type(v) == list:
-                try:
-                    if type(v[0]) == datetime:
-                        setattr(self, "last_date", v[0].strftime("%d %B %Y %H:%M"))
-                        setattr(self, "date_nb", v[0].toordinal())
-                    else:
-                        setattr(self, "last_"+k, v[0])
-                    params_values.append("last_"+k)
-                except IndexError:
-                    pass
-            elif k == "data":
-                continue
-            else:
-                setattr(self, k, v)
-                params_values.append(k)
-        try:
-            setattr(self, "created_at", task["date"][0].strftime("%d %B %Y %H:%M"))
-            setattr(self, "now",self.date.strftime("%d %B %Y %H:%M"))
-            params_values.extend(["created_at", "now"])
-            return params_values
-        except IndexError:
-            return params_values
-        except KeyError:
-            return params_values
+        else:
+            task["now"] = self.date.strftime("%d %B %Y %H:%M")
+            task["project_name"] = self.name
+            return task
             
     def get_sources(self):
         return {"results":self.data.count({"depth":0, "status.0": True}), "logs":self.data.count({"depth":0, "status.0": False}) ,"total": self.data.count({"depth":0})}
@@ -147,8 +126,8 @@ class Stats(object):
     
     def report(self, type=["crawl","action"], format="mail",):
         '''Create canvas for report'''
-        if self.stats is None:
-            self.stats = self.get_full_stats()
+        #~ if self.stats is None:
+            #~ self.stats = self.get_full_stats()
             
         if format in ["shell", "print", "debug", "terminal"]:
             return self.show()
@@ -162,13 +141,18 @@ class Stats(object):
                         if self.user is False:
                             send_mail(__author__, "crawl.html", stats, self.text())
                         else:
-                            send_mail([self.user,__author__], "crawl.html", stats, self.text())
+                            send_mail([self.user,__author__], "crawl.html",stats, self.text())
                     #~ else:
                         #~ if self.user is False:
                             #~ 
                             #~ send_mail(__author__, "action", self.data.update({"params":self.params_report()}))
                         #~ else:
                             #~ send_mail([self.user,__author__], "report.html", self.data.update({"params":self.params_report()}))
+                    else:
+                        stats = self.get_task()
+                        stats["action"] = t
+                        stats["project_name"] = self.name
+                        send_mail(__author__, "info.html", stats, "\n".join(stats))
                             
             elif format in ["html"]:
                 raise NotImplementedError
@@ -262,8 +246,8 @@ class Stats(object):
 
 if __name__=="__main__":
     #test
-    new_project = "RRI"
+    new_project = "COP_24_test"
     s1 = Stats(new_project)
     
-    s1.report()
+    s1.report(["created"])
     pass
