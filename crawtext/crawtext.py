@@ -494,6 +494,7 @@ class Crawtext(object):
     def report(self):
         self.stats = Stats(self.name)
         print stats.get_full_stats()
+        return 
         #return sys.exit("Report failed")
     
     def export(self):
@@ -545,16 +546,15 @@ class Crawtext(object):
             except KeyError:
                 self.coll.remove(n)
         return sys.exit(0)
-
-
+    def report(self, type=["crawl","action"], format="mail",):
+        s = Stats(self.name)
+        return s.report(type, format)
+        
 
 if __name__ == "__main__":
     dict_params = {"key":"J8zQNrEwAJ2u3VcMykpouyPf4nvA6Wre1019v/dIT0o","query":"(COP21) OR (COP 21)", "user":"4barbes@gmail.com", "max_depth":"3"}
     c = Crawtext("COP_24_test")
-    #c.start(dict_params)
-    c.report()
-    #c.start(dict_params)
-    #s = Stats("COP_23_test2")
-    #COP_23_testprint s.get_full_stats()
-    #c.start(dict_params)
+    c.start(dict_params)
+    c.report(["crawl", "finished"])
+    
     
