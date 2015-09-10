@@ -142,7 +142,7 @@ class Stats(object):
                         if task["user"] is False:
                             send_mail(__author__, "crawl.html", stats, self.text())
                         else:
-                            send_mail([self.user,__author__], "crawl.html",stats, self.text())
+                            send_mail(task["user"], "crawl.html",stats, self.text())
                     #~ else:
                         #~ if self.user is False:
                             #~ 
