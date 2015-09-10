@@ -137,8 +137,9 @@ class Stats(object):
                     if t == "crawl":
                         stats = self.get_full_stats()
                         stats["project_name"] = self.name
-                        print stats
-                        if self.user is False:
+                        task = self.get_task()
+                        
+                        if task["user"] is False:
                             send_mail(__author__, "crawl.html", stats, self.text())
                         else:
                             send_mail([self.user,__author__], "crawl.html",stats, self.text())
