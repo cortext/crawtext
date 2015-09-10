@@ -217,71 +217,29 @@ ul li, ol li {
             <table>
                 <tr>
                     <td>
-                        <span>Report generated at {{now}}</span>
-                        <h3>Project : '<b>{{project_name}}</b>'</h3>
-                        <p>Created at :{{task["creation_date"}} </p>
-                        <p>Updated at :{{params["date"][-1]}} </p>
+                        <span>Report generated at {{stats["now"]}}</span>
+                        <h3>Project : '<b>{{stats["name"]}}</b>' has been successfully {{stats["action"]}}</h3>
+                        
                         <p> <ul>with the following parameters:
-                            {% for k, v in stats["params"].items() %}
-                            <li>{{k}} : {{v}}</li>
-                            {% endfor %}
-                            </ul>
-                        <p>
-                        <table>
-                            <thead>
-                                <h2>{{params["project_name"]}}</h2>
-                                <h5>{{params["action"]}}</h5>
+                            {% for k, v in stats.items() %}
+                            {%if v != False  %}
                             
-                            </thead>
-                            <tbody>
-                            <tr>
-                            <h3>Parameters</h3>
-                            </tr>
-                            <tr class="padding">
-                            {% for k, v in params.items() %}
-                            
-                            
+                                {%if k in ["status", "msg", "date", "error"] %}
                                 
-                                <td>
-                                    <em>{{k}}</em>:{{v}}
-                                </td>
-                            {% endfor %}
-                            </tr>
-                            <tr>
-                            <h3>Overview of the project!</h3>
-                            </tr>
-                            <tr>
-                                <td><a class="btn-blue">Consult your project</a></td>
-                                <td><a class="btn-orange">Stop crawl</a></td>
-                                <td><a class="btn-green">Export crawl</a></td>
-                                <td><a class="btn-red" href="">Get rid of this stupid email</a></td>
-                            </tr>
+                                {% for i in v %}
+                                <li><strong>{{k}}</strong>:</li>
+                                <ul>
+                                    <li>{{i}}</li>
+                                    </ul>
+                                {% endfor %}
+                                {%else%}
+                                <li><strong>{{k}}</strong>: {{v}}</li>
+                                {%endif%}
+                            {%endif%}
                             
-                            </table>
-                        
-                        <table>
-                            <tr>
-                            <h3>Get back to your project!</h3>
-                            </tr>
-                            <tr>
-                                <td><a class="btn-blue">Consult your project</a></td>
-                                <td><a class="btn-orange">Stop crawl</a></td>
-                                <td><a class="btn-green">Export crawl</a></td>
-                                <td><a class="btn-red" href="">Get rid of this stupid email</a></td>
-                            </tr>
-                        </table>
-                        
-                        <p>Have a lovely day!</p>
-                        <p><a href="http://playlab.paris/contact">Playlab Team</a></p>
-                    </td>
-                </tr>
-            </table>
-            </div>
-            <!-- /content -->
-            
-        </td>
-        <td></td>
-    </tr>
+                            {% endfor %}
+                        </p>
+                            
 </table>
 <!-- /body -->
 
