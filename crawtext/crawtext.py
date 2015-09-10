@@ -208,7 +208,7 @@ class Crawtext(object):
         #params = [k for k,v in self.task.items() if v is not False and k in ["file", "url", "key"]]
         self.add_seeds()
         
-        self.report.report_start("mail")
+        self.report(["created"])
         return True
     
     def update(self, user_input):
@@ -240,7 +240,7 @@ class Crawtext(object):
             else:
                 pass
             self.coll.update_one({"name": self.name}, {"$push": {"status": True, "code":100, "msg": "udpated", "date": self.date}, "action": "updated"})
-            self.report.report_start("mail")
+            self.report(["updated"])
             return True
         
     
@@ -358,7 +358,7 @@ class Crawtext(object):
         while self.queue.count() > 0:
             print "%i urls in process" %self.queue.count()
             print "in which %i sources in process" %self.queue.count({"depth":0})
-            self.report.report("mail")
+            self.report(["crawl"]
             for item in self.queue.find(no_cursor_timeout=True).sort([('depth', pymongo.ASCENDING)]):
                 print "%i urls in process" %self.queue.count()
                 
