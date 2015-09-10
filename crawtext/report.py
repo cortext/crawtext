@@ -38,7 +38,7 @@ class Stats(object):
         self.project = name
         if params is not None and type(params) is dict:
             self.params = params
-        self.get_task()
+        self.task = self.get_task()
         self.stats = None
         
     def get_task(self):
@@ -180,9 +180,10 @@ class Stats(object):
 
     def export(self, format ="json", directory="", depth_limit = None):
         
-        if self.format is False:
+        if self.task["format"] is False:
             self.format = format
-        
+        else:
+            self.format = task["format"]
         if self.format not in ["json", "csv", "sql", "mongodb", "mongo"]:
             sys.exit("Wrong export format")
         
