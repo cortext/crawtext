@@ -491,11 +491,11 @@ class Crawtext(object):
         except pymongo.errors.OperationFailure:
             pass
                     
-    def report(self):
-        self.stats = Stats(self.name)
-        print stats.get_full_stats()
-        return 
-        #return sys.exit("Report failed")
+    #~ def report(self):
+        #~ self.stats = Stats(self.name)
+        #~ print stats.get_full_stats()
+        #~ return 
+        #~ #return sys.exit("Report failed")
     
     def export(self):
         if self.stats is None:
