@@ -61,14 +61,14 @@ class Crawtext(object):
             if self.create(user_input) is False:
                 sys.exit("Fail to create a new project")
             else:
-                print ("Creating project %s" %self.name)
+                print("Creating project %s" %self.name)
         else:
             logger.info("Project %s found. Udpating the project" %self.name)
             if self.update(user_input) is False:
                 logger.info("No parameters to update")
                 
         if self.add_seeds() is False:
-            sys.exit("No seeds found ")
+            sys.exit("No seeds found")
         else:
             self.report(["init"])
             self.global_crawl()
