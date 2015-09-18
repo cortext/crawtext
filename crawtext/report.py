@@ -48,7 +48,8 @@ class Stats(object):
         task = db.coll.find_one({"name":self.project})
         params_values = []
         if task is None:
-            return sys.exit("No Project found")
+            print "No Project found"
+            return None
         else:
             task["now"] = self.date.strftime("%d %B %Y %H:%M")
             task["project_name"] = self.name
@@ -137,9 +138,7 @@ class Stats(object):
                     if t == "crawl":
                         stats = self.get_full_stats()
                         stats["project_name"] = self.name
-                        task = self.get_task()
-                        
-                        if task["user"] is False:
+                        if task is None or task["user"] is False:                            
                             send_mail(__author__, "crawl.html", stats, self.text())
                         else:
                             send_mail(task["user"], "crawl.html",stats, self.text())
