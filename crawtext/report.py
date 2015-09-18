@@ -150,9 +150,12 @@ class Stats(object):
                             #~ send_mail([self.user,__author__], "report.html", self.data.update({"params":self.params_report()}))
                     else:
                         stats = self.get_task()
-                        stats["action"] = t
-                        stats["project_name"] = self.name
-                        send_mail(__author__, "info.html", stats, "\n".join(stats))
+                        if stats is not None:
+                            stats["action"] = t
+                            stats["project_name"] = self.name
+                            send_mail(__author__, "info.html", stats, "\n".join(stats))
+                        else:
+                            pass
                             
             elif format in ["html"]:
                 raise NotImplementedError
