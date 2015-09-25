@@ -126,6 +126,9 @@ class Crawtext(object):
                 crawl_date = (crawl_date).replace(hour=0)
                 if crawl_date == date:
                     return True
+                else:
+                    params = [k for k, v in self.task.items() if k in ["file", "url", "key"] and v is not False]
+                    self.add_sources(params)
             except IndexError:
             
                 #redo research
@@ -253,14 +256,17 @@ class Crawtext(object):
         try:
             self.data.insert_one(info.set_data())
         except pymongo.errors.DuplicateKeyError:
-            date = self.date.replace(hour=0)
-            p_date = (info.date[-1]).replace(hour=0)
-            if p_date == date:
-                print "Already in processing queue today. No need to update then!"
-                #self.queue.delete_one({"url":info.url})
-                #return self.queue
-                pass
-            else:
+            try:
+                date = self.date.replace(hour=0)
+                p_date = (info.date[-1]).replace(hour=0)
+                if p_date == date:
+                    print "Already in processing queue today. No need to update then!"
+                    #self.queue.delete_one({"url":info.url})
+                    #return self.queue
+                    pass
+                else:
+                    self.data.update_one({"url":url, "depth":0}, {"$push":info.add_data()})
+            except IndexError:
                 self.data.update_one({"url":url, "depth":0}, {"$push":info.add_data()})
         
         if self.task["repeat"]:
