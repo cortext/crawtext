@@ -120,12 +120,14 @@ class Crawtext(object):
                     
         else:
             #already queue awaiting to be processed
-            crawl_date = self.coll.find_one({"name": self.name})["date"][-1]
-            date = self.date.replace(hour=0)
-            crawl_date = (crawl_date).replace(hour=0)
-            if crawl_date == date:
-                return True
-            else:
+            try:
+                crawl_date = self.coll.find_one({"name": self.name})["date"][-1]
+                date = self.date.replace(hour=0)
+                crawl_date = (crawl_date).replace(hour=0)
+                if crawl_date == date:
+                    return True
+            except IndexError:
+            
                 #redo research
                 params = [k for k, v in self.task.items() if k in ["file", "url", "key"] and v is not False]
                 self.add_sources(params)
