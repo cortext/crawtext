@@ -70,7 +70,7 @@ class Crawtext(object):
         if self.add_seeds() is False:
             sys.exit("No seeds found")
         else:
-            self.report(["init"])
+            #self.report(["init"])
             self.global_crawl()
             return True
                 
@@ -206,9 +206,8 @@ class Crawtext(object):
         self.coll.update_one({"name": self.name}, {"$push": {"status": True, "code":100, "msg": "created", "date": self.date, "action": "create"}})
         self.task = self.coll.find_one({"name": self.name})
         #params = [k for k,v in self.task.items() if v is not False and k in ["file", "url", "key"]]
-        self.add_seeds()
-        
-        self.report(["created"])
+        if self.add_seeds():
+            self.report(["created"])
         return True
     
     def update(self, user_input):
@@ -454,12 +453,12 @@ class Crawtext(object):
                     #~ self.data.update_one({"url":item["url"]}, {"$push": {"msg":str(e), "status":False, "code":909, "date": self.date }})
                     #~ self.queue.delete_one({"url": item["url"]})
                     #~ continue
-            s.report("mail")
+            self.report(["crawl"])
                     
         logger.debug("***************END********")
         #s = Stats(self.name)
         #s.show(self)
-        self.report.report("mail")
+        self.report(["crawl"])
         return True
         
                     
@@ -531,14 +530,6 @@ class Crawtext(object):
         db.drop_db()
         #logger.debug("Database %s: sucessfully deleted" %self.name)
         return True
-        
-    def list_projects(self):
-        for n in self.coll.find():
-            try:
-                print "-", n["name"]
-            except KeyError:
-                self.coll.remove(n)
-        return sys.exit(0)
 
     def list_projects(self):
         for n in self.coll.find():
@@ -547,6 +538,7 @@ class Crawtext(object):
             except KeyError:
                 self.coll.remove(n)
         return sys.exit(0)
+    
     def report(self, type=["crawl","action"], format="mail",):
         s = Stats(self.name)
         return s.report(type, format)
