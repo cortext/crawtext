@@ -163,27 +163,10 @@ class Stats(object):
             raise NotImplementedError
     
     
-    #~ def report(self, type=["crawl", "action"]):
-        #~ for n in type:
-            #~ if n == "crawl":
-                #~ if self.user is None:
-                    #~ send_mail(__author__, n, self.get_full_stats())
-                #~ else:
-                    #~ send_mail(self.user, n, self.get_full_stats())
-            #~ else:
-                #~ if self.user is None:
-                    #~ send_mail(__author__, n, self.get_short_stats())
-                #~ else:
-                    #~ send_mail(self.user, n, self.get_short_stats())
-                        
-    
-        
-    
-
-    def export(self, format ="json", directory="", depth_limit = None):
+    def export(self, file_format ="json", directory=None, depth_limit = None):
         
         if self.task["format"] is False:
-            self.format = format
+            self.format = file_format
         else:
             self.format = task["format"]
         if self.format not in ["json", "csv", "sql", "mongodb", "mongo"]:
@@ -195,63 +178,72 @@ class Stats(object):
             completed_depth = depth_limit
             
         else:
-            completed_depth = int(self.current_level() - 1)
+            try:
+                completed_depth = int(self.current_level() - 1)
+            except IndexError:
+                completed_depth = 2
         if directory is None:
             directory = os.path.join(RESULT_PATH, self.project)
-                
-        query_str = '{last_status:true,depth:{$lte:%i}}, {\"_id\": 0, \"last_cited_links_ids\":1, \"last_title\":1, \"last_text\":1, \"last_status\":1, \"last_date\":1, \"depth\":1, \"url\":1, \"url_id\":1}' %completed_depth
-        query, projection = {"last_status":True,"depth":{"$lte":completed_depth}},{"_id": 0, "last_cited_links_ids":1, "last_title":1, "last_text":1, "last_status":1, "last_date":1, "depth":1, "url":1, "url_id":1}
-        
-        
-        outfile = os.path.join(directory, "results_export"+self.date.strftime("%d%B%Y_%H-%M")+"."+str(format))
-        
-        if self.format == "json":
-            query = "\'"+query+"\'"
-            cmds = ["mongoexport", "--db",self.project,"--collection","data","--query",query_str, "--out",outfile]
-            print " ".join(cmds)
-            subprocess.call(" ".join(cmds), shell=True)
-            count = ["cat", outfile, "|", "wc", "-l"]
-            results_nb = subprocess.call(count, shell=False)
-            logging.info("Exported %s records into %s" %(results_nb, outfile))
-            return 
-        elif self.format == "csv":
-            raise NotImplementedError
-        elif format == "sql":
-            raise NotImplementedError
-        elif str(self.format).startswith("mongo"):
-            try:
-                self.results = self.c.set_coll("results", "url")
-            except pymongo.errors.DuplicateKeyError:
-                self.c.drop_coll("results")
-                self.results = self.c.set_coll("results", "url")
-            res = self.data.find({"last_status":True,"depth":{"$lte":completed_depth}}, {"_id": 0, "last_cited_links_ids":1, "last_title":1, "last_text":1, "last_status":1, "last_date":1, "depth":1, "url":1, "url_id":1})
-            for n in res:
-                try:
-                    self.results.insert_one(n)
-                except pymongo.errors.DuplicateKeyError:
-                    pass
-                
+        results_fields = defaultdict.fromkeys([u'cited_domains', u'extension', u'title', u'url', u'source_url', u'date', u'depth', u'url_id', u'cited_links', u'cited_links_ids',u'crawl_nb'], 1)
+        for n in self.data.find({"status.0":True},{"_id":1}):
+            print(n.findOne({"_id": n["_id"]},results_fields))
             
-            try: 
-                self.logs = self.c.set_coll("logs", "urls")
-            except pymongo.errors.DuplicateKeyError:
-                self.c.drop_coll("logs")
-                self.logs = self.c.set_coll("logs", "url")
-            log = self.data.find({"last_status":False,"depth":{"$lte":completed_depth}}, {"_id": 0, "last_msg":1, "last_date":1, "depth":1, "url":1, "url_id":1})
-            for n in log:
-                try:
-                    self.logs.insert_one(n)
-                except pymongo.errors.DuplicateKeyError:
-                    pass
-            logging.info("Exported %i records into %s and %i into %s collections of %s db for %i steps" %(self.logs.count(),"logs", self.results.count(),"results",  self.project, completed_depth))
-            return True
-        else:
-            sys.exit("Unknown export format")
 
-if __name__=="__main__":
-    #test
-    new_project = "COP_24_test"
-    s1 = Stats(new_project)
+            break
+        #query_str = '{last_status:true, depth:{$lte:%i}}, {\"_id\": 0, \"last_cited_links_ids\":1, \"last_title\":1, \"last_text\":1, \"last_status\":1, \"last_date\":1, \"depth\":1, \"url\":1, \"url_id\":1}' %completed_depth
+        #query, projection = {"last_status":True,"depth":{"$lte":completed_depth}},{"_id": 0, "last_cited_links_ids":1, "last_title":1, "last_text":1, "last_status":1, "last_date":1, "depth":1, "url":1, "url_id":1}
+        
+        
+        outfile = os.path.join(directory, "results_export"+self.date.strftime("%d%m%Y_%H-%M")+"."+str(format))
+        
+        #~ if self.format == "json":
+            #~ query_str = "\""+str(query)+"\""
+            #~ cmds = ["mongoexport", "--db",self.project,"--collection","data","--query", query_str, "--out",outfile]
+            #~ print " ".join(cmds)
+            #~ subprocess.call(" ".join(cmds), shell=True)
+            #~ count = ["cat", outfile, "|", "wc", "-l"]
+            #~ results_nb = subprocess.call(count, shell=False)
+            #~ logging.info("Exported %s records into %s" %(results_nb, outfile))
+            #~ return 
+        #~ elif self.format == "csv":
+            #~ raise NotImplementedError
+        #~ elif format == "sql":
+            #~ raise NotImplementedError
+        #~ elif str(self.format).startswith("mongo"):
+            #~ try:
+                #~ self.results = self.c.set_coll("results", "url")
+            #~ except pymongo.errors.DuplicateKeyError:
+                #~ self.c.drop_coll("results")
+                #~ self.results = self.c.set_coll("results", "url")
+            #~ res = self.data.find({"last_status":True,"depth":{"$lte":completed_depth}}, {"_id": 0, "last_cited_links_ids":1, "last_title":1, "last_text":1, "last_status":1, "last_date":1, "depth":1, "url":1, "url_id":1})
+            #~ for n in res:
+                #~ try:
+                    #~ self.results.insert_one(n)
+                #~ except pymongo.errors.DuplicateKeyError:
+                    #~ pass
+                #~ 
+            #~ 
+            #~ try: 
+                #~ self.logs = self.c.set_coll("logs", "urls")
+            #~ except pymongo.errors.DuplicateKeyError:
+                #~ self.c.drop_coll("logs")
+                #~ self.logs = self.c.set_coll("logs", "url")
+            #~ log = self.data.find({"last_status":False,"depth":{"$lte":completed_depth}}, {"_id": 0, "last_msg":1, "last_date":1, "depth":1, "url":1, "url_id":1})
+            #~ for n in log:
+                #~ try:
+                    #~ self.logs.insert_one(n)
+                #~ except pymongo.errors.DuplicateKeyError:
+                    #~ pass
+            #~ logging.info("Exported %i records into %s and %i into %s collections of %s db for %i steps" %(self.logs.count(),"logs", self.results.count(),"results",  self.project, completed_depth))
+            #~ return True
+        #~ else:
+            #~ sys.exit("Unknown export format")
+
+#~ if __name__=="__main__":
     
-    s1.report(["created"])
-    pass
+    #test
+    #~ new_project = "COP_24_test"
+    #~ s1 = Stats(new_project)
+    #~ 
+    #~ s1.report(["created"])
+    #~ pass
