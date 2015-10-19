@@ -23,7 +23,6 @@ import requests
 #from report import send_mail, generate_report
 from database import *
 from article import Page
-
 from report import Stats
 
 ABSPATH = os.path.dirname(os.path.abspath(sys.argv[0]))
@@ -46,7 +45,7 @@ class Crawtext(object):
         self.coll = self.task_db.coll
         #report
         #self.report = Stats(self.name)
-        self.stats = None
+        #self.stats = None
         
                 
     def start(self, user_input=None):
@@ -70,7 +69,7 @@ class Crawtext(object):
         if self.add_seeds() is False:
             sys.exit("No seeds found")
         else:
-            #self.report(["init"])
+            #self.report()
             self.global_crawl()
             return True
                 
@@ -80,8 +79,8 @@ class Crawtext(object):
         self.project = Database(self.name)
         self.data = self.project.set_coll("data", "url")
         self.queue = self.project.set_coll("queue", "url")
-        print "%i urls in data" %(self.data.count())
-        print "%i urls to treat" %(self.queue.count())
+        print("%i urls in data" %(self.data.count()))
+        print("%i urls to treat" %(self.queue.count()))
         return self
         
     def add_seeds(self):
@@ -211,8 +210,8 @@ class Crawtext(object):
         self.coll.update_one({"name": self.name}, {"$push": {"status": True, "code":100, "msg": "created", "date": self.date, "action": "create"}})
         self.task = self.coll.find_one({"name": self.name})
         #params = [k for k,v in self.task.items() if v is not False and k in ["file", "url", "key"]]
-        if self.add_seeds():
-            self.report(["created"])
+        self.add_seeds()
+            #self.report()
         return True
     
     def update(self, user_input):
@@ -244,7 +243,7 @@ class Crawtext(object):
             else:
                 pass
             self.coll.update_one({"name": self.name}, {"$push": {"status": True, "code":100, "msg": "udpated", "date": self.date}, "action": "updated"})
-            self.report(["updated"])
+            #self.report()
             return True
         
     
@@ -260,7 +259,7 @@ class Crawtext(object):
                 date = self.date.replace(hour=0)
                 p_date = (info.date[-1]).replace(hour=0)
                 if p_date == date:
-                    print "Already in processing queue today. No need to update then!"
+                    print("Already in processing queue today. No need to update then!")
                     #self.queue.delete_one({"url":info.url})
                     #return self.queue
                     pass
@@ -279,7 +278,7 @@ class Crawtext(object):
                 except pymongo.errors.DuplicateKeyError:
                     continue
                 except pymongo.errors.WriteError:
-                    print "Error", link
+                    print("Error", link)
                     pass
         return self.queue
                 
@@ -290,7 +289,7 @@ class Crawtext(object):
         for k in to_update:
             
             if k == "url":
-                print "Adding source from", k, self.task[k]
+                print("Adding source from", k, self.task[k])
                 #logger.debug("Adding url %s from manual insert" %self.task[k])
                 url = self.task[k]
                 self.insert_url(url)
@@ -304,14 +303,14 @@ class Crawtext(object):
                 #logger.debug("Adding url from file %s" %url_file)
                 with open(url_file, 'r') as f:
                     for url in f.readlines():
-                        print "Adding source from", url_file, url
+                        print("Adding source from", url_file, url)
                         self.insert_url(url)
             else:
                 if self.task["query"] is False:
                     logger.warning("Please add a query to activate search")
                     continue
                 else:
-                    print "Adding source from search with query", self.task['query']
+                    print("Adding source from search with query", self.task['query'])
                     web_results = self.search(self.task["key"], self.task["query"], self.task["search_nb"])
                     logger.debug("\t> inserting %s urls from search on %s " %(len(web_results), self.task["query"]))
                     for nb,url in enumerate(web_results):
@@ -363,11 +362,11 @@ class Crawtext(object):
     def global_crawl(self):
         logger.debug("***************CRAWL********")
         while self.queue.count() > 0:
-            print "%i urls in process" %self.queue.count()
-            print "in which %i sources in process" %self.queue.count({"depth":0})
-            self.report(["crawl"])
+            print("%i urls in process" %self.queue.count())
+            print("in which %i sources in process" %self.queue.count({"depth":0}))
+            #self.report()
             for item in self.queue.find(no_cursor_timeout=True).sort([('depth', pymongo.ASCENDING)]):
-                print "%i urls in process" %self.queue.count()
+                print("%i urls in process" %self.queue.count())
                 
                 #~ #Once a day
                 #~ if self.task["repeat"] is False:
@@ -406,7 +405,7 @@ class Crawtext(object):
                                     except pymongo.errors.DuplicateKeyError:
                                         continue
                                 else: continue
-                            print "adding %i new urls in queue  with depth %i" %(cpt, page.depth+1)
+                            print("adding %i new urls in queue  with depth %i" %(cpt, page.depth+1))
                             self.data.update_one({"url":item["url"]}, {"$set":{"type": "page"}})
                     else:
                         self.data.update_one({"url":item["url"]}, {"$set":{"type": "log"}})
@@ -461,12 +460,12 @@ class Crawtext(object):
                     #~ self.data.update_one({"url":item["url"]}, {"$push": {"msg":str(e), "status":False, "code":909, "date": self.date }})
                     #~ self.queue.delete_one({"url": item["url"]})
                     #~ continue
-            self.report(["crawl"])
+            #self.report()
                     
         logger.debug("***************END********")
         #s = Stats(self.name)
         #s.show(self)
-        self.report(["crawl"])
+        #self.report()
         return True
         
                     
@@ -499,15 +498,19 @@ class Crawtext(object):
         except pymongo.errors.OperationFailure:
             pass
                     
-    #~ def report(self):
-        #~ self.stats = Stats(self.name)
-        #~ print stats.get_full_stats()
-        #~ return 
-        #~ #return sys.exit("Report failed")
+    def report(self):
+        self.stats = Stats(self.name)
+        print stats.get_full_stats()
+        
+        return sys.exit("Report failed")
     
     def export(self):
-        if self.stats is None:
+        try:
+            if self.stats is None:
+                self.stats = Stats(self.name)
+        except AttributeError:
             self.stats = Stats(self.name)
+        return self.stats.export()
     
     def delete(self, with_dir=False):
         self.task = self.coll.find_one({"name": self.name})
@@ -542,7 +545,7 @@ class Crawtext(object):
     def list_projects(self):
         for n in self.coll.find():
             try:
-                print "-", n["name"]
+                print("-", n["name"])
             except KeyError:
                 self.coll.remove(n)
         return sys.exit(0)
@@ -553,9 +556,10 @@ class Crawtext(object):
         
 
 if __name__ == "__main__":
+    #pass
     dict_params = {"key":"J8zQNrEwAJ2u3VcMykpouyPf4nvA6Wre1019v/dIT0o","query":"(COP21) OR (COP 21)", "user":"4barbes@gmail.com", "max_depth":"3"}
-    c = Crawtext("COP_24_test")
+    c = Crawtext("COP_29_test")
     c.start(dict_params)
-    c.report(["crawl", "finished"])
+    c.report()
     
     
