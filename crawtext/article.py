@@ -14,7 +14,7 @@ from bs4 import BeautifulSoup
 from readability.readability import Document
 import requests
 import errno
-
+from collections import defaultdict
 
 
 #from url import Link
@@ -409,7 +409,10 @@ class Page(object):
         #data = {}
         data = defaultdict.fromkeys(["cited_links", "cited_links_ids", "cited_domains", "title", "text","html", "keywords", "generators", "status", "code", "msg", "date"], None)
         for k in data.keys():
-            data[n] = self.__dict__[k]
+            try:
+                data[k] = self.__dict__[k]
+            except KeyError:
+                pass
         return data
                 
     def get_status(self):
@@ -420,15 +423,7 @@ class Page(object):
             except KeyError:
                 data[k] = None
         return data
-        
-                
-    
-    
-        
 
-    
-
-    
 if __name__ == "__main__":
     #test
     #~ item = {"url":"http://www.ifpeb.fr/", "source_url":"", "depth":0, "type":"source"}

@@ -40,12 +40,9 @@ class Crawtext(object):
     def __init__(self, name):
         self.name = name
         dt1 = dt.today()
-        self.date = dt1.replace(minute=0, second=0, microsecond=0)
+        self.date = dt1.replace(second=0, microsecond=0)
         self.task_db = TaskDB()
         self.coll = self.task_db.coll
-        #report
-        #self.report = Stats(self.name)
-        #self.stats = None
         
                 
     def start(self, user_input=None):
@@ -264,9 +261,9 @@ class Crawtext(object):
                     #return self.queue
                     pass
                 else:
-                    self.data.update_one({"url":url, "depth":0}, {"$push":info.add_data()})
+                    self.data.update_one({"url":url, "depth":0}, {"$set":info.set_data()})
             except IndexError:
-                self.data.update_one({"url":url, "depth":0}, {"$push":info.add_data()})
+                self.data.update_one({"url":url, "depth":0}, {"$set":info.set_data()})
         
         if self.task["repeat"]:
             self.data.update_one({"url":url}, {"$inc":{"crawl_nb":1}})
@@ -344,7 +341,7 @@ class Crawtext(object):
             #if msg is None:
                 
             for e in r.json()['d']['results']:
-                #print e["Url"]
+                print e["Url"]
                 web_results.append(e["Url"])
 
         if len(web_results) == 0:
@@ -367,33 +364,12 @@ class Crawtext(object):
             #self.report()
             for item in self.queue.find(no_cursor_timeout=True).sort([('depth', pymongo.ASCENDING)]):
                 print("%i urls in process" %self.queue.count())
-                
-                #~ #Once a day
-                #~ if self.task["repeat"] is False:
-                    #~ date = self.date.replace(hour=0)
-                    #~ p_date = p.date[-1].replace(hour=0)
-                    #~ if p_date == date:
-                        #~ print "Already treated today"
-                        #~ self.queue.delete_one({"url":p.url})
-                        #~ continue
-                  
-                #si c'est une source
-                #~ if item["depth"] == 0:
-                    #~ print "is source"
-                    #~ self.queue.delete_one({"url": item["url"]})
-                    #~ continue
-                #~ else:
-                
-                    
                 page = Page(item, self.task)
                 #pertinence
                 status = page.process()                    
-                try:
-                    
+                try:                    
                     #on cree et insere la page
                     self.data.insert_one(page.set_data())
-                    #self.data.update_one({"url":item["url"]}, {"$set":page.set_last(), "$inc":{"crawl_nb":1}})
-                    
                     if page.status:
                         cpt = 0
                         if page.depth+1 < page.max_depth:
@@ -410,62 +386,15 @@ class Crawtext(object):
                     else:
                         self.data.update_one({"url":item["url"]}, {"$set":{"type": "log"}})
                     
-                    self.data.update_one({"url":item["url"]}, {"$push":page.add_data()})
+                    self.data.update_one({"url":item["url"]}, {"$set":page.set_data()})
                     self.queue.delete_one({"url": item["url"]})
                     continue
                     
                 except pymongo.errors.DuplicateKeyError:
-                    #~ if page.status:
-                        #~ self.data.update_one({"url":item["url"]}, {"$set":{"type": "page"})
-                    #~ else:
-                        #~ self.data.update_one({"url":item["url"]}, {"$set":{"type": "log"})
-                    #self.data.update_one({"url":item["url"]}, {"$push":page.add_data()}
-                    
-                        
                     self.queue.delete_one({"url": item["url"]})
                     continue
-                    #check_last_modif
-                    #####################"
-                    #check_last_crawl
-                    ########################
-                    #~ date = self.date.replace(hour=0)
-                    #~ p_date = page.date[-1]
-                    #~ p_date = (p_date).replace(hour=0, day=p_date.day+1)
-                    #~ print p_date, date
-                    #~ if p_date == date:
-                        #~ print "Already treated today"
-                        #~ self.queue.delete_one({"url":item['url']})
-                        #~ continue
-                    #~ else:
-                    
-                        #check_last_modif
-                        #####################"
-                        #~ #if self.has_modification():
-                            #~ if page.status:
-                                #diff btw page.outlinks and last_page.outlinks
-                            
-                                #~ for outlink in page.outlinks:
-                                    #~ try:
-                                        #~ self.queue.insert_one(outlink)
-                                    #~ except pymongo.errors.DuplicateKeyError:
-                                        #~ continue
-                            
-                            #~ self.data.update_one({"url":item["url"]}, {"$push": page.add_info(),"$set":page.set_last(), "$inc":{"crawl_nb":1}})
-                        #~ else:
-                           #~ pass
-                        #~ self.data.update_one({"url":item["url"]}, {"$push": page.add_data(), "$inc":{"crawl_nb":1}})
-                        #~ self.queue.delete_one({"url": item["url"]})
-                        #~ continue
-                #~ except Exception as e:
-                    #~ self.data.update_one({"url":item["url"]}, {"$push": {"msg":str(e), "status":False, "code":909, "date": self.date }})
-                    #~ self.queue.delete_one({"url": item["url"]})
-                    #~ continue
-            #self.report()
-                    
+            self.report("crawl")
         logger.debug("***************END********")
-        #s = Stats(self.name)
-        #s.show(self)
-        #self.report()
         return True
         
                     
@@ -490,11 +419,9 @@ class Crawtext(object):
         for line in out.splitlines():
             if cmd in line:
                 pid = int([n for n in line.split(" ") if n != ""][0])
-                #pid = int(line.split(" ")[0])
-                #logger.warning("Current crawl project %s killed" %self.name)
                 os.kill(pid, signal.SIGKILL)
         try:
-            self.update_status(self.task["name"], "stop")
+            self.update_status(self.task["name"], {"$set":"stop"})
         except pymongo.errors.OperationFailure:
             pass
                     
@@ -560,6 +487,6 @@ if __name__ == "__main__":
     dict_params = {"key":"J8zQNrEwAJ2u3VcMykpouyPf4nvA6Wre1019v/dIT0o","query":"(COP21) OR (COP 21)", "user":"4barbes@gmail.com", "max_depth":"3"}
     c = Crawtext("COP_29_test")
     c.start(dict_params)
-    c.report()
+    c.report(["crawl"])
     
     
