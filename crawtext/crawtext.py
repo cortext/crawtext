@@ -117,7 +117,7 @@ class Crawtext(object):
         else:
             #already queue awaiting to be processed
             try:
-                crawl_date = self.coll.find_one({"name": self.name})["date"][-1]
+                crawl_date = self.coll.find_one({"name": self.name})["date"]
                 date = self.date.replace(hour=0)
                 crawl_date = (crawl_date).replace(hour=0)
                 if crawl_date == date:
