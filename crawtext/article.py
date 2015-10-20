@@ -405,51 +405,11 @@ class Page(object):
         pass
     #@debug
     def set_data(self):
-        '''Set data : creating default page info'''
-        data = {}
-        for n in ["date", "url", "url_id","url", "cited_links", "cited_links_ids","source_url", "cited_domains", "title", "text","html", "keywords", "generators", "extension", "filetype", "depth", "crawl_nb", "status", "msg", "date", "code", "lang"]:
-            #unique info
-            if n in ["url_id","url","extension", "filetype", "depth", "crawl_nb", "source_url", "type", "lang"]:
-                if n in ["type"]:
-                    if self.depth == 0:
-                        data["type"] = "source"
-                    else:
-                        if self.status is True:
-                            data["type"] = "page"
-                        else:
-                            data["type"] = "log"
-                else:        
-                    try:
-                        #conserver le type de donnée
-                        data[n] = self.__dict__[n]
-                    except KeyError:
-                        if n in ["crawl_nb", "depth"]:
-                            data[n] = 0
-                        else:
-                            data[n] = None
-            #multiple info
-            else:
-                try:
-                    data[n] = [self.__dict__[n]]
-                    
-                except KeyError:
-                    data[n] = [None]
-        #meta_data
-        #~ for k, v in self.meta.items():
-            #~ data["meta_"+k] = v
-        return data
-    
-    #@debug
-    def add_data(self):
-        '''Add data : updating values of page_info adding contextual info to existing'''
-        data = {}
-        for n in ["cited_links", "cited_links_ids", "cited_domains", "title", "text","html", "keywords", "generators", "status", "code", "msg", "date"]:
-            try:
-                data[n] = {"$each":[self.__dict__[n]], "$position":0}
-            
-            except KeyError:
-                data[n] = {"$each":[None], "$position":0}
-            
+        '''Add data : updating values of page_info'''
+        #data = {}
+        data = defaultdict.fromkeys(["cited_links", "cited_links_ids", "cited_domains", "title", "text","html", "keywords", "generators", "status", "code", "msg", "date"], None)
+        for k in data.keys():
+            data[n] = self.__dict__[k]
         return data
                 
     def get_status(self):
