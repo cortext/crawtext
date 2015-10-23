@@ -82,28 +82,24 @@ class Page(object):
         
     
     def process(self, filter_text=True):
-        
-        self.check_depth()
-        
-        self.valid_url()
-        
-        self.fetch()
-        
-        self.clean_article()
-        
-        self.extract()
-        
-        self.check_lang()
-        
-        if filter_text:
-            if self.filter is not False:
-                self.filter_text()
-        return self.status
+        '''Article extraction modules'''
+        if self.check_depth():
+            if self.valid_url():
+                if self.fetch():
+                    if self.clean_article():
+                        if self.extract():
+                            if self.check_lang():
+                                if filter_text:
+                                    if self.filter is not False:
+                                        if self.filter_text():
+                                            return self.status
+        else:
+            return self.status
         
     @check_status
     #@debug
     def check_depth(self):
-        '''checking depth'''
+        '''checking max depth'''
         if self.depth is False or self.depth is None:
             self.depth = 0
             
