@@ -19,6 +19,7 @@ import datetime
 #Internal module import
 from config import config
 from database import TaskDB, Database
+from pymongo.errors import DuplicateKeyError, WriteError, OperationFailure
 
 from article import Page
 #from logger import logger
@@ -49,7 +50,9 @@ class Crawtext(object):
         else:
             #creating parameteres of the project
             self.create(cfg["project"])
-        
+        if self.queue.count() == 0:
+            self.relaod_queue()
+        self.run()
             
             
     @q
@@ -199,22 +202,22 @@ class Crawtext(object):
         if p.status:
             try:
                 self.data.insert_one(p.set_data())
-            except pymongo.errors.DuplicateKeyError:
+            except DuplicateKeyError:
                 pass
                 #~ if self.task["repeat"]:
                     #~ self.data.update_one({"url":url, "depth":0}, {"$inc":{"crawl_nb": 1},'$push':{"history":self.date}, "$set":p.status})
             for link in p.outlinks:
-                if link not in set(self.logs.distinct("url")):
+                if link not in self.logs.distinct("url"):
                     try:
                         self.queue.insert_one({"url":link, "source_url":p.url, "depth":1})
-                    except pymongo.errors.DuplicateKeyError:
+                    except DuplicateKeyError:
                         continue
-                    except pymongo.errors.WriteError:
+                    except WriteError:
                         self.logs.insert_one({"url":link, "source_url":p.url, "depth":1})
                         
                         pass
         else:
-            self.logs.insert_one(p.get_data())
+            self.logs.insert_one({"url":p.url})
         return
                 
     def check_interval(self):
@@ -232,10 +235,10 @@ class Crawtext(object):
                 for link in p.outlinks:
                     try:
                         self.queue.insert_one({"url":link, "source_url":p.url, "depth":1})
-                    except pymongo.errors.DuplicateKeyError:
+                    except DuplicateKeyError:
                         continue
-                    except pymongo.errors.WriteError:
-                        self.logs.insert_one(l{"url":link, "source_url":p.url, "depth":1, })
+                    except WriteError:
+                        self.logs.insert_one({"url":link, "source_url":p.url, "depth":1, })
                         
         return
 
@@ -271,51 +274,52 @@ class Crawtext(object):
             
 
     
-    def global_crawl(self):
+    def run(self):
         '''the main crawler logic'''
-        logger.debug("***************CRAWL********")
+        
         while self.queue.count() > 0:
             print("%i urls in process" %self.queue.count())
             print("in which %i sources in process" %self.queue.count({"depth":0}))
             #self.report()
             for item in self.queue.find(no_cursor_timeout=True).sort([('depth', pymongo.ASCENDING)]):
                 print("%i urls in process" %self.queue.count())
-                page = Page(item, self.task)
-                #pertinence
-                status = page.process()
-                if status is False:
-                    
-                    try:                   
-                    
-                    #on cree et insere la page
-                        self.data.insert_one(page.set_data())
-                        if page.status:
-                            cpt = 0
-                            if page.depth+1 < page.max_depth:
-                                for outlink in page.outlinks:
-                                    if outlink["url"] not in self.data.distinct("url"):
-                                        try:
-                                           cpt = cpt+1
-                                           self.queue.insert_one(outlink)
-                                        except pymongo.errors.DuplicateKeyError:
-                                            continue
-                                    else: continue
-                                print("adding %i new urls in queue  with depth %i" %(cpt, page.depth+1))
-                                self.data.update_one({"url":item["url"]}, {"$set":{"type": "page"}})
-                        else:
-                            self.data.update_one({"url":item["url"]}, {"$set":{"type": "log"}})
+                if item["url"] not in self.logs.distinct("url"):
+                    page = Page(item, self.task)
+                    #pertinence
+                    status = page.process()
+                    if status is True:
                         
-                        self.data.update_one({"url":item["url"]}, {"$set":page.set_data()})
-                        self.queue.delete_one({"url": item["url"]})
-                        continue
-                    
-                    except pymongo.errors.DuplicateKeyError:
-                        self.queue.delete_one({"url": item["url"]})
-                        continue
-                else:
-                    self.logs.insert_one({"url": status.url, "status":False, "date":self.date})
-            self.report("crawl")
-        logger.debug("***************END********")
+                        try:                   
+                        
+                        #on cree et insere la page
+                            self.data.insert_one(page.set_data())
+                            if page.status:
+                                cpt = 0
+                                if page.depth+1 < page.max_depth:
+                                    for outlink in page.outlinks:
+                                        if outlink["url"] not in self.data.distinct("url"):
+                                            try:
+                                               cpt = cpt+1
+                                               self.queue.insert_one(outlink)
+                                            except DuplicateKeyError:
+                                                continue
+                                        else: continue
+                                    print("adding %i new urls in queue  with depth %i" %(cpt, page.depth+1))
+                                    #self.data.update_one({"url":item["url"]}, {"$set":{"type": "page"}})
+                            else:
+                                self.logs.insert_one({"url":item["url"]})
+                            
+                            #~ self.data.update_one({"url":item["url"]}, {"$set":page.set_data()})
+                            self.queue.delete_one({"url": item["url"]})
+                            continue
+                        
+                        except DuplicateKeyError:
+                            self.queue.delete_one({"url": item["url"]})
+                            continue
+                    else:
+                        self.logs.insert_one({"url": p.url})
+            
+        
         return True
         
                     
@@ -343,7 +347,7 @@ class Crawtext(object):
                 os.kill(pid, signal.SIGKILL)
         try:
             self.update_status(self.task["name"], {"$set":"stop"})
-        except pymongo.errors.OperationFailure:
+        except OperationFailure:
             pass
                     
     def delete(self, with_dir=False):
