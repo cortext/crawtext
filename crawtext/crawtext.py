@@ -18,14 +18,14 @@ import datetime
 
 #Internal module import
 from config import config
-from database import TaskDB, Database
-from pymongo.errors import DuplicateKeyError, WriteError, OperationFailure
+from database import Database
+from database import DuplicateKeyError, WriteError, OperationFailure
+
 
 from article import Page
 #from logger import logger
 import q
-#Pas2sta#from report imore
-
+#Pas2stats#from report imore
 import requests
 
 class Crawtext(object):
@@ -51,7 +51,7 @@ class Crawtext(object):
             #creating parameteres of the project
             self.create(cfg["project"])
         if self.queue.count() == 0:
-            self.relaod_queue()
+            self.reload_queue()
         self.run()
             
             
