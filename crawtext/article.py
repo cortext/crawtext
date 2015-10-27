@@ -1,13 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-__title__ = 'crawtext'
-__author__ = 'c24b'
-__license__ = 'MIT'
-__copyright__ = 'Copyright 2014-2015, c24b'
-
 import copy
-import os
+import os, sys
 import glob
 import re
 from bs4 import BeautifulSoup
@@ -24,7 +19,7 @@ from datetime import datetime as dt
 from query import Query
 from cleaners import *
 from langdetect import detect
-
+from database import Database
 
 from filter import filter
 from url_filter import *
@@ -48,6 +43,7 @@ def debug(f):
         print f.__doc__
         return f(*args)
     return wrapper    
+
 class Page(object):
     """
         Basic Page
@@ -56,33 +52,126 @@ class Page(object):
         """
         Mapping item and config
         """
+        
         for k, v in item.items():
-            if k in ["url", "source_url", "depth", "type"]:
-                setattr(self, k, v) 
+            
+            setattr(self, k, v) 
+        
         
         
         for k, v in config.items():
-            if k in ['filter_lang','max_depth', "query", "directory", "filter", "short_export", "date"]:
+            if k != "url":
                 setattr(self, k, v) 
+        self.status = True
+        self.load_db()
+        #already somewhere in DB
+        if self.exists():
+            self.status = self.updated()
+        else:
+            self.status = self.created()
+        #self.queue.delete({"url": self.url})
+    @check_status
+    def created(self):
+        ''' '''
+        if self.depth == 0:
+            if self.process(False):
+                self._id = self.data.insert(self.set_data())
+                print self._id
+                
+                if len(self.outlinks) > 0:
+                    self.queue.insert_many(self.outlinks)
+            #is_source?
+            else:
+                self.logs.insert(self.set_status())
+            return True
+            #should exists
+        else:
+            return False
+    
+    def download(self):
+        html_archive = str(self._id)+"_"+self.date.strftime("%Y-%m-%d")+".html"
+        txt_archive = str(self._id)+"_"+self.date.strftime("%Y-%m-%d")+".txt"
+        hfile = os.path.join(self.project_path, html_archive)
+        tfile = os.path.join(self.project_path, txt_archive)
+        with open(hfile, "w") as f:
+            try:
+                f.write((self.html).encode("utf-8"))
+            except AttributeError:
+                print self.status, self.url
+                pass
+        with open(tfile, "w") as f:
+            try:
+                f.write((self.text).encode("utf-8"))
+            except AttributeError:
+                print self.status, self.url
+                pass
+        return (hfile, tfile)
+    
+    @check_status
+    def updated(self):
+        ''' general treatment if queue send to log or data 
+            if already in data or log detect change
+        '''
+        self.set_page_type()
+        if self.page_type == "queue":
+            #normal case queue >>> process >>> True: result >>> False: log
+            if self.process():
+                self.data.insert(self.set_data())
+                self._id = self.get_id()
+                for n in self.outlinks:
+                    print n
+                    if n["url"] not in self.queue.distinct("url"): 
+                        if n["url"] not in self.data.distinct("url"):
+                            if n["url"] not in self.logs.distinct("url"):
+                                self.queue.insert_one(n)
+            else:
+                self.logs.insert(self.set_data())
+            return True
+                    
+        elif self.page_type == "log":
+            print "log", self.set_status()
             
-        ##logger.debug("Page Init")
-        
-        self.status = True
-        self.load_default()
-        
-        
-    
-    
-    def load_default(self):
-        self.msg = ""
-        self.code = 100
-        self.status = True
-        return self
-
-        
+                    
+            #depends on the status if blocked in text
+            #should just run a part of the process
+            #such as parse outlinks to check changes
+            return False
+            #previous status was false
+            #if self.fetch():
+            #    if self.extract():
+                    #compare_outlinks only
+            #    else:
+                #has changed
+            #else:
+                #has changed
+                    #compare_outlinks
+            #if self.process():
+                #and now true
+            #    print("has changed")
+                
+            #else:
+                #no change
+            
+            #    pass
+        else:
+            
+            #depends on the status of changeif blocked in text
+            #should just run a part of the process
+            #such as parse outlinks to check changes
+            return False
+            #previous status was true
+            #if self.process():
+                #no change
+            #    pass
+            #else:
+                #print self.get_status()
+                #and now false
+                #print("has changed")
     
     def process(self, filter_text=True):
+        
         self.check_depth()
+        
         self.valid_url()
         self.fetch()
         self.clean_article()
@@ -92,7 +181,9 @@ class Page(object):
             if self.filter is not False:
                 self.filter_text()
         return self.status
-        
+                        
+            
+    
     @check_status
     #@debug
     def check_depth(self):
@@ -113,15 +204,14 @@ class Page(object):
     #@debug
     def valid_url(self):
         '''checking url format and validity'''
-        for k, v in self.parse_link(self.url).items():
+            
+        for k, v in self.parse_link().items():
             if k is None:
                 continue
-            
-                
             if v is None or v == "":
                 setattr(self, k, "")
             else:
-                setattr(self, k, v)
+                setattr(self, k, str(v))
                 
         
         
@@ -220,6 +310,7 @@ class Page(object):
                             self.status = False
                             return self.status
                         else:
+                            
                             return self
                         
                     except Exception as e:
@@ -271,7 +362,7 @@ class Page(object):
     #@debug
     def extract(self):
         '''extracting info from page'''
-        if self.doc is not None:
+        if self.doc is not None and self.doc != "":
             
             links = list(set([n.get('href') for n in bs(self.article).find_all("a")]))
             links = [n for n in links if n != self.url]
@@ -279,6 +370,7 @@ class Page(object):
             self.outlinks = self.parse_outlinks(links)
             self.get_meta()
             return self
+        
         else:
             #~ #self.msg = str(#logger.debug("ParserError"))
             self.msg = "Extract Error"
@@ -286,39 +378,47 @@ class Page(object):
             self.status = False
             return self.status
     
-    def parse_link(self, url):
+    def parse_link(self, url=None):
         '''parsing link info'''
-        link = {"url":url}
+        if url is None:
+        #just in case url is a simple link
+            if type(self.url) == str or type(self.url) == unicode:
+                self.link = {"url": self.url}
+            else:
+                self.link = self.url
+        else:
+            self.link = {"url": url}
         
-        parsed_url = urlparse(url)
+        parsed_url = urlparse(self.url)
         for k in ["scheme", "netloc", "path", "params", "query", "fragment"]:
             if k == "query":
-                link["url_query"] = getattr(parsed_url,k)
+                self.link["url_query"] = getattr(parsed_url,k)
             else:
-                link[k] = getattr(parsed_url,k)
+                self.link[k] = getattr(parsed_url,k)
                 
-        tld_dat = tldextract.extract(url)
+        tld_dat = tldextract.extract(self.link["url"])
         for k in ["domain", "subdomain", "suffix"]:
-            link[k] = getattr(tld_dat,k)
+            self.link[k] = getattr(tld_dat,k)
         #~ link["subdomain"] = tld_dat.subdomain
         #~ link["domain"] = tld_dat.domain.lower()
-        if link["subdomain"] not in ["www", "ww1", "ww2", ""]:
-            link["url_id"] = link["subdomain"]+"_"+link["domain"]
+        
+        if self.link["subdomain"] not in ["www", "ww1", "ww2", "", None]:
+            self.link["url_id"] = self.link["subdomain"]+"_"+self.link["domain"]
         else:
-            link["url_id"] = link["domain"]
-            
-        link["extension"] =  link["suffix"]
-        del link["suffix"]
-        link["chunks"] = [x for x in link["path"].split('/') if len(x) > 0]
-        link["internal_depth"] = len(link["chunks"])
-        link["filetype"] = re.split(".", link['netloc'])[-1]                
-        return link
+            self.link["url_id"] = self.link["domain"]
+        
+        self.link["extension"] =  self.link["suffix"]
+        del self.link["suffix"]
+        self.link["id"] = self.link["url_id"]+"_"+self.link["extension"]
+        self.link["chunks"] = [x for x in self.link["path"].split('/') if len(x) > 0]
+        self.link["internal_depth"] = len(self.link["chunks"])
+        self.link["filetype"] = re.split(".", self.link['netloc'])[-1]                
+        return self.link
         
     
     def parse_outlinks(self, links):
         '''creating outlinks from page'''
         self.links = [self.parse_link(url) for url in set(links) if url is not None and url != ""]
-        
         self.cited_links = [n["url"] for n in self.links]
         self.cited_links_ids = [n["url_id"] for n in self.links]
         self.cited_domains = [n["domain"] for n in self.links]
@@ -383,7 +483,7 @@ class Page(object):
         relevant = q.match(doc)
         
         if relevant is False:
-        
+            
             self.code = 800
             self.msg = "Article Query Filter: text not relevant"
             self.status = False
@@ -392,38 +492,104 @@ class Page(object):
             self.status = True
             return self
     
-    def format_export(self):
-        '''format export'''
-        #for n in ["url_id","url", "cited_links", "cited_links_ids","source_url", "cited_domains", "title", "text", "keywords", "generators", "extension", "filetype", "depth", "crawl_nb", "status", "msg", "date", "code", "nb", "total"]:
-        pass
+        
     #@debug
     def set_data(self):
         '''Add data : updating values of page_info'''
         #data = {}
-        data = defaultdict.fromkeys(["cited_links", "cited_links_ids", "cited_domains", "title", "text","html", "keywords", "generators", "status", "code", "msg", "date"], None)
+        data = defaultdict.fromkeys(["cited_links", "cited_links_ids", "cited_domains", "title", "text","html", "keywords", "generators", "status", "code", "msg", "date", "link"], None)
+        for k,v in self.link.items():
+            data[k] = v
         for k in data.keys():
             try:
-                data[k] = self.__dict__[k]
+                if k not in ["html", "txt"]:
+                    data[k] = self.__dict__[k]
+                
+                    
             except KeyError:
                 pass
+        data["html"], data["text"] = self.download()
         return data
-                
-    def get_status(self):
-        data = {}
-        for k in ["status", "date", "code", "msg"]:
+    
+    def set_status(self):
+        
+        data = defaultdict.fromkeys(["status", "code", "msg", "date", "history"], None)
+        try:
+            for k,v in self.link.items():
+                data[k] = v
+        except:
+            pass
+        data["url"] = self.url
+        for k in ["status", "date", "code", "msg", "link"]:
             try:
                 data[k] = self.__dict__[k]
             except KeyError:
                 data[k] = None
         return data
+    def load_db(self):
+        self.db = Database(self.name)
+        self.data = self.db.use_coll("data")
+        self.logs = self.db.use_coll("logs")
+        self.queue = self.db.use_coll("queue")
 
-if __name__ == "__main__":
-    #test
-    #~ item = {"url":"http://www.ifpeb.fr/", "source_url":"", "depth":0, "type":"source"}
-    #~ config = {'filter_lang':"fr","max_depth":10, "query": "(COP 21) OR (COP21)", "filter":True, "directory":"./projects/COP21/"}
-    #~ a = Page(item, config)
-    #~ a.process()
-    #~ a.set_data()
-    #~ a.add_data()
+    def get_id(self):
+        doc = self.data.find_one({"url": self.url})
+        if doc is not None:
+            self._id = doc["_id"]
+            print doc["_id"]
+            return self._id
+    def is_result(self):
+        doc = self.data.find_one({"url": self.url})
+        return bool(doc is not None)
     
+    def is_log(self):
+        doc = self.logs.find_one({"url": self.url})
+        return bool(doc is not None)
+    
+    def is_queued(self):
+        doc = self.queue.find_one({"url": self.url})
+        return bool(doc is not None)
+    def is_source(self):
+        doc = self.queue.find_one({"url": self.url, "depth":0})
+        return bool(doc is not None)
+        
+    def exists(self):
+        return any([self.is_result(),self.is_log(), self.is_queued()])
+    
+    def set_page_type(self):
+        types =[("result",self.is_result()), ("log",self.is_log()), ("queue",self.is_queued())]
+        try:
+            page_type = [t[0] for t in types if t[1] is True]
+            if len(page_type) == 1:
+                self.page_type = page_type[0]
+            else:
+                self.page_type = page_type
+                print self.page_type
+            
+        except IndexError:
+            self.page_type = None
+        return self.page_type
+     
+     
+if __name__ == "__main__":
     pass
+    #test
+    #~ item = {"url":"http://www.cop21.gouv.f/en", "source_url":"search", "depth":0}
+    #~ from config import config
+    #~ cfg = config()
+    #~ name = cfg["project"]["name"]
+    #~ task_db = Database(cfg["default"]["db_name"])
+    #~ coll = task_db.use_coll("job")
+    #~ task = coll.find_one({"name":name})
+    #~ a = Page(item, task)
+    #~ print a.status
+    #~ if a.status is True:
+    #if a.exists():
+    #    print a.set_page_type()
+        #~ a.set_data()
+    #~ else:
+        #~ print a.set_status()
+    #a.add_data()
+    #~ pass
+    
+    

@@ -19,7 +19,7 @@ import datetime
 #Internal module import
 from config import config
 from database import Database
-from database import DuplicateKeyError, WriteError, OperationFailure
+from database import DuplicateKeyError, WriteError, OperationFailure, ASCENDING
 
 
 from article import Page
@@ -32,6 +32,7 @@ class Crawtext(object):
     '''main crawler'''
     
     def __init__(self):
+        self.status = True
         dt1 = dt.today()
         self.date = dt1.replace(second=0, microsecond=0)
         cfg = config()
@@ -43,46 +44,54 @@ class Crawtext(object):
         #set_task
         self.task = self.coll.find_one({"name": self.name})
         #set_project
-        self.create_dir(cfg["default"]["dir_name"])
+        
         if bool(self.task is not None):
             #updating parameters of the project
             self.update(cfg["project"])
         else:
-            #creating parameteres of the project
+            #creating parameters of the project
+            self.create_dir(cfg["default"]["dir_name"])
             self.create(cfg["project"])
+        #load_db
+        self.load()
         if self.queue.count() == 0:
             self.reload_queue()
+            if self.data.count({"depth":0}) == 0:
+                self.add_seeds()
+                self.reload_queue()
+        
+        
         self.run()
-            
-            
+        
+
     @q
     def load(self):
         '''Load the data store of the projects from the project name'''
+        self.task = self.coll.find_one({"name": self.name})
+        
         self.project = Database(self.name)
         self.data = self.project.set_coll("data")
         self.queue = self.project.set_coll("queue")
         self.logs = self.project.set_coll("logs")
         print("%i urls in data" %(self.data.count()))
-        print("%i urls to treat" %(self.queue.count()))
+        print("%i queue" %(self.queue.count()))
         print("%i logs " %(self.logs.count()))
         return self
-    
-        
-            
+
     @q    
     def add_seeds(self):
         '''adding seeds 
-        initial seeds are not checked with filetr_query 
-        put automatically in data store
-        if last_run is more than one day if queue is empty
-        add seeds
+        initial seeds are not checked with filtering by query
+        but put automatically in data store 
+        executed only:
+        if new project
+        if last_run is more than one day 
+        if queue is empty
         '''
-        self.task = self.coll.find_one({"name":self.name})
         methods = [k for k, v in self.task.iteritems() if k in ["file", "url", "key"] and v is not False]
-            
         if self.query is False or self.query is None or self.query == "":
             methods = [k for k in methods if k != "key"]
-        if self.check_interval() is True and self.queue.count() ==0:
+        if self.queue.count() == 0:
             for k in methods:
                 getattr(self, 'insert_%s' % k)()
             return True
@@ -116,7 +125,10 @@ class Crawtext(object):
             if not os.path.exists(index):
                 #print("Creating the index")
                 os.makedirs(index)
-        return   
+            self.archives_dir = os.path.join(self.project_path, 'archives')
+            if not os.path.exists(self.archives_dir):
+                os.makedirs(self.archives_dir)
+        return self
     
         
     
@@ -136,8 +148,10 @@ class Crawtext(object):
         if self.task is not None:
             self.load()
             self.add_seeds()
-            return True
-        return False
+            
+        else:
+            self.status = False
+        return self.status
         
 
     @q
@@ -149,7 +163,7 @@ class Crawtext(object):
         
         '''
         #check existing task removing status_info
-        self.task = self.coll.find_one({"name":self.name})
+        #self.task = self.coll.find_one({"name":self.name})
         task = {k:v for k,v in self.task.iteritems() if type(v) != list}
         for k,v in task.items():
             setattr(self,k,v)
@@ -177,59 +191,56 @@ class Crawtext(object):
                         #"$position":0}
                         }
                         )
-            self.task = self.coll.find_one({"name":self.name})
+            
         else:
+            #no change
             self.load()
-            self.add_seeds()
-        return status
+            if self.check_interval() is False:
+                self.add_seeds()
+        self.task = self.coll.find_one({"name":self.name})
+        return self.status
     
     def insert_file(self):
         path = os.path.join(self.current_dir, self.file)        
         with open(path, 'r') as f:
             for i,url in enumerate(f.readlines()):
                 print("Adding source from", url_file, url)
-                self.url = url
+                self.link = {"url": url, "source_url": "file:"+url_file, "depth": 0}
                 self.insert_url()
             print ("%i urls added" %i)
-        
         return True
-        
+    
     def insert_url(self):
         "insert url directly into data and next_url to seeds"
-        print("Insert url", self.url)
-        p = Page({"url": self.url, "source_url": "url", "depth": 0}, self.task)
-        p.process(False)
-        if p.status:
-            try:
-                self.data.insert_one(p.set_data())
-            except DuplicateKeyError:
-                pass
-                #~ if self.task["repeat"]:
-                    #~ self.data.update_one({"url":url, "depth":0}, {"$inc":{"crawl_nb": 1},'$push':{"history":self.date}, "$set":p.status})
-            for link in p.outlinks:
-                if link not in self.logs.distinct("url"):
-                    try:
-                        self.queue.insert_one({"url":link, "source_url":p.url, "depth":1})
-                    except DuplicateKeyError:
-                        continue
-                    except WriteError:
-                        self.logs.insert_one({"url":link, "source_url":p.url, "depth":1})
-                        
-                        pass
-        else:
-            self.logs.insert_one({"url":p.url})
+        #in case a simple url is given
+        
+        if type(self.url) == str:
+            self.link = {"url": self.url, "source_url": "url", "depth": 0}
+        page = Page(self.link, self.task)
         return
                 
-    def check_interval(self):
-        task_d = self.task['history'][-1]
-        last_run = (task_d.day,task_d.month, task_d.year)
-        today = (self.date.day, self.date.month, self.date.year)
-        return bool(task_d == today)
+    def check_interval(self, interval ="day"):
+        '''interval default 1 day or 1 week or 1 month'''
+        try:
+            task_d = self.task['history'][-1]
+            today = self.date.isocalendar()
+            if interval == "day":
+                last_run = task_d.isocalendar()
+            elif interval == "week":
+                last_run = task_d.isocalendar()+datetime.timedelta(days=7)
+                
+            elif interval == "month":
+                last_run = task_d.isocalendar()+ datetime.timedelta(days=21)
+            return bool(task_d == today)
+        except TypeError:
+            return False
         
         
     def reload_queue(self):
         for n in self.data.find({"depth":0},{"url":1, "source_url": 1, "depth":1}):
-            p = Page(n, self.task)
+            self.link = n
+            print(n)
+            p = Page(self.link, self.task)
             p.process(False)
             if p.status:                
                 for link in p.outlinks:
@@ -252,7 +263,8 @@ class Crawtext(object):
         if self.search_nb > 1000:
             print("Maximum of search results is 1000 urls so set to 1000 urls")
             self.search_nb = 1000
-        
+        if self.search_nb < 50:
+            print("Minimum of search results should be 50 urls")
         web_results = []
         for i in range(0,self.search_nb, 50):
             r = requests.get('https://api.datamarket.azure.com/Bing/Search/v1/Web',
@@ -263,9 +275,12 @@ class Crawtext(object):
                     },auth=(self.key, self.key)
                     )
     
-            for i,e in enumerate(r.json()['d']['results']):
-                self.url = e['Url']
+            for i, e in enumerate(r.json()['d']['results']):
+                
+                self.link = {"url": e['Url'], "source_url": "search", "depth": 0}
                 self.insert_url()
+                if i == self.search_nb-1:
+                    break
         if i == 0:
             return False
         else:
@@ -277,49 +292,21 @@ class Crawtext(object):
     def run(self):
         '''the main crawler logic'''
         
+        self.task = self.coll.find_one({"name": self.name})
         while self.queue.count() > 0:
             print("%i urls in process" %self.queue.count())
-            print("in which %i sources in process" %self.queue.count({"depth":0}))
+            print("%i sources in process" %self.queue.count({"depth":0}))
+            print("%i sources stored" %self.data.count({"depth":0}))
             #self.report()
-            for item in self.queue.find(no_cursor_timeout=True).sort([('depth', pymongo.ASCENDING)]):
+            for item in self.queue.find(no_cursor_timeout=True).sort([('depth', ASCENDING)]):
                 print("%i urls in process" %self.queue.count())
-                if item["url"] not in self.logs.distinct("url"):
-                    page = Page(item, self.task)
-                    #pertinence
-                    status = page.process()
-                    if status is True:
-                        
-                        try:                   
-                        
-                        #on cree et insere la page
-                            self.data.insert_one(page.set_data())
-                            if page.status:
-                                cpt = 0
-                                if page.depth+1 < page.max_depth:
-                                    for outlink in page.outlinks:
-                                        if outlink["url"] not in self.data.distinct("url"):
-                                            try:
-                                               cpt = cpt+1
-                                               self.queue.insert_one(outlink)
-                                            except DuplicateKeyError:
-                                                continue
-                                        else: continue
-                                    print("adding %i new urls in queue  with depth %i" %(cpt, page.depth+1))
-                                    #self.data.update_one({"url":item["url"]}, {"$set":{"type": "page"}})
-                            else:
-                                self.logs.insert_one({"url":item["url"]})
-                            
-                            #~ self.data.update_one({"url":item["url"]}, {"$set":page.set_data()})
-                            self.queue.delete_one({"url": item["url"]})
-                            continue
-                        
-                        except DuplicateKeyError:
-                            self.queue.delete_one({"url": item["url"]})
-                            continue
-                    else:
-                        self.logs.insert_one({"url": p.url})
-            
-        
+                #if item["url"] not in self.logs.distinct("url"):
+                page = Page(item, self.task)
+                self.queue.delete_one({"url": item["url"]})
+                print("%i urls in process" %self.queue.count())
+                print("%i results" %self.data.count())
+                print("%i logs" %self.logs.count())
+               
         return True
         
                     

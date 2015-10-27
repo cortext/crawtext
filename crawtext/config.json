@@ -1,0 +1,21 @@
+{
+    "default":{
+        "host":"localhost",
+        "dir_name":"project_test",
+        "db_name":"scheduler_test",
+        "user": "4barbes@gmail.com"
+    },
+    "project":{
+        "name": "cop21-test_mardi2",
+        "query": "(COP21) OR (COP 21)",
+        "file": false,
+        "url": false,
+        "key":"J8zQNrEwAJ2u3VcMykpouyPf4nvA6Wre1019v/dIT0o",
+        "search_nb": 100,
+        "max_depth": 1,
+        "filter_lang":"fr",
+        "repeat":false,
+        "next":false,
+        "filter": false
+        }
+}
