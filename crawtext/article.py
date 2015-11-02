@@ -500,9 +500,9 @@ class Page(object):
         try:
             for k,v in self.link.items():
                 data[k] = v
-        except:
-            print("Link of page", self.link)
-            data["link"] = self.link
+        except AttributeError:
+            pass
+            
         for k in data.keys():
             try:
                 if k not in ["html", "txt"]:
@@ -511,6 +511,9 @@ class Page(object):
                     
             except KeyError:
                 pass
+            except AttributeError:
+                pass
+                
         data["html"], data["text"] = self.download()
         return data
     
