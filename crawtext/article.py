@@ -19,7 +19,7 @@ from datetime import datetime as dt
 from query import Query
 from cleaners import *
 from langdetect import detect
-from database import Database
+from database import Database, WriteError
 
 from filter import filter
 from url_filter import *
@@ -45,14 +45,7 @@ def debug(f):
     return wrapper    
 
 class Page(object):
-    """
-        Basic Page
-    """
     def __init__(self, item, config):
-        """
-        Mapping item and config
-        """
-        
         for k, v in item.items():
             
             setattr(self, k, v) 
@@ -75,14 +68,19 @@ class Page(object):
         ''' '''
         if self.depth == 0:
             if self.process(False):
-                self._id = self.data.insert(self.set_data())
-                print self._id
+                try:
+                    self._id = self.data.insert(self.set_data())
+                except WriteError:
+                    sys.exit("A former DB already exits with this name %s" %self.name)
                 
                 if len(self.outlinks) > 0:
                     self.queue.insert_many(self.outlinks)
             #is_source?
             else:
-                self.logs.insert(self.set_status())
+                try:
+                    self.logs.insert(self.set_status())
+                except DuplicateKeyError:
+                    pass
             return True
             #should exists
         else:
@@ -97,14 +95,13 @@ class Page(object):
             try:
                 f.write((self.html).encode("utf-8"))
             except AttributeError:
-                print self.status, self.url
-                pass
+                hfile = False
         with open(tfile, "w") as f:
             try:
                 f.write((self.text).encode("utf-8"))
             except AttributeError:
-                print self.status, self.url
-                pass
+                tfile = False
+                
         return (hfile, tfile)
     
     @check_status
@@ -116,10 +113,12 @@ class Page(object):
         if self.page_type == "queue":
             #normal case queue >>> process >>> True: result >>> False: log
             if self.process():
-                self.data.insert(self.set_data())
+                try:
+                    self.data.insert(self.set_data())
+                except DuplicateKeyError:
+                    pass
                 self._id = self.get_id()
                 for n in self.outlinks:
-                    print n
                     if n["url"] not in self.queue.distinct("url"): 
                         if n["url"] not in self.data.distinct("url"):
                             if n["url"] not in self.logs.distinct("url"):
@@ -194,7 +193,7 @@ class Page(object):
         #logger.debug("Page check depth")
         if self.depth > self.max_depth:
             self.code = "102"
-            self.msg = "Depth exceed max_depth for page" %(self.max_depth)
+            self.msg = "Depth %i exceed max_depth for page" %(self.max_depth)
             self.status = False
             return self.status
         else:
