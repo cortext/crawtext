@@ -5,7 +5,7 @@ import copy
 import os, sys
 import glob
 import re
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup as bs
 from readability.readability import Document
 import requests
 import errno
@@ -210,8 +210,10 @@ class Page(object):
             if v is None or v == "":
                 setattr(self, k, "")
             else:
-                setattr(self, k, str(v))
-                
+                try:
+                    setattr(self, k, str(v))
+                except UnicodeEncodeError:
+                    setattr(self, k, v)
         
         
         try:
@@ -341,7 +343,7 @@ class Page(object):
         try:
             self.clean_doc = Document(self.doc,url = self.url, positive_keywords= "entry-content,post,main,content,container,blog,article*,post,entry", negative_keywords="like*,ad*,comment.*,comments,comment-body,about,access,navigation, sidebar.*?,share.*?,relat.*?,widget.*?")
             self.article = self.clean_doc.summary()
-            self.text = re.sub("  |\t", " ",bs(self.article).get_text())
+            self.text = re.sub("  |\t", " ",bs(self.article, "lxml").get_text())
             self.title = self.clean_doc.short_title()
             if self.text == "" or self.text == u'':
                 self.msg = "Error extracting Article and cleaning it"
@@ -363,7 +365,7 @@ class Page(object):
         '''extracting info from page'''
         if self.doc is not None and self.doc != "":
             
-            links = list(set([n.get('href') for n in bs(self.article).find_all("a")]))
+            links = list(set([n.get('href') for n in bs(self.article, "lxml").find_all("a")]))
             links = [n for n in links if n != self.url]
             #get links, cited_links, cited_links_ids, cited_domains
             self.outlinks = self.parse_outlinks(links)
@@ -427,7 +429,7 @@ class Page(object):
     def get_meta(self):
         self.generators = []
         self.meta = {}
-        for n in bs(self.doc).find_all("meta"): 
+        for n in bs(self.doc, "lxml").find_all("meta"): 
             name = n.get("name")
             prop = n.get("property")
             content = n.get("content")
