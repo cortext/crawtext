@@ -497,8 +497,12 @@ class Page(object):
         '''Add data : updating values of page_info'''
         #data = {}
         data = defaultdict.fromkeys(["cited_links", "cited_links_ids", "cited_domains", "title", "text","html", "keywords", "generators", "status", "code", "msg", "date", "link"], None)
-        for k,v in self.link.items():
-            data[k] = v
+        try:
+            for k,v in self.link.items():
+                data[k] = v
+        except:
+            print("Link of page", self.link)
+            data["link"] = self.link
         for k in data.keys():
             try:
                 if k not in ["html", "txt"]:
