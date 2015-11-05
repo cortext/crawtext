@@ -1,10 +1,12 @@
 #usr/bin python env
-import sys
+import os
 
-def config(afile="./config.json"):
+def config(afile="config.json"):
     '''load config given a YAML or a JSON file'''
     if afile.endswith("json"):
         import json
+        curr_dir = os.path.join(os.getcwd(), "crawtext")
+        afile = os.path.join(curr_dir, afile)
         with open(afile) as json_f:
             try:
                 config = json.load(json_f)
@@ -15,6 +17,9 @@ def config(afile="./config.json"):
         
     elif afile.endswith("yml"):
         import yaml
+        
+        curr_dir = os.path.join(os.getcwd(), "crawtext")
+        afile = os.path.join(curr_dir, afile)
         try:
             with open(afile, 'r') as ymlfile:
                 try:
