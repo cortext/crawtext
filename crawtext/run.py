@@ -51,7 +51,7 @@ if __name__ == '__main__':
     
     # Parse arguments, use file docstring as a parameter definition
     
-    for n in get_tasks(db_name):
+    for n in get_tasks(db_name, coll_name):
         print "Adding", n["name"]
         add(n)
         
