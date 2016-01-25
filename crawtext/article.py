@@ -16,13 +16,14 @@ from collections import defaultdict
 #from utils import encodeValue
 
 from datetime import datetime as dt
-from query import Query
-from cleaners import *
-from langdetect import detect
-from database import Database, WriteError
+from parser import cleaners, filter, url_filter, Query, langdetect, urlparse, tldextract
 
-from filter import filter
-from url_filter import *
+
+from database import Database
+
+
+#from filter import filter
+#from  import *
 
 import logging
 logger = logging.getLogger(__name__)
@@ -30,6 +31,7 @@ FORMAT = "[%(filename)s:%(lineno)s - %(funcName)20s() ] %(message)s"
 logging.basicConfig(file="quickanddirty.log", format=FORMAT, level=logging.DEBUG)
 logging.getLogger("requests").setLevel(logging.WARNING)
 logging.getLogger("readability").setLevel(logging.WARNING)
+from config import config
 
 def check_status(f):
     def wrapper(*args):
@@ -45,24 +47,29 @@ def debug(f):
     return wrapper    
 
 class Page(object):
-    def __init__(self, item, config):
+    def __init__(self, item, settings):
+        self.config = settings
+        self.name = settings["name"]
+        self.date = settings["date"]
         for k, v in item.items():
             
             setattr(self, k, v) 
         
         
-        
-        for k, v in config.items():
-            if k != "url":
-                setattr(self, k, v) 
         self.status = True
         self.load_db()
+        self.process()
         #already somewhere in DB
         if self.exists():
             self.status = self.updated()
         else:
             self.status = self.created()
+        print self.status
+        
+        #~ self.set_data()
         #self.queue.delete({"url": self.url})
+    
+        
     @check_status
     def created(self):
         ''' '''
@@ -71,6 +78,7 @@ class Page(object):
                 try:
                     self._id = self.data.insert(self.set_data())
                 except WriteError:
+                    #WriteError
                     sys.exit("A former DB already exits with this name %s" %self.name)
                 
                 if len(self.outlinks) > 0:
@@ -87,10 +95,10 @@ class Page(object):
             return False
     
     def download(self):
-        html_archive = str(self._id)+"_"+self.date.strftime("%Y-%m-%d")+".html"
-        txt_archive = str(self._id)+"_"+self.date.strftime("%Y-%m-%d")+".txt"
-        hfile = os.path.join(self.project_path, html_archive)
-        tfile = os.path.join(self.project_path, txt_archive)
+        html_archive = str(self.url_id)+"_"+self.date.strftime("%Y-%m-%d")+".html"
+        txt_archive = str(self.url_id)+"_"+self.date.strftime("%Y-%m-%d")+".txt"
+        hfile = os.path.join(self.config["directory"], html_archive)
+        tfile = os.path.join(self.config["directory"], txt_archive)
         with open(hfile, "w") as f:
             try:
                 f.write((self.html).encode("utf-8"))
@@ -101,7 +109,6 @@ class Page(object):
                 f.write((self.text).encode("utf-8"))
             except AttributeError:
                 tfile = False
-                
         return (hfile, tfile)
     
     @check_status
@@ -125,7 +132,7 @@ class Page(object):
                                 self.queue.insert_one(n)
             else:
                 self.logs.insert(self.set_data())
-            return True
+            return self.set_status()
                     
         elif self.page_type == "log":
             print "log", self.set_status()
@@ -134,7 +141,7 @@ class Page(object):
             #depends on the status if blocked in text
             #should just run a part of the process
             #such as parse outlinks to check changes
-            return False
+            return self.set_status()
             #previous status was false
             #if self.fetch():
             #    if self.extract():
@@ -170,16 +177,17 @@ class Page(object):
     def process(self, filter_text=True):
         
         self.check_depth()
-        
         self.valid_url()
         self.fetch()
         self.clean_article()
         self.extract()
         self.check_lang()
         if filter_text:
-            if self.filter is not False:
+            if self.config["filter"] is not False:
                 self.filter_text()
-        return self.status
+            #self.download()
+            print self.set_data()
+        return self.set_status()
                         
             
     
@@ -191,9 +199,9 @@ class Page(object):
             self.depth = 0
             
         #logger.debug("Page check depth")
-        if self.depth > self.max_depth:
+        if self.depth > self.config["max_depth"]:
             self.code = "102"
-            self.msg = "Depth %i exceed max_depth for page" %(self.max_depth)
+            self.msg = "Depth %i exceed max_depth for page" %(self.config["max_depth"])
             self.status = False
             return self.status
         else:
@@ -453,8 +461,10 @@ class Page(object):
     #@debug
     def check_lang(self):
         '''checking lang'''
+        
+
         try:
-            self.lang = detect(self.text)
+            self.lang = langdetect(self.text)
         except Exception as e:
             logging.warning("No lang detected in article")
             try:
@@ -462,13 +472,10 @@ class Page(object):
             except Exception as e:
                 logging.warning("No lang detected in title")
                 self.lang = None
-                
-        if self.filter_lang is not False:
-            if self.lang == self.filter_lang:
-                return self
-            else:
-                self.status = False
-                return self.status
+            
+        if self.config['filter_lang'] is not False:
+            self.status = bool(self.filter_lang == self.lang)
+            return self.status
 
     
     @check_status
@@ -498,6 +505,7 @@ class Page(object):
     def set_data(self):
         '''Add data : updating values of page_info'''
         #data = {}
+        #self.download()
         data = defaultdict.fromkeys(["cited_links", "cited_links_ids", "cited_domains", "title", "text","html", "keywords", "generators", "status", "code", "msg", "date", "link"], None)
         try:
             for k,v in self.link.items():
@@ -507,8 +515,8 @@ class Page(object):
             
         for k in data.keys():
             try:
-                if k not in ["html", "txt"]:
-                    data[k] = self.__dict__[k]
+                #if k not in ["html", "txt"]:
+                data[k] = self.__dict__[k]
                 
                     
             except KeyError:
@@ -516,7 +524,7 @@ class Page(object):
             except AttributeError:
                 pass
                 
-        data["html"], data["text"] = self.download()
+        
         return data
     
     def set_status(self):
@@ -533,7 +541,9 @@ class Page(object):
                 data[k] = self.__dict__[k]
             except KeyError:
                 data[k] = None
+        print data
         return data
+    
     def load_db(self):
         self.db = Database(self.name)
         self.data = self.db.use_coll("data")

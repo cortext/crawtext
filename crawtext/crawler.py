@@ -23,10 +23,15 @@ import datetime
 
 #Internal module import
 from config import config
-from database import Database
-from database import DuplicateKeyError, WriteError, OperationFailure, ASCENDING
+from database import Database, ASCENDING, DuplicateKeyError, WriteError, OperationFailure
+import logging
+logger = logging.getLogger(__name__)
+FORMAT = "[%(filename)s:%(lineno)s - %(funcName)20s() ] %(message)s"
+logging.basicConfig(file="./crawtext.log", format=FORMAT, level=logging.DEBUG)
+
 #from database import TaskDb
 
+from report import report
 from article import Page
 #from logger import logger
 import q
@@ -36,40 +41,21 @@ import requests
 class Crawtext(object):
     '''main crawler default config on config.json'''    
     def __init__(self, task_cfg = None):
-        print task_cfg
         self.status = True
         dt1 = dt.today()
+        self.current_dir = os.getcwd()
         self.date = dt1.replace(second=0, microsecond=0)
-        if task_cfg is None :
-            cfg = config()
-            #set name
-            self.name = cfg["project"]["name"]
-            #set_scheduler
-            self.task_db = Database(cfg["default"]["db_name"])
-            
-        else:
-            self.name = task_cfg["name"]
-            self.task_db = Database(task_cfg["db_name"])
         
-        self.coll = self.task_db.use_coll("job")
-        print [n for n in self.coll.find()]
-        #set_task
-        self.task = self.coll.find_one({"name": self.name})
-        #set_project
-        if bool(self.task is None):
-            #creating parameters of the project
-            if task_cfg is not None:
-                
-                sys.exit("No project found")
-            else:
-                self.create_dir(cfg["default"]["dir_name"])
-                self.create(cfg["project"])
-        else:    
-            #updating parameters of the project
-            if task_cfg is not None:
-                self.update(self.task)
-            else:
-                self.update(cfg["project"])
+        #loading config    
+        if task_cfg is not None :
+            self.global_config(task_cfg)
+        
+        else:
+            self.global_config("config.json")
+            
+            
+        
+        
         #load_db
         self.load()
         if self.queue.count() == 0:
@@ -79,13 +65,77 @@ class Crawtext(object):
                 self.add_seeds()
             self.reload_queue()
         self.run()
+    @q
+    def global_config(self, cfg):
+        cfg = config(cfg)
         
-
+        try:
+            project_conf = cfg["project"]
+            #project_name
+            self.name = project_conf["name"]
+            
+        except KeyError:
+            sys.exit('''Invalid format for config file.
+            should follow the syntax:
+            {
+            "project": {
+                            "name": "example",
+                            "query": "",
+                            "file": false,
+                            "directory": false,
+                            "url": "www.example.com",
+                            "key": false,
+                            "search_nb": false,
+                            "max_depth": 10,
+                            "filter_lang": "fr",
+                            "repeat": false,
+                            "next": false,
+                            "filter": false,
+                            "user": "4barbes@gmail.com"
+                        }
+            }
+            ''')
+        try:
+            task_conf  = cfg["default"]
+        except KeyError:
+            logging.info("No global configuration found")
+            task_conf = config("/config/default_config.json")["default"]
+        
+        self.config = task_conf
+        for k,v in project_conf.items():
+            self.config[k] = v
+        self.config["date"] = self.date
+        
+        #~ self.config = {'name': self.name, 
+                        #~ 'filter': project_conf["filter"], 
+                        #~ 'filter_lang': project_conf["filter_lang"], 
+                        #~ 'query': project_conf["query"], 
+                        #~ 'max_depth': project_conf["max_depth"],
+                        #~ 'date': self.date}
+        
+        #find Crawtext task_db
+        self.task_db = Database(task_conf["db_name"])
+        self.coll = self.task_db.use_coll("job")
+        self.task = self.coll.find_one({"name": self.name})
+        #set_project
+        if bool(self.task is None):
+            #creating parameters of the project
+            
+            #creating the default directory for storing projects
+            #based on user+ directory name
+            default_dir = os.path.join(task_conf["user"], task_conf["directory"])
+            self.create_dir(default_dir)
+            self.create(project_conf)
+        else:
+            self.update(project_conf)
+        return self.task
+    
+    
+        
     @q
     def load(self):
         '''Load the data store of the projects from the project name'''
         self.task = self.coll.find_one({"name": self.name})
-        
         self.project = Database(self.name)
         self.data = self.project.set_coll("data")
         self.queue = self.project.set_coll("queue")
@@ -106,6 +156,7 @@ class Crawtext(object):
         if queue is empty
         '''
         methods = [k for k, v in self.task.iteritems() if k in ["file", "url", "key"] and v is not False]
+            
         if self.query is False or self.query is None or self.query == "":
             methods = [k for k in methods if k != "key"]
         if self.queue.count() == 0:
@@ -129,8 +180,7 @@ class Crawtext(object):
     @q
     def create_dir(self, dirname):
         '''create the default store directory'''
-        curr_dir = os.getcwd()
-        self.directory = os.path.join(curr_dir, dirname)
+        self.directory = os.path.join(self.current_dir, dirname)
         self.project_path = os.path.join(self.directory,re.sub(r'[^\w]',"_", self.name))
         if not os.path.exists(self.directory):
             print("creating directory to store project %s" %self.directory)
@@ -160,7 +210,10 @@ class Crawtext(object):
         project = {k:v for k,v in self.__dict__.iteritems() if k not in ['coll', 'db', 'database','task_db']}
         f_name = sys._getframe().f_code.co_name
         project["status"], project["msg"], project["step"], project["history"] = [True], ["ok"], [f_name], [self.date]        
-        self.coll.insert_one(project)
+        try:
+            self.coll.insert_one(project)
+        except DuplicateKeyError:
+            pass
         self.task = self.coll.find_one({"name":self.name})
         if self.task is not None:
             self.load()
@@ -183,32 +236,48 @@ class Crawtext(object):
         #self.task = self.coll.find_one({"name":self.name})
         task = {k:v for k,v in self.task.iteritems() if type(v) != list}
         for k,v in task.items():
+            if v == u'':
+                v = False
             setattr(self,k,v)
         
         
-        
-        #~ project = {k:v for k,v in self.task.items() if k is not None and k not in ['coll', 'db', 'database','task_db']}
+        #project = {k:v for k,v in self.task.items() if k is not None and k not in ['coll', 'db', 'database','task_db']}
         status = False
+        
         for k,v in cfg_project.iteritems():
             try:
                 if v != task[k]:
+                    if v == u'':
+                        v = False
                     self.coll.update({"_id":task["_id"]},{"$set":{k: v}})
                     status = True
             except KeyError:
                 self.coll.update({"_id":task["_id"]},{"$set":{k: v}})
                 status = True
         if status:
-            f_name = sys._getframe().f_code.co_name
-            self.coll.update({"_id": task["_id"]}, 
-                        {"$push":
-                            {"status":True,
-                            "msg":"ok",
-                            "step": f_name,
-                            "history": self.date}
-                        #"$position":0}
-                        }
-                        )
-            
+            try:
+                f_name = sys._getframe().f_code.co_name
+                print f_name
+                self.coll.update({"_id": task["_id"]}, 
+                            {"$push":
+                                {"status":True,
+                                "msg":"ok",
+                                "step": f_name,
+                                "history": self.date},
+                            #"$position":0
+                            }
+                            )
+            except:
+                
+                self.coll.update({"_id": task["_id"]}, 
+                            {"$push":
+                                {"status":True,
+                                "msg":"No info",
+                                "step": "update",
+                                "history": self.date},
+                            
+                            }
+                            )
         else:
             #no change
             self.load()
@@ -222,11 +291,20 @@ class Crawtext(object):
         return self.status
     
     def insert_file(self):
-        path = os.path.join(self.current_dir, self.file)        
+        try:
+            path = os.path.join(self.project_path, self.file)
+        except IOError:
+            try:
+                path = os.path.join(self.current_dir, self.file)
+            except IOError:
+                path = self.file
         with open(path, 'r') as f:
             for i,url in enumerate(f.readlines()):
-                print("Adding source from", url_file, url)
-                self.link = {"url": url, "source_url": "file:"+url_file, "depth": 0}
+                #print url
+                url = re.split("\n|\t|,",url)[0]
+                #print url
+                print("Adding source from", path, url)
+                self.link = {"url": url, "source_url": "file:"+path, "depth": 0}
                 self.insert_url()
             print ("%i urls added" %i)
         return True
@@ -235,10 +313,11 @@ class Crawtext(object):
         "insert url directly into data and next_url to seeds"
         #in case a simple url is given
         
-        if type(self.url) == str:
+        if type(self.url) == str or type(self.url) == unicode:
             self.link = {"url": self.url, "source_url": "url", "depth": 0}
-        page = Page(self.link, self.task)
-        return
+        page = Page(self.link, self.config)
+        
+        return 
                 
     def check_interval(self, interval ="day"):
         '''interval default 1 day or 1 week or 1 month'''
@@ -318,15 +397,29 @@ class Crawtext(object):
             print("%i sources in process" %self.queue.count({"depth":0}))
             print("%i sources stored" %self.data.count({"depth":0}))
             #self.report()
-            for item in self.queue.find(no_cursor_timeout=True).sort([('depth', ASCENDING)]):
-                print("%i urls in process" %self.queue.count())
-                #if item["url"] not in self.logs.distinct("url"):
-                page = Page(item, self.task)
-                self.queue.delete_one({"url": item["url"]})
-                print("%i urls in process" %self.queue.count())
-                print("%i results" %self.data.count())
-                print("%i logs" %self.logs.count())
-               
+            
+            try:
+                for item in self.queue.find(no_cursor_timeout=True).sort([('depth', ASCENDING)]):
+                    print("%i urls in process" %self.queue.count())
+                    #if item["url"] not in self.logs.distinct("url"):
+                    page = Page(item, self.task)
+                    self.queue.delete_one({"url": item["url"]})
+                    self.data.insert(page.set_data())
+                    print("%i urls in process" %self.queue.count())
+                    print("%i results" %self.data.count())
+                    print("%i logs" %self.logs.count())
+            #if queue is too big for sorting
+            except :
+                
+                for item in self.queue.find(no_cursor_timeout=True):
+                    print("%i urls in process" %self.queue.count())
+                    #if item["url"] not in self.logs.distinct("url"):
+                    page = Page(item, self.task)
+                    self.data.insert(page.set_data())
+                    self.queue.delete_one({"url": item["url"]})
+                    print("%i urls in process" %self.queue.count())
+                    print("%i results" %self.data.count())
+                    print("%i logs" %self.logs.count())
         return True
         
                     
@@ -399,4 +492,5 @@ class Crawtext(object):
         s = Stats(self.name)
         return s.report(type, format)
 
-    
+if __name__ == "__main__":
+    Crawtext()

@@ -1,0 +1,17 @@
+--- !config.yml
+default:
+    host:localhost
+    dir_name:projects
+    db_name":crawtext_job
+    user: 4barbes@gmail.com
+projets:
+    - name        : cop21_test0
+     query: ""
+     file   : false
+     url    : false
+     key    : "J8zQNrEwAJ2u3VcMykpouyPf4nvA6Wre1019v/dIT0o"
+     search_nb  : 0
+     max_depth  : 1
+     filter_lang    : false
+     repeat    : false
+     next  : false

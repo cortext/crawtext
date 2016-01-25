@@ -1,7 +1,7 @@
 from adblockparser import AdblockRules
 import os
-
-PKG_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'packages')
+PKG_DIR = os.path.dirname(os.path.realpath(__file__))
+#PKG_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'packages')
 class Filter(object):
     def __init__(self, filename):
         self.rules = []

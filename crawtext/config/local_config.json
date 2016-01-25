@@ -1,0 +1,24 @@
+{
+    "default": {
+        "host":"localhost",
+        "dir_name":"crawl_results",
+        "db_name":"tasks",
+        "user": "4barbes@gmail.com"
+    },
+    "project":{
+        "name": "test",
+        "query": "",
+        "file": false,
+        "directory": false,
+        "url": "www.viedemerde.com",
+        "key": "J8zQNrEwAJ2u3VcMykpouyPf4nvA6Wre1019v/dIT0o",
+        "search_nb": false,
+        "max_depth": 1,
+        "filter_lang": false,
+        "repeat": false,
+        "next": false,
+        "filter": false,
+        "user": "4barbes@gmail.com"
+        }
+    
+}
