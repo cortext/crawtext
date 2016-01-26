@@ -1,17 +1,14 @@
 {
-"ABSPATH": "", 
-"PROJECT_DIR_NAME": "",
-"query": "",
-"file": "", 
-"url": False, 
-"key": False, 
-"search_nb": 1000, 
-"filter_lang": False,
-"user": False, 
-"max_depth": 100, 
-"repeat": False, 
-"data": False, 
-"format": False, 
-"short_export": False, 
-"next": False
+	"user": "admin@cortext.fr",
+    "password": "keepitsecret",
+	"db": {
+		"host": "localhost",
+		"port": 27017,
+        "db_name": "crawtext",
+		"collection": "projects"
+	},
+    "website":{
+        "host": "localhost",
+        "port": 8080
+    }
 }

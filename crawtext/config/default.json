@@ -1,0 +1,20 @@
+{
+	"project_parameters": {
+		"name": "demo1",
+		"crawl_parameters": {
+			"max_depth": 100,
+			"lang": "en",
+			"query": "digital humanities AND (web OR crawl* OR spider)"
+		},
+		"crawl_scheduler": {
+			"repeat": false,
+			"next": "week"
+		},
+		"crawl_sources": {
+			"url": false,
+			"search_key": "J8zQNrEwAJ2u3VcMykpouyPf4nvA6Wre1019v/dIT0o",
+			"search_nb_results": 1000,
+			"file": false
+		}
+    }
+}
