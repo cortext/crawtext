@@ -7,6 +7,8 @@ import yaml
 import crypt
 from pymongo import MongoClient
 from collections import namedtuple
+import datetime
+from datetime import datetime as dt
 
 class Setup(object):
     def __init__(self, global_settings=None):
@@ -21,7 +23,7 @@ class Setup(object):
         self.DB = self.client[self.db["db_name"]]
         self.COLL = self.DB[self.db["collection"]]
         self.DIR = self.create_env()
-        
+        self.SETTINGS = {"user":self.USER,"db":self.DB,"coll": self.COLL,"dir": self.DIR}
         
     def get_settings(self, cfg):
         #loading default setup
@@ -68,78 +70,119 @@ class Setup(object):
             os.makedirs(self.DIR)
         return self.DIR
         
-class Config(object):
+class Project(object):
     def __init__(self, project = None, global_settings = None):
-        if global_settings is None:
-            s = Setup()
-            SETTINGS = {"user":s.USER,"db":s.DB,"coll": s.COLL,"dir": s.DIR)
-        else:
-            s = Setup(global_settings)
-            SETTINGS = {"user":s.USER,"db":s.DB,"coll": s.COLL,"dir": s.DIR)
+        '''config project and task'''
+        s = Setup(global_settings)
+        for k, v in s.SETTINGS.items():
+            #print k.upper(), v
+            setattr(self, k.upper(),v)
             
-    def get_settings(self, cfg):
+        self.PROJECT = None
+        self.get_params(project)
+        self.setup_project()
+    def get_params(self, cfg):
         #loading default setup
         if cfg is None:
             print "Loading demo"
-            afile = os.path.realpath("./config/default.json")
-            self.settings = json_config(afile)
-            return self.settings
+            afile = os.path.realpath("./config/example.json")
+            self.params = json_config(afile)
         #loading from a simple dict
         elif isinstance(cfg, dict):
-            self.settings = cfg
-            return self.settings
+            self.params = cfg
         #loading from file
         else:
             afile = os.path.realpath(cfg)
-            
             try:
                 if afile.endswith(".json"):
-                    self.settings = json_config(afile)
+                    self.params = json_config(afile)
                 elif afile.endswith(".yml"):
-                    self.settings = yml_config(afile)
+                    self.params = yml_config(afile)
                 else:
                     sys.exit("SETUP error: config input MUST be a dict, a JSON or a YAML file")
             except IOError:
-                self.settings = json_config(afile)
+                self.params = json_config(afile)
                 sys.exit("SETUP error: no config file found")
-            return self.settings
-    def setup_project(self, cfg):
-        '''reading setup info db, user'''
-        if cfg is None:
-            afile = os.path.realpath("./config/default_settings.json")
-            self.settings = json_config(afile)
-            print self.settings
-        #loading from a simple dict
-        
-        elif isinstance(cfg, dict):
-            self.settings = cfg
-            return self.settings
-        #loading from file
-        
+        return self.params
+    def setup_project(self):
+        if not self.exists():
+            self.create_project()
+            self.add_seeds()
         else:
-            afile = os.path.join(os.getcwd(), cfg)
-            print afile
-            try:
-                if afile.endswith(".json"):
-                    self.settings = json_config(afile)
-                elif afile.endswith(".yml"):
-                    self.settings = yml_config(afile)
-                else:
-                    sys.exit("CONFIG error: config input MUST be a dict, a JSON or a YAML file")
-            except IOError:
-                self.settings = json_config(afile)
-                sys.exit("CONFIG error: no config file found")
-            return self.settings
-            
-            
-    def check_format(self):
-        '''check if default settings are correctly setup'''
-        setup_params = [bool(self.params.haskey(n)) for n in ["user", "db"]]
-        print setup_params
-        print self.params.keys()
-        #~ if any(bool(self.params.haskey("user")), bool:
-            #~ print "ok"
+            self.update_project()
+            self.add_seeds()
+        return self
+    def exists(self):
+        self.NAME = self.params["name"]
+        self.PROJECT = self.COLL.find_one({"user":self.USER, "name": self.NAME})
+        return bool(self.PROJECT is not None)
         
+    def create_projet(self):
+        date = dt.today()
+        self.START_DATE = date.replace(second=0, microsecond=0)
+        self.params["user"] = self.USER
+        self.params["date"] = [self.START_DATE]
+        self.SCHEDULE = self.params["scheduler"]
+        if self.SCHEDULE["activated"]:
+            print self.SCHEDULE["days"]
+        
+        self._id = self.COLL.insert(self.params)
+        self.PROJECT = self.COLL.find_one({"_id":self._id})
+        return self.PROJECT
+        
+    def update_project(self):
+        self.START_DATE = self.PROJECT["date"][-1]
+        date = dt.today()
+        self.UPDATED_DATE = date.replace(second=0, microsecond=0)
+        time_elapsed = self.START_DATE - self.UPDATED_DATE
+        return self
+    
+    def delete_project():
+        pass
+    def add_seeds(self):
+        for k, v in self.PROJECT["seeds"].items():
+            
+            if v["activated"]:
+                print k, v
+                if k == "from_search":
+                    if self.PROJECT["filters"]["query_filter"]["activated"]:
+                        print self.PROJECT["filters"]["query_filter"]["query"]
+                        #~ if g["activated"]:
+                            #~ print f, g
+        pass
+    def delete_seeds():
+        pass
+    def update_seeds():
+        pass
+    def delete_env(self):
+        import shutil
+        directory = os.path.join(RESULT_PATH, self.name)
+        if os.path.exists(directory):
+            shutil.rmtree(directory)
+            #logger.debug("Directory %s: %s sucessfully deleted"    %(self.name,directory))
+            return True
+        else:
+            #logger.debug("No directory found for crawl project %s" %(str(self.name)))
+            return False
+
+    def delete_db(self):
+        db = Database(self.name)
+        db.drop_db()
+        #logger.debug("Database %s: sucessfully deleted" %self.name)
+        return True
+
+    def list_projects(self):
+        for n in self.coll.find():
+            try:
+                print("-", n["name"])
+            except KeyError:
+                self.coll.remove(n)
+        return sys.exit(0)
+    
+    def report(self, type=["crawl","action"], format="mail",):
+        s = Stats(self.name)
+        return s.report(type, format)
+                        
 def yml_config(afile):
     with open(afile, 'r') as ymlfile:
         
@@ -155,4 +198,6 @@ def json_config(afile):
             sys.exit("Error parsing %s file: %s" %(afile, e))
         
 
-
+if __name__=="__main__":
+    t = Project()
+    print t.START_DATE

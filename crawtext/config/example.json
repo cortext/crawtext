@@ -1,0 +1,36 @@
+{
+    "name": "example",
+    "filters": {
+        "depth_filter":{ 
+            "activated": true,
+            "depth": 100
+            },
+        "lang_filter":{
+            "activated": false,
+            "lang": "en"
+            },
+        "query_filter":{
+            "activated": true,
+            "query": "digital humanities AND (web OR crawl* OR spider)"
+            }
+    },
+    "scheduler": {
+        "activated": true,
+        "days": 7
+    },
+    "seeds": {
+        "from_url":{
+            "activated": false,
+            "url": ""
+            },
+        "from_file":{
+            "activated": false,
+            "file": ""
+            },
+        "from_search": {
+            "activated":true,
+            "key": "J8zQNrEwAJ2u3VcMykpouyPf4nvA6Wre1019v/dIT0o",
+            "nb_results": 1000
+            }
+        }
+}
