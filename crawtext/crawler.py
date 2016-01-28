@@ -43,23 +43,21 @@ class Crawler(object):
             self.client =  MongoClient(uri)
             db_name  = self.client[self.name]
             return bool(self.name in self.client.database_names())
-        else:
-            raise NotImplementedError
+        
        
 
     def setup_db(self):
         if self.db["provider"] == "mongo":
+            uri = '%sdb://%s,%s:%s'%(self.db["provider"], self.db["host"], self.db["host"], self.db["port"])
+            self.client =  MongoClient(uri)
+            self.DB = self.client[self.name]
             if not self.exists():
-                uri = 'mongodb://%s,%s:%s'%(self.db["host"], self.db["host"], self.db["port"])
-                self.client =  MongoClient(uri)
-                self.db = self.client[self.name]
-                self.infos = self.db["infos"].insert(self.PROJECT)
-                
-                self.db["seeds"].create_index([("url", pymongo.HASHED)],unique=True, background=True, safe=True)
-                self.db["data"].create_index("url",unique=True, background=True)
+                self.infos = self.DB["infos"].update(self.PROJECT, upsert=True)
+                print self.DB["seeds"].create_index([("url", pymongo.HASHED)],unique=True, background=True, safe=True)
+                print self.DB["data"].create_index("url",unique=True, background=True)
             
-            self.seeds = self.db["seeds"]
-            self.data = self.db["data"]
+            self.seeds = self.DB["seeds"]
+            self.data = self.DB["data"]
             self.queue = {}
             return self
                 
@@ -79,6 +77,7 @@ class Crawler(object):
                     self.add_file(params[n])
                 elif n == "url":
                     self.add_url(url)
+        
         print self.seeds.count()
         for n in self.seeds.find():
             print n["url"]
@@ -106,8 +105,12 @@ class Crawler(object):
                 try:
                     print("Inserting %i new seeds from file") %len(seeds)
                     self.seeds.insert_many(seeds)
+                
                 except pymongo.errors.DuplicateKeyError:
                     pass
+                except Exception as e:
+                    print ">>>>>>>>>>>", e
+                    
         except IOError:
             sys.exit("File not found")
     def add_url(self, url):
