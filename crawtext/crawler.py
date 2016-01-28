@@ -25,8 +25,9 @@ class Crawler(object):
         
         self.SETTINGS = global_settings
         self.db = self.SETTINGS["db"]
-        if not self.exists():
-            self.setup_db()
+        
+        self.setup_db()
+        
             #~ setattr(self, k, v)
         if self.status:
             #~ self.setup_db()
@@ -47,36 +48,40 @@ class Crawler(object):
        
 
     def setup_db(self):
-        if self.db["provider"] == "mongo":
-            uri = 'mongodb://%s,%s:%s'%(self.db["host"], self.db["host"], self.db["port"])
-            self.client =  MongoClient(uri)
-            self.db = self.client[self.name]
-            self.infos = self.db["infos"].insert(self.PROJECT)
-            
-            self.db["seeds"].create_index([("url", pymongo.HASHED)],unique=True, background=True, safe=True)
-            
-            self.seeds = self.db["seeds"]
-            
-            self.db["data"].create_index("url",unique=True, background=True)
-            
-            self.data = self.db["data"]
-            self.queue = {}
-            return self
-        elif self.db["provider"] in ["sql","sqlite"]:
-            #~ import sqlite3
-            #~ self.client = sqlite3.connect(self.db["db_name"])
-            #~ DB = self.client.cursor()
-            #~ DB.execute("""CREATE TABLE IF NOT EXISTS %s()""") %self.db["collection"]
-            #~ DB.commit()
-            raise NotImplementedError
-        else:
-            #~ import psycopg2
-            #~ try:
-                #~ conn = psycopg2.connect("dbname='%s' user='%s' host='%s' password='%s" %(self.db["name"],self.db["user"], self.db["host"], self.db["password"]) )
-            #~ except:
-                #~ print "I am unable to connect to the database"
-            raise NotImplementedError
-            
+        if not self.exists():
+            if self.db["provider"] == "mongo":
+                uri = 'mongodb://%s,%s:%s'%(self.db["host"], self.db["host"], self.db["port"])
+                self.client =  MongoClient(uri)
+                self.db = self.client[self.name]
+                self.infos = self.db["infos"].insert(self.PROJECT)
+                
+                self.db["seeds"].create_index([("url", pymongo.HASHED)],unique=True, background=True, safe=True)
+                
+                
+                
+                self.db["data"].create_index("url",unique=True, background=True)
+                
+                
+                
+            elif self.db["provider"] in ["sql","sqlite"]:
+                #~ import sqlite3
+                #~ self.client = sqlite3.connect(self.db["db_name"])
+                #~ DB = self.client.cursor()
+                #~ DB.execute("""CREATE TABLE IF NOT EXISTS %s()""") %self.db["collection"]
+                #~ DB.commit()
+                raise NotImplementedError
+            else:
+                #~ import psycopg2
+                #~ try:
+                    #~ conn = psycopg2.connect("dbname='%s' user='%s' host='%s' password='%s" %(self.db["name"],self.db["user"], self.db["host"], self.db["password"]) )
+                #~ except:
+                    #~ print "I am unable to connect to the database"
+                raise NotImplementedError
+        self.seeds = self.db["seeds"]
+        self.data = self.db["data"]
+        self.queue = {}
+        return self
+                
     def add_seeds(self):
         #~ print self.PROJECT.keys()
         filters = {k: self.PROJECT["seeds"][k]["active"] for k in self.PROJECT["seeds"].keys()}
@@ -86,7 +91,6 @@ class Crawler(object):
             if n == "search":
                 params = self.PROJECT["seeds"][n]
                 params["query"] = self.PROJECT["filters"]["query"]["query"]
-                
                 self.search(params)
             else:
                 params = self.PROJECT["seeds"][n]
@@ -94,8 +98,9 @@ class Crawler(object):
                     self.add_file(params[n])
                 elif n == "url":
                     self.add_url(url)
-                    
-        
+        print self.seeds.count()
+        for n in self.seeds.find():
+            print n["url"]
     def add_file(self, filename):
         #print self.SETTINGS["dir"], filename
         if filename.startswith("./"):
@@ -108,7 +113,7 @@ class Crawler(object):
         try:
             with open(filename, "r") as f:
                 seeds =  [n.replace("\n","") for n in f.readlines() if n != "\n"]
-                urls_ids = [{   "date":[date], 
+                urls_ids = [{   "date":self.date, 
                                 "url": url, 
                                 "url_id":get_url_id(url), 
                                 "title":None, 
@@ -135,9 +140,8 @@ class Crawler(object):
                                 "description": None,
                                 "rank": 1,
                                 "source_url": None,
-                                "depth": 0
+                                "depth": 0,
                                 "method": "manual"
-
                                 }, safe = True)
                                     
         except pymongo.errors.DuplicateKeyError:
