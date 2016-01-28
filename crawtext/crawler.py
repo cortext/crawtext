@@ -56,12 +56,7 @@ class Crawler(object):
                 self.infos = self.db["infos"].insert(self.PROJECT)
                 
                 self.db["seeds"].create_index([("url", pymongo.HASHED)],unique=True, background=True, safe=True)
-                
-                
-                
                 self.db["data"].create_index("url",unique=True, background=True)
-                
-                
                 
             elif self.db["provider"] in ["sql","sqlite"]:
                 #~ import sqlite3
