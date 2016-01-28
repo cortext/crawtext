@@ -48,8 +48,8 @@ class Crawler(object):
        
 
     def setup_db(self):
-        if not self.exists():
-            if self.db["provider"] == "mongo":
+        if self.db["provider"] == "mongo":
+            if not self.exists():
                 uri = 'mongodb://%s,%s:%s'%(self.db["host"], self.db["host"], self.db["port"])
                 self.client =  MongoClient(uri)
                 self.db = self.client[self.name]
@@ -57,25 +57,11 @@ class Crawler(object):
                 
                 self.db["seeds"].create_index([("url", pymongo.HASHED)],unique=True, background=True, safe=True)
                 self.db["data"].create_index("url",unique=True, background=True)
-                
-            elif self.db["provider"] in ["sql","sqlite"]:
-                #~ import sqlite3
-                #~ self.client = sqlite3.connect(self.db["db_name"])
-                #~ DB = self.client.cursor()
-                #~ DB.execute("""CREATE TABLE IF NOT EXISTS %s()""") %self.db["collection"]
-                #~ DB.commit()
-                raise NotImplementedError
-            else:
-                #~ import psycopg2
-                #~ try:
-                    #~ conn = psycopg2.connect("dbname='%s' user='%s' host='%s' password='%s" %(self.db["name"],self.db["user"], self.db["host"], self.db["password"]) )
-                #~ except:
-                    #~ print "I am unable to connect to the database"
-                raise NotImplementedError
-        self.seeds = self.db["seeds"]
-        self.data = self.db["data"]
-        self.queue = {}
-        return self
+            
+            self.seeds = self.db["seeds"]
+            self.data = self.db["data"]
+            self.queue = {}
+            return self
                 
     def add_seeds(self):
         #~ print self.PROJECT.keys()
