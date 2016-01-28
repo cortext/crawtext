@@ -5,12 +5,14 @@ import simplejson as json
 import yaml
 import crypt
 from pymongo import MongoClient
-from collections import namedtuple
+
 import datetime
 from datetime import datetime as dt
 #import requests
-import time
-from requests_futures.sessions import FuturesSession
+
+
+import logging
+logging.basicConfig()
 
 class Setup(object):
     def __init__(self, global_settings=None):
@@ -25,7 +27,8 @@ class Setup(object):
         self.DB = self.client[self.db["db_name"]]
         self.COLL = self.DB[self.db["collection"]]
         self.DIR = self.create_env()
-        self.SETTINGS = {"user":self.USER,"db":self.DB,"coll": self.COLL,"dir": self.DIR}
+        self.GLOBAL_SETTINGS = {"db": self.db, "user": self.USER, "dir": self.DIR}
+        self.LOCAL_SETTINGS = {"user":self.USER,"db":self.DB,"coll": self.COLL,"dir": self.DIR}
         
     def get_settings(self, cfg):
         #loading default setup
@@ -53,27 +56,7 @@ class Setup(object):
                 sys.exit("SETUP error: no config file found")
             return self.settings
     
-    def setup_db(self):
-        if self.db["provider"] == "mongo":
-            uri = 'mongodb://%s,%s:%s'%(self.db["host"], self.db["host"], self.db["port"])
-            self.client =  MongoClient(uri)
-            DB = self.client[self.db["db_name"]]
-            COLL = DB[self.db["collection"]]
-            return self.client
-        elif self.db["provider"] in ["sql","sqlite"]:
-            #~ import sqlite3
-            #~ self.client = sqlite3.connect(self.db["db_name"])
-            #~ DB = self.client.cursor()
-            #~ DB.execute("""CREATE TABLE IF NOT EXISTS %s()""") %self.db["collection"]
-            #~ DB.commit()
-            raise NotImplementedError
-        else:
-            #~ import psycopg2
-            #~ try:
-                #~ conn = psycopg2.connect("dbname='%s' user='%s' host='%s' password='%s" %(self.db["name"],self.db["user"], self.db["host"], self.db["password"]) )
-            #~ except:
-                #~ print "I am unable to connect to the database"
-            raise NotImplementedError
+    
 
     def db_exists(self):
         uri = 'mongodb://%s,%s:%s'%(self.db["host"], self.db["host"], self.db["port"])
@@ -86,19 +69,43 @@ class Setup(object):
         if not os.path.exists(self.DIR):
             os.makedirs(self.DIR)
         return self.DIR
+    
+    def delete_env(self):
+        import shutil
+        
+        if os.path.exists(self.DIR):
+            shutil.rmtree(self.DIR)
+            #logger.debug("Directory %s: %s sucessfully deleted"    %(self.name,directory))
+            return True
+        else:
+            #logger.debug("No directory found for crawl project %s" %(str(self.name)))
+            return False
+
+    def delete_db(self):
+        return self.DB.drop_db()
+        
+    def list_projects(self):
+        for n in self.COLL.find():
+            print n
+        return 
         
 class Project(object):
     def __init__(self, project = None, global_settings = None):
         '''config project and task'''
         s = Setup(global_settings)
-        for k, v in s.SETTINGS.items():
+        
+        self.settings = s.GLOBAL_SETTINGS
+        for k, v in s.LOCAL_SETTINGS.items():
             #print k.upper(), v
             setattr(self, k.upper(),v)
-            
+            #~ 
         self.PROJECT = None
         self.get_params(project)
         self.status = self.setup_project()
-    
+        #TEST
+        self.status = True
+        self.PROJECT["status"] = self.status 
+        
     def get_params(self, cfg):
         '''indexig parameters from file'''
         #loading default setup
@@ -126,13 +133,9 @@ class Project(object):
         
     def setup_project(self):
         if self.exists():
-            self.update_project()
-            
-        else:
-            self.create_project()
-        
-        return self
-    
+            return self.update_project()
+        return self.create_project()
+
     def exists(self):
         self.NAME = self.params["name"]
         #self.USER is in SETUP
@@ -158,9 +161,10 @@ class Project(object):
                 print "Project %s has been sucessfully created" %self.PROJECT["name"]
                 return True
             else:
-                sys.exit("Error while creating a new project")
+                return False
         else:
-            sys.exit("Error in config file. Aborting")
+            print "Error in config file. Aborting"
+            return False
         
     def update_project(self):
         '''updating project configuration'''
@@ -189,7 +193,7 @@ class Project(object):
                         
                         self.COLL.update({"_id": self.PROJECT["_id"]}, {"$set":{n+"."+k+"."+item[0]: item[2]}})
                         self.PROJECT[n][k][item[0]] = item[2]
-                        msg = n, k, item[0], "has been updated to: ", item[2]
+                        msg = n+" "+k+" "+item[0]+"has been updated to: "+ str(item[2])
                         histories.append(msg)
                         if n == "seeds":
                             reload_seeds = True
@@ -201,7 +205,7 @@ class Project(object):
         if self.check_config():
             return reload_seeds
         else:
-            sys.exit("Error in configuration file. ")
+            return False
     
         
     def check_config(self):
@@ -301,91 +305,12 @@ class Project(object):
     def has_changed(self, params):
         return any([n[0]!=n[1] for n in zip(params[0].values(),params[1].values())])
     
-    def delete_project():
-        pass
-    def add_seeds(self):
-        
-        filters = {k: self.PROJECT["seeds"][k]["active"] for k in self.PROJECT["seeds"].keys()}
-        seeds_options = [k for k, v in filters.items() if v is True]
-        for n in seeds_options:
-            if n == "search":
-                params = self.PROJECT["seeds"][n]
-                del params["active"]
-                params["query"] = self.PROJECT["filters"]["query"]["query"]
-                self.search(params)
-            else:
-                params = self.PROJECT["seeds"][n]
-                del params["active"]
-                print params
-    
-    def search(self, params):
-        session = FuturesSession()
-       
-        def get_req(future):
-            response = future.result()
-            results = response.json()['d']['results']
-            
-            for res in results:
-                position = int(res['__metadata']['uri'].split("&$")[1].split("=")[1])+1
-                url, description, title = res["Url"], res["Description"], res["Title"]
-                #ici insertion dans bdd projet
-                
-            
-            
-            
-            
-        for i in range(0,params["nb"]+50, 50):
-            
-            future = session.get(
-                        'https://api.datamarket.azure.com/Bing/Search/v1/Web',
-                        params={    '$format' : 'json',
-                                    '$skip' : i,
-                                    '$top': 50,
-                                    'Query' : '\'%s\'' %params["query"],},
-                        auth=(params["key"], params["key"]),
-                        headers = { 'User-agent': 'Mozilla/5.0',
-                                    'Connection': 'close'}
-                    )
-            try:
-                future.add_done_callback(get_req)
-            except:
-                pass
-                
-            
-    def insert_url(self):
-        print 
-    def delete_seeds():
-        pass
-    def update_seeds():
-        pass
-    def delete_env(self):
-        import shutil
-        directory = os.path.join(RESULT_PATH, self.name)
-        if os.path.exists(directory):
-            shutil.rmtree(directory)
-            #logger.debug("Directory %s: %s sucessfully deleted"    %(self.name,directory))
+    def delete_project(self):
+        if self.exists():
+            print self.COLL.remove({"name":self.PROJECT["name"], "user":self.PROJECT["user"]})
             return True
-        else:
-            #logger.debug("No directory found for crawl project %s" %(str(self.name)))
-            return False
-
-    def delete_db(self):
-        db = Database(self.name)
-        db.drop_db()
-        #logger.debug("Database %s: sucessfully deleted" %self.name)
-        return True
-
-    def list_projects(self):
-        for n in self.coll.find():
-            try:
-                print("-", n["name"])
-            except KeyError:
-                self.coll.remove(n)
-        return sys.exit(0)
+        return False
     
-    def report(self, type=["crawl","action"], format="mail",):
-        s = Stats(self.name)
-        return s.report(type, format)
                         
 def yml_config(afile):
     with open(afile, 'r') as ymlfile:
@@ -400,11 +325,3 @@ def json_config(afile):
             return config    
         except ValueError as e:
             sys.exit("Error parsing %s file: %s" %(afile, e))
-        
-
-if __name__=="__main__":
-    
-    t = Project()
-    if t.status:
-        print "Launch PROJECT", t.PROJECT
-    #print t.START_DATE
