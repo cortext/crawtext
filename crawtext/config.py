@@ -14,62 +14,74 @@ from datetime import datetime as dt
 import logging
 logging.basicConfig()
 
-class Setup(object):
-    def __init__(self, global_settings=None):
-        '''setting global environnement'''
-        self.get_settings(global_settings)
-        self.USER, self.password = self.settings["user"], crypt.crypt(self.settings["password"],"22")
-        #~ os.system("useradd -p "+self.password+" "+self.user)
-        self.db = self.settings["db"]
-        if not self.db_exists():
-            self.setup_db()
+def yml_config(afile):
+    with open(afile, 'r') as ymlfile:
         
-        self.DB = self.client[self.db["db_name"]]
-        self.COLL = self.DB[self.db["collection"]]
-        self.DIR = self.create_env()
-        self.GLOBAL_SETTINGS = {"db": self.db, "user": self.USER, "dir": self.DIR}
-        self.LOCAL_SETTINGS = {"user":self.USER,"db":self.DB,"coll": self.COLL,"dir": self.DIR}
-        
-    def get_settings(self, cfg):
-        #loading default setup
-        if cfg is None:
-            afile = os.path.realpath("./config/settings.json")
-            self.settings = json_config(afile)
-            return self.settings
-        #loading from a simple dict
-        elif isinstance(cfg, dict):
-            self.settings = cfg
-            return self.settings
-        #loading from file
-        else:
-            afile = os.path.realpath(cfg)
-            
-            try:
-                if afile.endswith(".json"):
-                    self.settings = json_config(afile)
-                elif afile.endswith(".yml"):
-                    self.settings = yml_config(afile)
-                else:
-                    sys.exit("SETUP error: config input MUST be a dict, a JSON or a YAML file")
-            except IOError:
-                self.settings = json_config(afile)
-                sys.exit("SETUP error: no config file found")
-            return self.settings
-    
-    
+        config = yaml.load(ymlfile.read())
+        return config
 
-    def db_exists(self):
-        uri = 'mongodb://%s,%s:%s'%(self.db["host"], self.db["host"], self.db["port"])
-        self.client =  MongoClient(uri)
-        return bool(self.db["db_name"] in self.client.database_names())
-   
+def json_config(afile):
+    with open(afile, 'r') as jsonfile:
+        try:
+            config = json.load(jsonfile)
+            return config    
+        except ValueError as e:
+            sys.exit("Error parsing %s file: %s" %(afile, e))
+
+def load_settings(cfg="./config/settings.json"):
+    #loading from a simple dict
+    if isinstance(cfg, dict):
+        return cfg
+    else:
+        #loading from file
+        afile = os.path.realpath(cfg)
+        try:
+            if afile.endswith(".json"):
+                return json_config(afile)
+            elif afile.endswith(".yml"):
+                return yml_config(afile)
+            else:
+                sys.exit("SETUP error: config input MUST be a dict, a JSON or a YAML file")
+        except IOError:
+                sys.exit("SETUP error: no config file found")
+                
+class Config(object):
+    def __init__(self, global_settings="./config/settings.json"):
+        '''setting global environnement'''        
+        self.settings = load_settings(global_settings)
+        self.load()
+        #self.APP = dict(self.settings["website"])
+        
+    def load(self):
+        self.get_user()
+        self.create_db()
+        self.create_env()
+        return self
+    def get_user(self):
+        self.USER, password = self.settings["user"].values()
+        self.PASSWORD = crypt.crypt(password, "22")
+        return self.USER
+        
+    def create_db(self):
+        db = dict(self.settings["db"].items())
+        col_name= db["collection"]
+        self.DB = {}
+        self.DB["uri"] = '%sdb://%s,%s:%s'%(db["provider"], db["host"], db["host"], db["port"])
+        self.DB["client"] =  MongoClient(self.DB["uri"])
+        self.DB["db_name"] = self.DB["client"][str(db["db_name"])]
+        self.DB["collection"] = self.DB["db_name"][col_name]
+        return self.DB
+    
     def create_env(self):
-        '''create the default store directory'''
+        #Buy default ENV is a directory composed by username
+        #can be changed here
+        #self.ENV = dict(self.settings["env"])
+        
         self.DIR = os.path.join(os.getcwd(), self.USER)
         if not os.path.exists(self.DIR):
             os.makedirs(self.DIR)
         return self.DIR
-    
+        
     def delete_env(self):
         import shutil
         
@@ -82,88 +94,91 @@ class Setup(object):
             return False
 
     def delete_db(self):
-        return self.DB.drop_db()
-        
-    def list_projects(self):
+        return self.DB['client'].drop_database(self.DB["db_name"])
+     
+    def drop_config(self):
+        self.delete_env()
+        self.delete_db()
+    
+    def get_projects(self):
         for n in self.COLL.find():
             print n
-        return 
-        
+        return
+
 class Project(object):
-    def __init__(self, project = None, global_settings = None):
-        '''config project and task'''
-        s = Setup(global_settings)
+    def __init__(self, project_f = "./config/example.json", cfg = "./config/settings.json"):
+        self.load(cfg)
+        self.params =  load_settings(project_f)
+        self.NAME = self.params["name"] 
+        self.PROJECT = self.get()
+        self.create()
         
-        self.settings = s.GLOBAL_SETTINGS
-        for k, v in s.LOCAL_SETTINGS.items():
-            #print k.upper(), v
-            setattr(self, k.upper(),v)
-            #~ 
-        self.PROJECT = None
-        self.get_params(project)
-        self.status = self.setup_project()
-        #TEST
-        self.status = True
-        self.PROJECT["status"] = self.status 
+        self.CONFIG = self.get_config()
+    
+    def get(self):
+        '''return project'''
+        return self.COLL.find_one({"name": self.NAME, "user": self.USER})
+    
+    def get_config(self):
+        '''return config database'''
+        try:
+            return self.cfg()
+        except:
+            self.load()
+            return self.cfg
         
-    def get_params(self, cfg):
-        '''indexig parameters from file'''
-        #loading default setup
-        if cfg is None:
-            print "Loading demo"
-            afile = os.path.realpath("./config/example.json")
-            self.params = json_config(afile)
-        #loading from a simple dict
-        elif isinstance(cfg, dict):
-            self.params = cfg
-        #loading from file
-        else:
-            afile = os.path.realpath(cfg)
-            try:
-                if afile.endswith(".json"):
-                    self.params = json_config(afile)
-                elif afile.endswith(".yml"):
-                    self.params = yml_config(afile)
-                else:
-                    sys.exit("SETUP error: config input MUST be a dict, a JSON or a YAML file")
-            except IOError:
-                self.params = json_config(afile)
-                sys.exit("SETUP error: no config file found")
-        return self.params
+    def load(self, cfg="./config/settings.json"):
+        s = Config()
+        self.cfg = {}
+        self.cfg["db"] = s.settings["db"]
         
-    def setup_project(self):
+        self.USER = s.USER
+        self.DB = s.DB["client"]
+        self.TASK_DB = s.DB["db_name"]
+        self.COLL = s.DB["collection"]
+        self.DIR = s.DIR
+        return self
+    
+    def create(self):
         if self.exists():
             return self.update_project()
         return self.create_project()
-
-    def exists(self):
-        self.NAME = self.params["name"]
-        #self.USER is in SETUP
         
-        self.PROJECT = self.COLL.find_one({"user":self.USER, "name": self.NAME})
+    def exists(self):
+        self.PROJECT = self.COLL.find_one({"name": self.NAME, "user": self.USER})
         return bool(self.PROJECT is not None)
+    def create_env(self):
+        self.directory = os.path.join(self.DIR, self.NAME)
+        if not os.path.exists(self.directory):
+            os.makedirs(self.directory)
+        return self.directory
         
     def create_project(self):
         '''creating a new project'''
         print self.create_project.__doc__
         date = dt.today()
         self.START_DATE = date.replace(second=0, microsecond=0)
+        #adding parameters
         self.params["date"] = [self.START_DATE]
         self.params["history"] = ["created"]
         self.params["user"] = self.USER
         #self.SCHEDULE = self.params["scheduler"]
         #~ if self.SCHEDULE["active"]:
             #~ print self.SCHEDULE["days"]
-        
+        self.params["directory"] = self.create_env()
         if self.check_config():
-            self.project_id = self.COLL.insert(self.params)
+            self.params["reload"] = True
+            self.params["status"] = True
+            self.project_id = self.COLL.insert_one(self.params)
+            
             if self.exists():
-                print "Project %s has been sucessfully created" %self.PROJECT["name"]
+                print "Project %s has been sucessfully created" %self.NAME
                 return True
-            else:
-                return False
         else:
+            self.params["reload"] = False
+            self.params["status"] = False
             print "Error in config file. Aborting"
+
             return False
         
     def update_project(self):
@@ -181,6 +196,7 @@ class Project(object):
             self.PROJECT["scheduler"] = self.params["scheduler"]
             self.COLL.update({"_id": self.PROJECT["_id"]}, {'$push':{"date": self.UPDATED_DATE}})
             self.COLL.update({"_id": self.PROJECT["_id"]}, {'$push':{"history": "update sccheduler"}})
+            self.COLL.update({"_id": self.PROJECT["_id"]}, {'$set':{"reload": True}})
         reload_seeds = False
         histories = []
         for n in ["seeds", "filters"]:
@@ -192,6 +208,7 @@ class Project(object):
                     if item[1] != item[2]:
                         
                         self.COLL.update({"_id": self.PROJECT["_id"]}, {"$set":{n+"."+k+"."+item[0]: item[2]}})
+                        
                         self.PROJECT[n][k][item[0]] = item[2]
                         msg = n+" "+k+" "+item[0]+"has been updated to: "+ str(item[2])
                         histories.append(msg)
@@ -203,7 +220,11 @@ class Project(object):
             self.COLL.update({"_id": self.PROJECT["_id"]}, {'$push':{"date": self.UPDATED_DATE}})
             self.COLL.update({"_id": self.PROJECT["_id"]}, {'$push':{"history": " ".join(histories)}})
         if self.check_config():
-            return reload_seeds
+            if reload_seeds:
+                self.COLL.update({"_id": self.PROJECT["_id"]}, {'$set':{"reload": True}})
+            else:
+                self.COLL.update({"_id": self.PROJECT["_id"]}, {'$set':{"reload": False}})
+            return True
         else:
             return False
     
@@ -218,7 +239,6 @@ class Project(object):
                 #print "%s is not text" %value
                 return False
             return True
-            
         filters = {k: self.params["seeds"][k]["active"] for k in self.params["seeds"].keys()}
         seeds_options = [k for k, v in filters.items() if v is True]
         
@@ -284,8 +304,6 @@ class Project(object):
                         print "\t -"+ f +" parameter: "+err
                         status = False
                         
-                        
-                        
         else:
             err = '''\t ! No seed option has been activated: 
             Activate at least one option inside your config file to launch the crawler:
@@ -305,23 +323,13 @@ class Project(object):
     def has_changed(self, params):
         return any([n[0]!=n[1] for n in zip(params[0].values(),params[1].values())])
     
+        
     def delete_project(self):
         if self.exists():
-            print self.COLL.remove({"name":self.PROJECT["name"], "user":self.PROJECT["user"]})
+            self.COLL.remove({"name":self.NAME, "user":self.USER})
             return True
-        return False
-    
-                        
-def yml_config(afile):
-    with open(afile, 'r') as ymlfile:
-        
-        config = yaml.load(ymlfile.read())
-        return config
+        else:
+            return False
 
-def json_config(afile):
-    with open(afile, 'r') as jsonfile:
-        try:
-            config = json.load(jsonfile)
-            return config    
-        except ValueError as e:
-            sys.exit("Error parsing %s file: %s" %(afile, e))
+if __name__=="__main__":
+    pass
