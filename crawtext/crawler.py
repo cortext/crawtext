@@ -11,17 +11,23 @@ __version__ = "6.0.0"
 __author_username__= "c24b"
 __author_email__= "4barbes@gmail.com"
 __author__= "Constance de Quatrebarbes"
+
 from config import Project
+import concurrent.futures
+from concurrent.futures import ProcessPoolExecutor, as_completed
+ 
 from requests_futures.sessions import FuturesSession
 from parser import *
  
 import pymongo
 from pymongo import MongoClient
+
 import os, sys, lxml, re
 from bs4 import BeautifulSoup as bs
 from readability.readability import Document
 logging.getLogger("requests").setLevel(logging.WARNING)
 logging.getLogger("readability").setLevel(logging.WARNING)
+
 
 
 class Crawler(object):
@@ -62,13 +68,13 @@ class Crawler(object):
             del self.PROJECT["_id"]
             self.infos = self.db["infos"].insert_one(self.PROJECT)
             self.db["seeds"].create_index("url",unique=True, background=True, safe=True)
-            self.db["data"].create_index("url",unique=True, background=True)
-        
+            self.db["data"].create_index("url",unique=True, background=True, safe=True)
+            self.db["queue"].create_index("url", unique=True, background=True)
         self.seeds = self.db["seeds"]
         self.data = self.db["data"]
-        self.queue = {}
-        
+        self.queue = self.db["queue"]
         return self
+        
     def load_filters(self):
         filters = {k: self.PROJECT["filters"][k]["active"] for k in self.PROJECT["filters"].keys()}
         self.filters = {}
@@ -97,14 +103,14 @@ class Crawler(object):
                     self.add_file(params[n])
                 elif n == "url":
                     self.add_url(params[n])
-        return
+        return self
+        
     def add_file(self, filename):
         #print self.SETTINGS["dir"], filename
         if filename.startswith("./"):
             filename = os.path.realpath(filename)
             #print filename
         else:
-            
             parent_dir = os.path.abspath(os.path.join(self.SETTINGS["dir"], os.pardir))
             #print filename
         try:
@@ -132,8 +138,9 @@ class Crawler(object):
                                 })
                                     
         except pymongo.errors.DuplicateKeyError:
-            print "Duplicate"
+            pass
         return self
+        
     def search(self, params):
         session = FuturesSession()
         def get_req(future):
@@ -159,7 +166,8 @@ class Crawler(object):
                                     
                 except pymongo.errors.DuplicateKeyError:
                     #print "Alredy in DB"
-                    pass
+                    self.seeds.update({"url": url}, {'$push': {"date": self.date}})
+            
             
         for i in range(0,params["nb"]+50, 50):
             
@@ -205,60 +213,135 @@ class Crawler(object):
         else:
             return True
     
-    def extract_text(self, html, url):
-        print lxml_cleaner(html, url)
-        #~ print extract_article(html, url)
-        #~ print 
-    def extract_outlinks(self, html):
-        pass
     
+    def extract_outlinks(self, html, url):
+        soup = bs(html, "lxml")
+        outlinks = []
+        outlink_urls = []
+        for u in soup.findAll("a"):
+            u = u.get("href")
+            if u is None or u == "":
+                pass
+            else:
+                u = Url(u)
+                
+                if not u.is_absolute():
+                    u.make_absolute(url.url)
+                    u.clean_url()
+                #u.source_url = url
+                #print u.source_url
+                if bool(u.url != url.url):
+                    
+                    if u.url not in outlink_urls:
+                        doc = {"url":u.url, "url_id": u.url_id, "url_info": u.export()}
+                    
+                        outlinks.append(doc)
+                        outlink_urls.append(u.url)
+                    #outlinks_ids.append(u.export())
+        return outlinks
+    
+    def extract_keywords(self, meta):
+        return meta["keywords"]
+        
     def extract_meta(self,html):
-        pass
+        '''extraire les balises meta de la page'''
         
-    def check_status(self, reponse):
-         return (reponse not in range(400,520))
+        meta = {"generators": [],
+                "keywords":[]
+                    }
+        for n in bs(html, "lxml").find_all("meta"): 
+            name = n.get("name")
+            prop = n.get("property")
+            content = n.get("content")
+            if name is not None and name not in ["type", "viewport"]:
+                if name.lower() in ["generator"]:
+                    meta["generators"].append(content)
+                else:
+                    meta[re.sub("og:|DC.", "", name)] = content
+                #~ 
+            if prop is not None:
+                meta[re.sub("og:|DC.", "", prop)] = content
+        
+        return meta
     
+    def store_file(self, url_id, data, fmt="txt"):
+        if fmt is None:
+            fname = url_id.replace(".", "_")+"_VERSION_"+self.date.strftime("%d_%m_%Y_%H_%M")
+        else:    
+            fname = url_id.replace(".", "_")+"_VERSION_"+self.date.strftime("%d_%m_%Y_%H_%M")+"."+fmt
+        fname = os.path.join(self.directory, fname)
+        with open(fname, "w") as f:
+            data = (data).encode("utf-8")
+            f.write(data)
+        return fname
+
+    def extract_article(self, response):
+        article = {}
+        html = response.text
         
+        url = response.url
+        url = Url(url)
+        article["url"] = url.url
+        article["url_id"] = url.url_id
+        
+        article_txt = lxml_extractor(html, url)
+        article["html_file"] = self.store_file(url.url_id, article_txt)
+        article["txt_file"] = self.store_file(url.url_id, article_txt, fmt="txt")
+        
+        
+        article["url_info"] = url.export()
+        article["type"] = response.headers['content-type']
+        article["encoding"] = response.encoding.lower()
+        article["outlinks"] = self.extract_outlinks(html, url)
+        return article
+    
     def get_seeds(self):
-        '''download url'''
+        '''download and store seeds'''
         filters = False
         session = FuturesSession()
         def get_req(future):
-            #print filters
             response = future.result()
-            if self.check_status(response.status_code):
+            if response.status_code not in range(400,520):
                 if "text/html" in response.headers['content-type']:
-                    html = response.text
-                    encoding = response.encoding.lower()
-                    print encoding
-                    fname = url.url_id.replace(".", "_")+"_VERSION_"+self.date.strftime("%d_%m_%Y_%H_%M")
-                    f = os.path.join(self.directory, fname)
-                    with open(f, "w") as f:
-                        html = (html).encode("utf-8")
-                        f.write(html)
-                    #text = self.extract_text(html)
-                    article = lxml_extractor(html, response.url)
-                    #~ print article[0:500]
-                    fname = url.url_id.replace(".", "_")+"_VERSION_"+self.date.strftime("%d_%m_%Y_%H_%M")+".txt"
-                    f = os.path.join(self.directory, fname)
-                    with open(f, "w") as f:
-                        f.write(article.encode("utf-8"))
-                elif "pdf" in response.header["content-type"] or "pdf" or url.filetype:
-                    print "PDF!"
-                    
-            #print(response.url, response.status_code)
+                    article = self.extract_article(response)
+                    article["status"] = True
+                    article["depth"] = 0
+                    try:
+                        self.db.seeds.insert_one(article)
+                        
+                    except pymongo.errors.DuplicateKeyError:
+                        #update
+                        #self.db.seeds.update_one({"url":article["url"]}, {"$set":article})
+                        pass
+                    self.queue.insert_many(article["outlinks"])
+                else:
+                    status_code = 406
+                    msg = "Format de la page non supporté: %s" %response.headers['content-type']
+                    self.db.seeds.insert_one({"url": response.url}, {"$set":{"status": False, "status_code": status_code, "msg": msg}}, upsert=False)
+            else:
+                status_code = response.status_code
+                msg = "Page indisponible"
+                self.db.seeds.insert_one({"url": response.url}, {"$set":{"status": False, "status_code": status_code, "msg": msg}})
+        
+        for x in self.seeds.find({},{"url":1, "depth":1, "_id":0,"status":1}):
             
-        for x in self.seeds.find({},{"url":1, "depth":1, "_id":0}):
             url = Url(x["url"])
             url.clean_url()
-            
             future = session.get(url.url)
             try:
                 future.add_done_callback(get_req)
-            except:
+                
+            except Exception as e:
+                print e
                 pass
-            break
-            sys.exit()
+    
+    def crawl(self):
+        
+        URLS = self.queue.find()
+            
+            
+            
+            
     
             
 if __name__=="__main__":
