@@ -40,6 +40,7 @@ class Crawler(object):
         DB = p.get_config()["db"]
         
         self.name = self.PROJECT["name"]
+        print self.name
         self.directory = self.PROJECT["directory"]
         self.status = self.PROJECT["status"]
         self.date = self.PROJECT["date"][-1]
@@ -53,8 +54,7 @@ class Crawler(object):
     def load_default(self):
         filters = {k: self.params["seeds"][k]["active"] for k in self.PROJECT["seeds"].keys()}
         seeds_options = [k for k, v in filters.items() if v is True]
-        
-            
+           
     def exists(self):
         return bool(self.name in self.DB['client'].database_names())
         
@@ -192,9 +192,34 @@ class Crawler(object):
             return (depth<=self.depth)
         else:
             return True
+    def check_url(self, url):
+        try:
+            url = url.__dict__
+        except ValueError, AttributeError:
+            pass
+        '''check the validity of the url'''
+        if url["scheme"] not in ACCEPTED_PROTOCOL:
+            self.msg = "Bad scheme"
+            return False
+        if url["filetype"] in BAD_TYPES:
+            self.msg = "Bad filetype"
+            return False
+        if url["domain"] in BAD_DOMAINS:
+            self.msg = "Bad domain"
+            return False
+        if url["subdomain"] in BAD_SUBDOMAINS:
+            self.msg = "Bad domain"
+            return False
+        if url["path"] in BAD_PATHS:
+            self.msg = "Bad domain"
+            return False
+        if filter.match(url["url"]):
+            return False
+        else:
+            return True
     
     def check_lang(self, text):
-        self.data["lang"] 
+        '''check if filter lang is activated and match'''
         if self.lang is not False:
             try:
                 self.data["lang"] = langdetect(text)
@@ -206,38 +231,30 @@ class Crawler(object):
             return True
     
     def check_query(self, text):
+        '''check if filter query is activated and match on a given text'''
         if self.query is not False:
             q = Query(self.query, self.directory)
             doc = {"content": text}
             return (q.match(doc))
         else:
             return True
-    
-    
+
     def extract_outlinks(self, html, url):
+        '''extract links on page'''
         soup = bs(html, "lxml")
         outlinks = []
-        outlink_urls = []
-        for u in soup.findAll("a"):
-            u = u.get("href")
-            if u is None or u == "":
-                pass
-            else:
-                u = Url(u)
+        _urls = set([u.get("href") for u in soup.findAll("a") if u.get("href") is not None and u.get("href") != "" and u.get("href") != url.url])
+        for u in _urls:
+            u = Url(u)
+            if not u.is_absolute():
+                u.make_absolute(url.url)
+            u.clean_url()
+            if bool(u.url != url.url):
                 
-                if not u.is_absolute():
-                    u.make_absolute(url.url)
-                    u.clean_url()
-                #u.source_url = url
-                #print u.source_url
-                if bool(u.url != url.url):
-                    
-                    if u.url not in outlink_urls:
-                        doc = {"url":u.url, "url_id": u.url_id, "url_info": u.export()}
-                    
-                        outlinks.append(doc)
-                        outlink_urls.append(u.url)
-                    #outlinks_ids.append(u.export())
+                if self.check_url(u):                    
+                    doc = {"url":u.url, "url_id": u.url_id, "url_info": u.export()}
+                    outlinks.append(doc)
+        
         return outlinks
     
     def extract_keywords(self, meta):
@@ -275,7 +292,7 @@ class Crawler(object):
             f.write(data)
         return fname
 
-    def extract_article(self, response):
+    def extract_article(self, response, depth=0):
         article = {}
         html = response.text
         
@@ -287,8 +304,7 @@ class Crawler(object):
         article_txt = lxml_extractor(html, url)
         article["html_file"] = self.store_file(url.url_id, article_txt)
         article["txt_file"] = self.store_file(url.url_id, article_txt, fmt="txt")
-        
-        
+        article["depth"] = depth
         article["url_info"] = url.export()
         article["type"] = response.headers['content-type']
         article["encoding"] = response.encoding.lower()
@@ -306,14 +322,25 @@ class Crawler(object):
                     article = self.extract_article(response)
                     article["status"] = True
                     article["depth"] = 0
+                    article_url = article["url"]
+                    
                     try:
-                        self.db.seeds.insert_one(article)
+                        self.db.data.insert_one(article)
                         
                     except pymongo.errors.DuplicateKeyError:
                         #update
-                        #self.db.seeds.update_one({"url":article["url"]}, {"$set":article})
+                        
+                        #self.db.seeds.update_one({"url":article_url]}, {"$set":article})
                         pass
-                    self.queue.insert_many(article["outlinks"])
+                    
+                    self.db.seed.update_one({"url":article_url}, {"$set":article})
+                    for n in article["outlinks"]:
+                        n["depth"] = 1
+                        
+                        try:
+                            self.queue.insert_one(n)
+                        except pymongo.errors.DuplicateKeyError:
+                            pass                    
                 else:
                     status_code = 406
                     msg = "Format de la page non supporté: %s" %response.headers['content-type']
@@ -324,7 +351,6 @@ class Crawler(object):
                 self.db.seeds.insert_one({"url": response.url}, {"$set":{"status": False, "status_code": status_code, "msg": msg}})
         
         for x in self.seeds.find({},{"url":1, "depth":1, "_id":0,"status":1}):
-            
             url = Url(x["url"])
             url.clean_url()
             future = session.get(url.url)
@@ -334,11 +360,38 @@ class Crawler(object):
             except Exception as e:
                 print e
                 pass
+        print self.queue.count()
     
     def crawl(self):
-        
+        '''main crawl'''
         URLS = self.queue.find()
-            
+        def load_url(self, article):
+            if self.check_depth(article["depth"]):
+                
+                response = request.get(article["url"])
+                if response.status_code not in range(400,520):
+                    if "text/html" in response.headers['content-type']:
+                        a = self.extract_info(response, depth)
+                        
+                    else:
+                        status_code = 406
+                        msg = "Format de la page non supporté: %s" %response.headers['content-type']
+                        try:
+                            self.db.data.insert_one({"url": response.url}, {"$set":{"status": False, "status_code": status_code, "msg": msg}}, upsert=False)
+                        except:
+                            pass
+                else:
+                    status_code = response.status_code
+                    msg = "Page indisponible"
+                    try:
+                        self.db.data.insert_one({"url": response.url}, {"$set":{"status": False, "status_code": status_code, "msg": msg}})
+                    except:
+                        pass
+            else:
+                try:
+                    self.db.data.insert_one({"url": response.url}, {"$set":{"status": False, "status_code": 501, "msg": "Depth exceeded"}})
+                except:
+                    pass
             
             
             
