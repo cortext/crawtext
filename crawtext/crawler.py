@@ -25,11 +25,10 @@ from pymongo import DeleteOne, InsertOne
 import os, sys, bson
 #from pymongo import bson
 
-import logging
 
-logging.getLogger("requests").setLevel(logging.WARNING)
 
-logger = logging.getLogger(__name__)
+#~ logging.getLogger("requests").setLevel(logging.WARNING)
+
 
 
 
@@ -50,9 +49,13 @@ class Crawler(object):
         #Global config
         self.setup(DB)
         self.load_filters()
-        if self.PROJECT["reload"] and self.PROJECT["status"]:
+        if self.db.seeds.count() == 0:
             self.add_seeds()
         self.status = bool(self.db.queue.count() > 0)
+        if self.PROJECT["reload"]: 
+            self.add_seeds()
+        if self.status is False:
+            self.get_seeds()
             
     def exists(self):
         return bool(self.name in self.DB['client'].database_names())
@@ -151,11 +154,12 @@ class Crawler(object):
             for res in results:
                 position = int(res['__metadata']['uri'].split("&$")[1].split("=")[1])+1
                 url, description, title = res["Url"], res["Description"], res["Title"]
+                url = Url(url)
                 try:
                     self.db.seeds.insert({
                                         "date": [self.date],
-                                        "url": url,
-                                        "url_id" : get_url_id(url),
+                                        "url": url.url,
+                                        "url_id" : url.url_id,
                                         "title": title,
                                         "description": description,
                                         "rank": position,
@@ -167,7 +171,7 @@ class Crawler(object):
                                     
                 except pymongo.errors.DuplicateKeyError:
                     #print "Alredy in DB"
-                    self.db.seeds.update({"url": url}, {'$push': {"date": self.date}})
+                    self.db.seeds.update({"url": url.url}, {'$push': {"date": self.date}})
             
             
         for i in range(0,params["nb"]+50, 50):
@@ -224,8 +228,13 @@ class Crawler(object):
         return outlinks
     
     def extract_title(self, html):
-        return bs(html, "lxml").title.text
+        try:
+            return bs(html, "lxml").title.text
+        except AttributeError: 
+            return bs(html, "lxml").head.title.text
+            
     def extract_keywords(self, meta):
+        print meta["keywords"]
         return meta["keywords"]
         
     def extract_meta(self,html):
@@ -242,10 +251,10 @@ class Crawler(object):
                 if name.lower() in ["generator"]:
                     meta["generators"].append(content)
                 else:
-                    meta[re.sub("og:|DC.", "", name)] = content
+                    meta[re.sub("og:|DC.|.|:", "", name)] = content
                 #~ 
             if prop is not None:
-                meta[re.sub("og:|DC.", "", prop)] = content
+                meta[re.sub("og:|DC.|.|:", "", prop)] = content
         
         return meta
     
@@ -278,12 +287,12 @@ class Crawler(object):
             article_txt = lxml_extractor(html, url)
             article["title"] = self.extract_title(html)
             article["meta"] = self.extract_meta(html)
-            article["keywords"] = ",".split(self.extract_keywords(article["meta"]))
+            article["keywords"] = self.extract_keywords(article["meta"])
             print article["keywords"]
             if filters:
                 if self.check_lang(article_txt):
                     if self.check_query(article_txt):
-                        article["html_file"] = self.store_file(article["url_id"], html, fmt="html")
+                        article["html_file"] = self.store_file(article["url_id"]+"_HTML", html, fmt="html")
                         article["txt_file"] = self.store_file(article["url_id"], article_txt, fmt="txt")
                         outlinks = self.extract_outlinks(html, url, depth)
                         article["citeds_url"] = [n["url"] for n in outlinks]
@@ -352,10 +361,18 @@ class Crawler(object):
                     if article["status"]:
                         outlinks = article["outlinks"]
                         del article["outlinks"]
+                        
                         try:
                             #~ print article
                             self.db.data.insert_one(article)
-                            self.db.seeds.update({"url":article["url"]}, {"$set":article})
+                            
+                            try:
+                                ex = self.db.seeds.find_one({"url":article["url"]})
+                                self.db.seeds.update({"_id":ex["_id"]}, {"$set":article})
+                            except Exception as e:
+                                print e
+                                
+                                #self.db.seeds.update(article)
                             for n in outlinks:
                                 #bulk = [InsertOne(x for x in outlinks if x["url"] not in self.db.data.distinct("url") and x["url"] not in self.db.queue.distinct("url"))]
                                 if self.db.queue.count({"url":n["url"]}) > 0:
@@ -428,7 +445,7 @@ class Crawler(object):
                                     try:
                                         self.db.queue.insert_one(n)
                                     except pymongo.errors.DuplicateKeyError:
-                                        print "Already in queue"
+                                        pass
                             self.db.queue.delete_many({"url":article["url"]})
                             return True
                             
@@ -436,15 +453,12 @@ class Crawler(object):
                             print "Article is already in DB outlinks not put in Queue"
                             for n in outlinks:
                                 #bulk = [InsertOne(x for x in outlinks if x["url"] not in self.db.data.distinct("url") and x["url"] not in self.db.queue.distinct("url"))]
-                                if self.db.queue.count({"url":n["url"]}) > 0:
-                                    pass
-                                if self.db.data.count({"url":n["url"]}) > 0:
-                                    pass
-                                else:
-                                    try:
-                                        self.db.queue.insert_one(n)
-                                    except pymongo.errors.DuplicateKeyError:
-                                        print "Already in queue"
+                                try:
+                                    self.db.queue.insert_one(n)
+                                except pymongo.errors.DuplicateKeyError:
+
+                                    if self.db.data.count({"url":n["url"]}) > 0:
+                                        self.db.queue.delete_many({"url":n["url"]})
                             self.db.queue.delete_many({"url":article["url"]})
                             return True
                     else:
@@ -455,13 +469,13 @@ class Crawler(object):
                     status_code = 406
                     msg = "Format de la page non supporté: %s" %response.headers['content-type']
                     self.db.logs.update({"url":response.url}, {"$set":{"status": False, "status_code": status_code, "msg": msg}})
-                    self.db.queue.delete_many({"url":article["url"]})
+                    self.db.queue.delete_many({"url":response.url})
                     return False
             else:
                 status_code = response.status_code
                 msg = "Page indisponible"
                 self.db.logs.update({"url":response.url}, {"$set":{"status": False, "status_code": status_code, "msg": msg}})
-                self.db.queue.delete_many({"url":article["url"]})
+                self.db.queue.delete_many({"url":response.url})
                 return False
                 
         if self.status is True:
@@ -491,15 +505,16 @@ class Crawler(object):
                         except Exception as e:
                             print logging.critical(e)
                             
-                            sys.exit()
-                        pass
+                            
+                        
                 if self.db.queue.count() == 0:
                     break
                 if self.depth is not False:
                     results = self.db.queue.delete_many({"depth":{"$gt":self.depth}})
                     if results.deleted_count > 0:
                         break
-            
+                print "Url in queue": self.db.queue.count()
+                print "Step",depth+1, self.db.queue.count({"depth":depth+1})
             
 if __name__=="__main__":
     
