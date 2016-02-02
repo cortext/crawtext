@@ -286,8 +286,8 @@ class Crawler(object):
                         article["html_file"] = self.store_file(article["url_id"], html, fmt="html")
                         article["txt_file"] = self.store_file(article["url_id"], article_txt, fmt="txt")
                         outlinks = self.extract_outlinks(html, url, depth)
-                        article["outlinks_url"] = [n["url"] for n in outlinks]
-                        article["outlinks_id"] = [n["url_id"] for n in outlinks]
+                        article["citeds_url"] = [n["url"] for n in outlinks]
+                        article["cited_url_ids"] = [n["url_id"] for n in outlinks]
                         article["outlinks"] =  outlinks
                         article["lang"] = self.page_lang
                         return article
@@ -297,8 +297,8 @@ class Crawler(object):
                             article["html_file"] = self.store_file(article["url_id"], html)
                             article["txt_file"] = self.store_file(article["url_id"], article_txt, fmt="txt")
                             outlinks = self.extract_outlinks(html, url, depth)
-                            article["outlinks_url"] = [n["url"] for n in outlinks]
-                            article["outlinks_id"] = [n["url_id"] for n in outlinks]
+                            article["cited_urls"] = [n["url"] for n in outlinks]
+                            article["cited_url_ids"] = [n["url_id"] for n in outlinks]
                             article["outlinks"] =  outlinks
                             article["lang"] = self.page_lang
                             article = self.extract_page(article, article_txt, html)
@@ -314,8 +314,8 @@ class Crawler(object):
                         article["html_file"] = self.store_file(article["url_id"], html)
                         article["txt_file"] = self.store_file(article["url_id"], article_txt, fmt="txt")
                         outlinks = self.extract_outlinks(html, url, depth)
-                        article["outlinks_url"] = [n["url"] for n in outlinks]
-                        article["outlinks_id"] = [n["url_id"] for n in outlinks]
+                        article["cited_urls"] = [n["url"] for n in outlinks]
+                        article["cited_url_ids"] = [n["url_id"] for n in outlinks]
                         article["outlinks"] =  outlinks
                         article["lang"] = self.page_lang
                         return article
@@ -330,8 +330,8 @@ class Crawler(object):
                 article["html_file"] = self.store_file(article["url_id"], html)
                 article["txt_file"] = self.store_file(article["url_id"], article_txt, fmt="txt")
                 outlinks = self.extract_outlinks(html, url, depth)
-                article["outlinks_url"] = [n["url"] for n in outlinks]
-                article["outlinks_id"] = [n["url_id"] for n in outlinks]
+                article["cited_urls"] = [n["url"] for n in outlinks]
+                article["cited_url_ids"] = [n["url_id"] for n in outlinks]
                 article["outlinks"] =  outlinks
                 article["lang"] = self.page_lang
                 return article
