@@ -1,36 +1,36 @@
 {
-    "name": "example",
+    "name": "demo3",
     "filters": {
-        "depth_filter":{ 
-            "activated": true,
-            "depth": 100
+        "depth":{ 
+            "active": true,
+            "depth": 2
             },
-        "lang_filter":{
-            "activated": false,
+        "lang":{
+            "active": false,
             "lang": "en"
             },
-        "query_filter":{
-            "activated": true,
-            "query": "digital humanities AND (web OR crawl* OR spider)"
+        "query":{
+            "active": false,
+            "query": "(digital humanities AND machine learning)"
             }
     },
     "scheduler": {
-        "activated": true,
+        "active": true,
         "days": 7
     },
     "seeds": {
-        "from_url":{
-            "activated": false,
-            "url": ""
+        "url":{
+            "active": true,
+            "url": "http://www.lefigaro.fr"
             },
-        "from_file":{
-            "activated": false,
-            "file": ""
+        "file":{
+            "active": false,
+            "file": "./config/sources.txt"
             },
-        "from_search": {
-            "activated":true,
+        "search": {
+            "active": false,
             "key": "J8zQNrEwAJ2u3VcMykpouyPf4nvA6Wre1019v/dIT0o",
-            "nb_results": 1000
+            "nb": 100
             }
         }
 }

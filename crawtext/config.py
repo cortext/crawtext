@@ -50,6 +50,7 @@ class Config(object):
         '''setting global environnement'''        
         self.settings = load_settings(global_settings)
         self.load()
+        #print "Loading config"
         #self.APP = dict(self.settings["website"])
         
     def load(self):
@@ -114,7 +115,7 @@ class Project(object):
         self.create()
         
         self.CONFIG = self.get_config()
-    
+        
     def get(self):
         '''return project'''
         return self.COLL.find_one({"name": self.NAME, "user": self.USER})

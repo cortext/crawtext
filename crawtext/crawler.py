@@ -15,18 +15,19 @@ __author__= "Constance de Quatrebarbes"
 from config import Project
 import concurrent.futures
 from concurrent.futures import ProcessPoolExecutor, as_completed
- 
 from requests_futures.sessions import FuturesSession
+from extractor import *
 from parser import *
- 
+from url import Url, get_outlinks
 import pymongo
 from pymongo import MongoClient
-
 import os, sys, lxml, re
-from bs4 import BeautifulSoup as bs
-from readability.readability import Document
+
+import logging
+
 logging.getLogger("requests").setLevel(logging.WARNING)
-logging.getLogger("readability").setLevel(logging.WARNING)
+
+logger = logging.getLogger(__name__)
 
 
 
@@ -48,7 +49,11 @@ class Crawler(object):
         self.setup(DB)
         self.load_filters()
         if self.PROJECT["reload"] and self.PROJECT["status"]:
-            self.add_seeds()
+            try:
+                self.add_seeds()
+            except BadStatusLine(e):
+                logging.critical("Check you connection")
+                pass
         self.get_seeds()
         
     def load_default(self):
@@ -192,31 +197,6 @@ class Crawler(object):
             return (depth<=self.depth)
         else:
             return True
-    def check_url(self, url):
-        try:
-            url = url.__dict__
-        except ValueError, AttributeError:
-            pass
-        '''check the validity of the url'''
-        if url["scheme"] not in ACCEPTED_PROTOCOL:
-            self.msg = "Bad scheme"
-            return False
-        if url["filetype"] in BAD_TYPES:
-            self.msg = "Bad filetype"
-            return False
-        if url["domain"] in BAD_DOMAINS:
-            self.msg = "Bad domain"
-            return False
-        if url["subdomain"] in BAD_SUBDOMAINS:
-            self.msg = "Bad domain"
-            return False
-        if url["path"] in BAD_PATHS:
-            self.msg = "Bad domain"
-            return False
-        if filter.match(url["url"]):
-            return False
-        else:
-            return True
     
     def check_lang(self, text):
         '''check if filter lang is activated and match'''
@@ -239,24 +219,17 @@ class Crawler(object):
         else:
             return True
 
-    def extract_outlinks(self, html, url):
+    def extract_outlinks(self, html, url, depth):
         '''extract links on page'''
-        soup = bs(html, "lxml")
         outlinks = []
-        _urls = set([u.get("href") for u in soup.findAll("a") if u.get("href") is not None and u.get("href") != "" and u.get("href") != url.url])
-        for u in _urls:
-            u = Url(u)
-            if not u.is_absolute():
-                u.make_absolute(url.url)
-            u.clean_url()
-            if bool(u.url != url.url):
-                
-                if self.check_url(u):                    
-                    doc = {"url":u.url, "url_id": u.url_id, "url_info": u.export()}
-                    outlinks.append(doc)
-        
+        for u in get_outlinks(html, url):
+            doc = {"url":u.url, "url_id": u.url_id, "url_info": u.export(), "depth": depth+1}
+            outlinks.append(doc)
         return outlinks
     
+            
+    def extract_title(self, html):
+        return bs(html, "lxml").title.text
     def extract_keywords(self, meta):
         return meta["keywords"]
         
@@ -302,13 +275,19 @@ class Crawler(object):
         article["url_id"] = url.url_id
         
         article_txt = lxml_extractor(html, url)
+        article["title"] = self.extract_title(html)
         article["html_file"] = self.store_file(url.url_id, article_txt)
         article["txt_file"] = self.store_file(url.url_id, article_txt, fmt="txt")
         article["depth"] = depth
         article["url_info"] = url.export()
         article["type"] = response.headers['content-type']
         article["encoding"] = response.encoding.lower()
-        article["outlinks"] = self.extract_outlinks(html, url)
+        outlinks = self.extract_outlinks(html, url, depth)
+        article["outlinks_url"] = [n["url"] for n in outlinks]
+        article["outlinks_id"] = [n["url_id"] for n in outlinks]
+        article["outlinks"] =  outlinks
+        article["meta"] = self.extract_meta(html)
+        article["depth"] = depth
         return article
     
     def get_seeds(self):
@@ -335,8 +314,6 @@ class Crawler(object):
                     
                     self.db.seed.update_one({"url":article_url}, {"$set":article})
                     for n in article["outlinks"]:
-                        n["depth"] = 1
-                        
                         try:
                             self.queue.insert_one(n)
                         except pymongo.errors.DuplicateKeyError:
@@ -352,7 +329,6 @@ class Crawler(object):
         
         for x in self.seeds.find({},{"url":1, "depth":1, "_id":0,"status":1}):
             url = Url(x["url"])
-            url.clean_url()
             future = session.get(url.url)
             try:
                 future.add_done_callback(get_req)
@@ -364,39 +340,75 @@ class Crawler(object):
     
     def crawl(self):
         '''main crawl'''
-        URLS = self.queue.find()
-        def load_url(self, article):
-            if self.check_depth(article["depth"]):
-                
-                response = request.get(article["url"])
-                if response.status_code not in range(400,520):
-                    if "text/html" in response.headers['content-type']:
-                        a = self.extract_info(response, depth)
-                        
-                    else:
-                        status_code = 406
-                        msg = "Format de la page non supporté: %s" %response.headers['content-type']
-                        try:
-                            self.db.data.insert_one({"url": response.url}, {"$set":{"status": False, "status_code": status_code, "msg": msg}}, upsert=False)
-                        except:
-                            pass
-                else:
-                    status_code = response.status_code
-                    msg = "Page indisponible"
-                    try:
-                        self.db.data.insert_one({"url": response.url}, {"$set":{"status": False, "status_code": status_code, "msg": msg}})
-                    except:
-                        pass
-            else:
-                try:
-                    self.db.data.insert_one({"url": response.url}, {"$set":{"status": False, "status_code": 501, "msg": "Depth exceeded"}})
-                except:
-                    pass
+        URLS = [n for n in self.queue.find()]
+        filters = self.filters
+        
             
+        def load_url(article):
+            #~ print article["depth"], filters["depth"]
+            print(article["url"])
+            #~ if self.check_depth(article["depth"]):
+                #~ response = request.get(article["url"])
+                #~ if response.status_code not in range(400,520):
+                    #~ if "text/html" in response.headers['content-type']:
+                        #~ a = self.extract_article(response, depth)
+                        #~ with open(article["txt_file"], "r") as f:
+                            #~ if self.check_query(f.read()):
+                                #~ article["status"] = True
+                                #~ try:
+                                    #~ self.data.insert(article)
+                                    #~ self.queue.remove({"url":article["url"]})
+                                    #~ self.queue.insert_many(article["outlinks"])
+                                    #~ return article["outlinks"]
+                                #~ except: pass
+                            #~ else:
+                                #~ if self.check_query(a["title"]):
+                                    #~ self.data.insert(article)
+                                    #~ self.queue.remove({"url":article["url"]})
+                                    #~ self.queue.insert_many(article["outlinks"])
+                                    #~ return article["outlinks"]
+                                #~ else:
+                                    #~ try:
+                                        #~ msg = "Non pertinent"
+                                        #~ status_code = 800
+                                        #~ self.db.data.insert_one({"url": article["url"], "status": False, "status_code": status_code, "msg": msg})
+                                        #~ self.queue.insert_many(article["outlinks"])
+                                        #~ return article["outlinks"]
+                                    #~ except: pass
+                    #~ else:
+                        #~ status_code = 406
+                        #~ msg = "Format de la page non supporté: %s" %response.headers['content-type']
+                        #~ try:
+                            #~ self.db.data.insert_one({"url": response.url}, {"$set":{"status": False, "status_code": status_code, "msg": msg}}, upsert=False)
+                        #~ except: pass
+                #~ else:
+                    #~ status_code = response.status_code
+                    #~ msg = "Page indisponible"
+                    #~ try:
+                        #~ self.db.data.insert_one({"url": response.url}, {"$set":{"status": False, "status_code": status_code, "msg": msg}})
+                    #~ except:pass
+            #~ else:
+                #~ try:
+                    #~ self.db.data.insert_one({"url": response.url}, {"$set":{"status": False, "status_code": 501, "msg": "Depth exceeded"}})
+                #~ except: pass
+            #~ self.queue.remove({"url":article["url"]})
+            #~ return None
+        
+        with ProcessPoolExecutor(max_workers=5) as e:
+            articles = {e.submit(load_url, article): article for article in URLS}
+            for future in as_completed(articles):
+                
+                nexts = article[future]
+                print nexts
+        
+                if future.exception() is not None:
+                    print('%s generated an exception: %s' % (nexts, future.exception()))
+                else:
+                    print nexts[0]
             
             
     
             
 if __name__=="__main__":
     c = Crawler()
-    
+    #~ c.crawl()

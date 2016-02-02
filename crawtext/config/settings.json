@@ -1,12 +1,20 @@
 {
-	"user": "admin@cortext.fr",
-    "password": "keepitsecret",
+	"user":{
+        "username": "user@cortext.net",
+        "password": "keepitsecret"
+        },
 	"db": {
+        "provider": "mongo",
 		"host": "localhost",
 		"port": 27017,
-        "db_name": "crawtext",
+        "password": "",
+        "db_name": "demo_crawtext",
 		"collection": "projects"
 	},
+    "env": {
+        "directory": "",
+        "name": "crawtext"
+        },
     "website":{
         "host": "localhost",
         "port": 8080
