@@ -21,7 +21,9 @@ from parser import *
 from url import Url, get_outlinks
 import pymongo
 from pymongo import MongoClient
-import os, sys, lxml, re
+from pymongo import DeleteOne, InsertOne
+import os, sys, bson
+#from pymongo import bson
 
 import logging
 
@@ -49,17 +51,9 @@ class Crawler(object):
         self.setup(DB)
         self.load_filters()
         if self.PROJECT["reload"] and self.PROJECT["status"]:
-            try:
-                self.add_seeds()
-            except BadStatusLine(e):
-                logging.critical("Check you connection")
-                pass
-        self.get_seeds()
-        
-    def load_default(self):
-        filters = {k: self.params["seeds"][k]["active"] for k in self.PROJECT["seeds"].keys()}
-        seeds_options = [k for k, v in filters.items() if v is True]
-           
+            self.add_seeds()
+        self.status = bool(self.db.queue.count() > 0)
+            
     def exists(self):
         return bool(self.name in self.DB['client'].database_names())
         
@@ -72,25 +66,26 @@ class Crawler(object):
         if not self.exists():
             del self.PROJECT["_id"]
             self.infos = self.db["infos"].insert_one(self.PROJECT)
-            self.db["seeds"].create_index("url",unique=True, background=True, safe=True)
-            self.db["data"].create_index("url",unique=True, background=True, safe=True)
-            self.db["queue"].create_index("url", unique=True, background=True)
-        self.seeds = self.db["seeds"]
-        self.data = self.db["data"]
-        self.queue = self.db["queue"]
+            self.db["seeds"].create_index("url",unique=True, safe=True)
+            self.db["data"].create_index("url",unique=True, safe=True)
+            self.db["queue"].create_index("url", unique=True,safe=True)
+        #~ self.seeds = self.db["seeds"]
+        #~ self.data = self.db["data"]
+        #~ self.queue = self.db["queue"]
         return self
         
     def load_filters(self):
-        filters = {k: self.PROJECT["filters"][k]["active"] for k in self.PROJECT["filters"].keys()}
-        self.filters = {}
-        self.values = {}
-        for k,v in filters.items():
-            if v is True:
-                
+        '''load filters by default and mapping to Objet'''
+        self.filters = {k: self.PROJECT["filters"][k]["active"] for k in self.PROJECT["filters"].keys()}
+        #~ for n in filter(lambda x: (self.filters[x] is True), self.filters):
+            #~ self.filters[n] = self.PROJECT["filters"][n][n]
+        for k, v in self.filters.items():
+            if v is not False:
                 setattr(self, k, self.PROJECT["filters"][k][k])
+                self.filters[k] = self.PROJECT["filters"][k][k]
             else:
-                self.filters[k] = v
-        return self.filters
+                setattr(self, k, False)
+        return self
         
     def add_seeds(self):
         #~ print self.PROJECT.keys()
@@ -128,12 +123,13 @@ class Crawler(object):
             sys.exit("File not found")
     
     def add_url(self, url, rank=0, method="url"):
-        
+        url = Url(url)
         try:
-            self.seeds.insert_one({
+            self.db.seeds.insert_one({
                                 "date": [self.date],
-                                "url": url,
-                                "url_id" : get_url_id(url),
+                                "url": url.url,
+                                "url_id" : url.url_id,
+                                "url_info": url.export(),
                                 "title": None,
                                 "description": None,
                                 "rank": rank,
@@ -156,7 +152,7 @@ class Crawler(object):
                 position = int(res['__metadata']['uri'].split("&$")[1].split("=")[1])+1
                 url, description, title = res["Url"], res["Description"], res["Title"]
                 try:
-                    self.seeds.insert({
+                    self.db.seeds.insert({
                                         "date": [self.date],
                                         "url": url,
                                         "url_id" : get_url_id(url),
@@ -171,7 +167,7 @@ class Crawler(object):
                                     
                 except pymongo.errors.DuplicateKeyError:
                     #print "Alredy in DB"
-                    self.seeds.update({"url": url}, {'$push': {"date": self.date}})
+                    self.db.seeds.update({"url": url}, {'$push': {"date": self.date}})
             
             
         for i in range(0,params["nb"]+50, 50):
@@ -200,13 +196,13 @@ class Crawler(object):
     
     def check_lang(self, text):
         '''check if filter lang is activated and match'''
+        try:
+            self.page_lang = langdetect(text)
+        except Exception as e:
+            logging.warning("Check_lang ERror", e)
+            return True
         if self.lang is not False:
-            try:
-                self.data["lang"] = langdetect(text)
-                return (self.lang == self.data["lang"])
-            except Exception as e:
-                print e
-                return True
+            return bool(self.lang == self.page_lang)
         else:
             return True
     
@@ -227,7 +223,6 @@ class Crawler(object):
             outlinks.append(doc)
         return outlinks
     
-            
     def extract_title(self, html):
         return bs(html, "lxml").title.text
     def extract_keywords(self, meta):
@@ -264,151 +259,249 @@ class Crawler(object):
             data = (data).encode("utf-8")
             f.write(data)
         return fname
-
-    def extract_article(self, response, depth=0):
+    
+    def extract(self, response, depth=0, filters=True):
         article = {}
         html = response.text
-        
         url = response.url
         url = Url(url)
         article["url"] = url.url
-        article["url_id"] = url.url_id
-        
-        article_txt = lxml_extractor(html, url)
-        article["title"] = self.extract_title(html)
-        article["html_file"] = self.store_file(url.url_id, article_txt)
-        article["txt_file"] = self.store_file(url.url_id, article_txt, fmt="txt")
-        article["depth"] = depth
         article["url_info"] = url.export()
-        article["type"] = response.headers['content-type']
-        article["encoding"] = response.encoding.lower()
-        outlinks = self.extract_outlinks(html, url, depth)
-        article["outlinks_url"] = [n["url"] for n in outlinks]
-        article["outlinks_id"] = [n["url_id"] for n in outlinks]
-        article["outlinks"] =  outlinks
-        article["meta"] = self.extract_meta(html)
+        article["url_id"] = url.url_id
         article["depth"] = depth
-        return article
-    
+        article["type"] = response.headers['content-type']
+        article["date"] = self.date
+        article["encoding"] = response.encoding.lower()
+        
+        article["status"] = True
+        if url.status:
+            article_txt = lxml_extractor(html, url)
+            article["title"] = self.extract_title(html)
+            article["meta"] = self.extract_meta(html)
+            article["keywords"] = ",".split(self.extract_keywords(article["meta"]))
+            print article["keywords"]
+            if filters:
+                if self.check_lang(article_txt):
+                    if self.check_query(article_txt):
+                        article["html_file"] = self.store_file(article["url_id"], html, fmt="html")
+                        article["txt_file"] = self.store_file(article["url_id"], article_txt, fmt="txt")
+                        outlinks = self.extract_outlinks(html, url, depth)
+                        article["outlinks_url"] = [n["url"] for n in outlinks]
+                        article["outlinks_id"] = [n["url_id"] for n in outlinks]
+                        article["outlinks"] =  outlinks
+                        article["lang"] = self.page_lang
+                        return article
+                        
+                    else:
+                        if self.check_query(article["title"]):                            
+                            article["html_file"] = self.store_file(article["url_id"], html)
+                            article["txt_file"] = self.store_file(article["url_id"], article_txt, fmt="txt")
+                            outlinks = self.extract_outlinks(html, url, depth)
+                            article["outlinks_url"] = [n["url"] for n in outlinks]
+                            article["outlinks_id"] = [n["url_id"] for n in outlinks]
+                            article["outlinks"] =  outlinks
+                            article["lang"] = self.page_lang
+                            article = self.extract_page(article, article_txt, html)
+                            article["lang"] = self.page_lang
+                            return article
+                        else:
+                            article["status"] = False
+                            article["status_code"] = 900
+                            article["msg"] = "Search expression not found"
+                            return article
+                else:
+                    if self.check_lang(article["title"]):                        
+                        article["html_file"] = self.store_file(article["url_id"], html)
+                        article["txt_file"] = self.store_file(article["url_id"], article_txt, fmt="txt")
+                        outlinks = self.extract_outlinks(html, url, depth)
+                        article["outlinks_url"] = [n["url"] for n in outlinks]
+                        article["outlinks_id"] = [n["url_id"] for n in outlinks]
+                        article["outlinks"] =  outlinks
+                        article["lang"] = self.page_lang
+                        return article
+                    else:
+                        article["status"] = False
+                        article["status_code"] = 1000
+                        article["msg"] = "Lang is invalid"
+                        article["lang"] = self.page_lang
+                        return article
+            else:
+                self.check_lang(article_txt)
+                article["html_file"] = self.store_file(article["url_id"], html)
+                article["txt_file"] = self.store_file(article["url_id"], article_txt, fmt="txt")
+                outlinks = self.extract_outlinks(html, url, depth)
+                article["outlinks_url"] = [n["url"] for n in outlinks]
+                article["outlinks_id"] = [n["url_id"] for n in outlinks]
+                article["outlinks"] =  outlinks
+                article["lang"] = self.page_lang
+                return article
+        else:
+            article["status"] = False
+            article["error"] = "Invalid url"
+            article["status_code"] = 800
+            return article
+        
     def get_seeds(self):
         '''download and store seeds'''
-        filters = False
         session = FuturesSession()
         def get_req(future):
             response = future.result()
             if response.status_code not in range(400,520):
                 if "text/html" in response.headers['content-type']:
-                    article = self.extract_article(response)
-                    article["status"] = True
-                    article["depth"] = 0
-                    article_url = article["url"]
-                    
-                    try:
-                        self.db.data.insert_one(article)
-                        
-                    except pymongo.errors.DuplicateKeyError:
-                        #update
-                        
-                        #self.db.seeds.update_one({"url":article_url]}, {"$set":article})
-                        pass
-                    
-                    self.db.seed.update_one({"url":article_url}, {"$set":article})
-                    for n in article["outlinks"]:
+                    article = self.extract(response, depth=0, filters=False)
+                    if article["status"]:
+                        outlinks = article["outlinks"]
+                        del article["outlinks"]
                         try:
-                            self.queue.insert_one(n)
+                            #~ print article
+                            self.db.data.insert_one(article)
+                            self.db.seeds.update({"url":article["url"]}, {"$set":article})
+                            for n in outlinks:
+                                #bulk = [InsertOne(x for x in outlinks if x["url"] not in self.db.data.distinct("url") and x["url"] not in self.db.queue.distinct("url"))]
+                                if self.db.queue.count({"url":n["url"]}) > 0:
+                                    pass
+                                if self.db.data.count({"url":n["url"]}) > 0:
+                                    pass
+                                else:
+                                    try:
+                                        self.db.queue.insert_one(n)
+                                    except pymongo.errors.DuplicateKeyError:
+                                        print "Already in queue"
+                            return True
+                            
                         except pymongo.errors.DuplicateKeyError:
-                            pass                    
+                            print "Article is already in DB outlinks not put in Queue"
+                            self.db.seeds.update({"url":article["url"]}, {"$set":article})
+                            return True
+                            #~ self.db.data.update({"url":article_url}, {"$set":json.dumps(article)})
+                        
+                        
+                    else:
+                        self.db.seeds.update({"url":article["url"]}, {"$set":article})
+                        return False
                 else:
                     status_code = 406
                     msg = "Format de la page non supporté: %s" %response.headers['content-type']
-                    self.db.seeds.insert_one({"url": response.url}, {"$set":{"status": False, "status_code": status_code, "msg": msg}}, upsert=False)
+                    self.db.seeds.update({"url":response.url}, {"$set":{"status": False, "status_code": status_code, "msg": msg}})
+                    return False
             else:
                 status_code = response.status_code
                 msg = "Page indisponible"
-                self.db.seeds.insert_one({"url": response.url}, {"$set":{"status": False, "status_code": status_code, "msg": msg}})
+                self.db.seeds.update({"url":response.url}, {"$set":{"status": False, "status_code": status_code, "msg": msg}})
+                return False
+                
         
-        for x in self.seeds.find({},{"url":1, "depth":1, "_id":0,"status":1}):
+        for x in self.db.seeds.find({},{"url":1, "depth":1, "_id":0,"status":1}):
             url = Url(x["url"])
             future = session.get(url.url)
+            depth = 0
             try:
                 future.add_done_callback(get_req)
                 
             except Exception as e:
-                print e
-                pass
-        print self.queue.count()
+                logging.critical(e)
+        
+        
+        return bool(self.db.queue.count() > 0)
     
     def crawl(self):
         '''main crawl'''
-        URLS = [n for n in self.queue.find()]
-        filters = self.filters
-        
-            
-        def load_url(article):
-            #~ print article["depth"], filters["depth"]
-            print(article["url"])
-            #~ if self.check_depth(article["depth"]):
-                #~ response = request.get(article["url"])
-                #~ if response.status_code not in range(400,520):
-                    #~ if "text/html" in response.headers['content-type']:
-                        #~ a = self.extract_article(response, depth)
-                        #~ with open(article["txt_file"], "r") as f:
-                            #~ if self.check_query(f.read()):
-                                #~ article["status"] = True
-                                #~ try:
-                                    #~ self.data.insert(article)
-                                    #~ self.queue.remove({"url":article["url"]})
-                                    #~ self.queue.insert_many(article["outlinks"])
-                                    #~ return article["outlinks"]
-                                #~ except: pass
-                            #~ else:
-                                #~ if self.check_query(a["title"]):
-                                    #~ self.data.insert(article)
-                                    #~ self.queue.remove({"url":article["url"]})
-                                    #~ self.queue.insert_many(article["outlinks"])
-                                    #~ return article["outlinks"]
-                                #~ else:
-                                    #~ try:
-                                        #~ msg = "Non pertinent"
-                                        #~ status_code = 800
-                                        #~ self.db.data.insert_one({"url": article["url"], "status": False, "status_code": status_code, "msg": msg})
-                                        #~ self.queue.insert_many(article["outlinks"])
-                                        #~ return article["outlinks"]
-                                    #~ except: pass
-                    #~ else:
-                        #~ status_code = 406
-                        #~ msg = "Format de la page non supporté: %s" %response.headers['content-type']
-                        #~ try:
-                            #~ self.db.data.insert_one({"url": response.url}, {"$set":{"status": False, "status_code": status_code, "msg": msg}}, upsert=False)
-                        #~ except: pass
-                #~ else:
-                    #~ status_code = response.status_code
-                    #~ msg = "Page indisponible"
-                    #~ try:
-                        #~ self.db.data.insert_one({"url": response.url}, {"$set":{"status": False, "status_code": status_code, "msg": msg}})
-                    #~ except:pass
-            #~ else:
-                #~ try:
-                    #~ self.db.data.insert_one({"url": response.url}, {"$set":{"status": False, "status_code": 501, "msg": "Depth exceeded"}})
-                #~ except: pass
-            #~ self.queue.remove({"url":article["url"]})
-            #~ return None
-        
-        with ProcessPoolExecutor(max_workers=5) as e:
-            articles = {e.submit(load_url, article): article for article in URLS}
-            for future in as_completed(articles):
-                
-                nexts = article[future]
-                print nexts
-        
-                if future.exception() is not None:
-                    print('%s generated an exception: %s' % (nexts, future.exception()))
+        def get_page(future):
+            response = future.result()
+            if response.status_code not in range(400,520):
+                if "text/html" in response.headers['content-type']:
+                    article = self.extract(response, depth=0, filters=False)
+                    if article["status"]:
+                        outlinks = article["outlinks"]
+                        del article["outlinks"]
+                        try:
+                            #~ print article
+                            self.db.data.insert_one(article)
+                            #self.db.seeds.update({"url":article["url"]}, {"$set":article})
+                            for n in outlinks:
+                                #bulk = [InsertOne(x for x in outlinks if x["url"] not in self.db.data.distinct("url") and x["url"] not in self.db.queue.distinct("url"))]
+                                if self.db.queue.count({"url":n["url"]}) > 0:
+                                    pass
+                                if self.db.data.count({"url":n["url"]}) > 0:
+                                    pass
+                                else:
+                                    try:
+                                        self.db.queue.insert_one(n)
+                                    except pymongo.errors.DuplicateKeyError:
+                                        print "Already in queue"
+                            self.db.queue.delete_many({"url":article["url"]})
+                            return True
+                            
+                        except pymongo.errors.DuplicateKeyError:
+                            print "Article is already in DB outlinks not put in Queue"
+                            for n in outlinks:
+                                #bulk = [InsertOne(x for x in outlinks if x["url"] not in self.db.data.distinct("url") and x["url"] not in self.db.queue.distinct("url"))]
+                                if self.db.queue.count({"url":n["url"]}) > 0:
+                                    pass
+                                if self.db.data.count({"url":n["url"]}) > 0:
+                                    pass
+                                else:
+                                    try:
+                                        self.db.queue.insert_one(n)
+                                    except pymongo.errors.DuplicateKeyError:
+                                        print "Already in queue"
+                            self.db.queue.delete_many({"url":article["url"]})
+                            return True
+                    else:
+                        self.db.logs.update({"url":article["url"]}, {"$set":article})
+                        self.db.queue.delete_many({"url":article["url"]})
+                        return False
                 else:
-                    print nexts[0]
+                    status_code = 406
+                    msg = "Format de la page non supporté: %s" %response.headers['content-type']
+                    self.db.logs.update({"url":response.url}, {"$set":{"status": False, "status_code": status_code, "msg": msg}})
+                    self.db.queue.delete_many({"url":article["url"]})
+                    return False
+            else:
+                status_code = response.status_code
+                msg = "Page indisponible"
+                self.db.logs.update({"url":response.url}, {"$set":{"status": False, "status_code": status_code, "msg": msg}})
+                self.db.queue.delete_many({"url":article["url"]})
+                return False
+                
+        if self.status is True:
+            URLS = [n for n in self.db.queue.find()]
+        else:
+            #~ self.add_seeds()
+            #~ self.get_seeds()
+            #reload
+            return False
+        #~ else:
+        session = FuturesSession()
+        while self.db.queue.count() > 0:
+            print self.db.queue.count()
+            for x in self.db.queue.find():
+                url = Url(x["url"])
+                
+                depth = x['depth']
+                if self.depth is not False:
+                    if depth >= self.depth:
+                        self.db.queue.delete_one({"url": url.url})
+                        #results = self.db.queue.drop({"depth":{"$gt":self.depth})
+                        pass
+                    else:
+                        future = session.get(url.url)
+                        try:
+                            future.add_done_callback(get_page)
+                        except Exception as e:
+                            print logging.critical(e)
+                            
+                            sys.exit()
+                        pass
+                if self.db.queue.count() == 0:
+                    break
+                if self.depth is not False:
+                    results = self.db.queue.delete_many({"depth":{"$gt":self.depth}})
+                    if results.deleted_count > 0:
+                        break
             
-            
-    
             
 if __name__=="__main__":
+    
     c = Crawler()
-    #~ c.crawl()
+    c.crawl()
