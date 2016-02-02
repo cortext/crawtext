@@ -13,8 +13,9 @@ __author_email__= "4barbes@gmail.com"
 __author__= "Constance de Quatrebarbes"
 
 from config import Project
-import concurrent.futures
-from concurrent.futures import ProcessPoolExecutor, as_completed
+#import concurrent.futures
+from concurrent.futures import ProcessPoolExecutor
+import requests
 from requests_futures.sessions import FuturesSession
 from extractor import *
 from parser import *
@@ -24,7 +25,7 @@ from pymongo import MongoClient
 from pymongo import DeleteOne, InsertOne
 import os, sys, bson
 #from pymongo import bson
-
+from logger import logger
 
 
 #~ logging.getLogger("requests").setLevel(logging.WARNING)
@@ -44,19 +45,32 @@ class Crawler(object):
         self.name = self.PROJECT["name"]
         print self.name
         self.directory = self.PROJECT["directory"]
+        print self.PROJECT["history"]
         self.status = self.PROJECT["status"]
         self.date = self.PROJECT["date"][-1]
         #Global config
         self.setup(DB)
         self.load_filters()
+        
+        
+    
+    def start(self):
+        #debug
+        #~ self.get_seeds
+        if self.PROJECT["reload"]:
+            self.add_seeds()
+        if self.status:
+            self.add_seeds()
+            
         if self.db.seeds.count() == 0:
             self.add_seeds()
-        self.status = bool(self.db.queue.count() > 0)
-        if self.PROJECT["reload"]: 
-            self.add_seeds()
-        if self.status is False:
-            self.get_seeds()
             
+        if self.db.queue.count() > 0:
+            self.get_seeds()
+        
+        
+        self.crawl()
+        #queue = {e.submit(self.get_seeds())}
     def exists(self):
         return bool(self.name in self.DB['client'].database_names())
         
@@ -91,11 +105,12 @@ class Crawler(object):
         return self
         
     def add_seeds(self):
+        print "addings seeds"
         #~ print self.PROJECT.keys()
         filters = {k: self.PROJECT["seeds"][k]["active"] for k in self.PROJECT["seeds"].keys()}
         seeds_options = [k for k,v in filters.items() if v is True]
         for n in seeds_options:
-            
+            print "from", n
             if n == "search":
                 params = self.PROJECT["seeds"][n]
                 params["query"] = self.PROJECT["filters"]["query"]["query"]
@@ -106,7 +121,7 @@ class Crawler(object):
                     self.add_file(params[n])
                 elif n == "url":
                     self.add_url(params[n])
-        return self
+        return 
         
     def add_file(self, filename):
         #print self.SETTINGS["dir"], filename
@@ -146,11 +161,55 @@ class Crawler(object):
         return self
         
     def search(self, params):
-        session = FuturesSession()
-        def get_req(future):
-            response = future.result()
-            results = response.json()['d']['results']
+        #~ session = FuturesSession()
+        #~ def get_req(future):
+            #~ response = future.result()
+            #~ results = response.json()['d']['results']
+            #~ 
+            #~ for res in results:
+                #~ position = int(res['__metadata']['uri'].split("&$")[1].split("=")[1])+1
+                #~ url, description, title = res["Url"], res["Description"], res["Title"]
+                #~ url = Url(url)
+                #~ try:
+                    #~ self.db.seeds.insert({
+                                        #~ "date": [self.date],
+                                        #~ "url": url.url,
+                                        #~ "url_id" : url.url_id,
+                                        #~ "title": title,
+                                        #~ "description": description,
+                                        #~ "rank": position,
+                                        #~ "source_url": None,
+                                        #~ "depth": 0,
+                                        #~ "method": "search",
+                                        #~ "query": params["query"],
+                                            #~ })
+                                    #~ 
+                #~ except pymongo.errors.DuplicateKeyError:
+                    #~ #print "Alredy in DB"
+                    #~ self.db.seeds.update({"url": url.url}, {'$push': {"date": self.date}})
+            #~ 
+            #~ 
+        for i in range(0,params["nb"], 50):
             
+            r = requests.get('https://api.datamarket.azure.com/Bing/Search/v1/Web',
+                params={'$format' : 'json',
+                    '$skip' : i,
+                    '$top': 50,
+                    'Query' : '\'%s\'' %params["query"],
+                    },auth=(params["key"], params["key"])
+                    )
+            #~ s = requests.Session('https://api.datamarket.azure.com/Bing/Search/v1/Web')
+            #~ future = requests.get(
+                        #~ 'https://api.datamarket.azure.com/Bing/Search/v1/Web',
+                        #~ params={    '$format' : 'json',
+                                    #~ '$skip' : i,
+                                    #~ '$top': 50,
+                                    #~ 'Query' : '\'%s\'' %params["query"],},
+                        #~ auth=(params["key"], params["key"]),
+                        #~ headers = { 'User-agent': 'Mozilla/5.0',
+                                    #~ 'Connection': 'close'}
+                    #~ )
+            results = r.json()['d']['results']
             for res in results:
                 position = int(res['__metadata']['uri'].split("&$")[1].split("=")[1])+1
                 url, description, title = res["Url"], res["Description"], res["Title"]
@@ -171,25 +230,8 @@ class Crawler(object):
                                     
                 except pymongo.errors.DuplicateKeyError:
                     #print "Alredy in DB"
-                    self.db.seeds.update({"url": url.url}, {'$push': {"date": self.date}})
-            
-            
-        for i in range(0,params["nb"]+50, 50):
-            
-            future = session.get(
-                        'https://api.datamarket.azure.com/Bing/Search/v1/Web',
-                        params={    '$format' : 'json',
-                                    '$skip' : i,
-                                    '$top': 50,
-                                    'Query' : '\'%s\'' %params["query"],},
-                        auth=(params["key"], params["key"]),
-                        headers = { 'User-agent': 'Mozilla/5.0',
-                                    'Connection': 'close'}
-                    )
-            try:
-                future.add_done_callback(get_req)
-            except:
-                pass
+                    #self.db.seeds.update({"url": url.url}, {'$push': {"date": self.date}})
+                    pass
         return self
     
     def check_depth(self, depth):
@@ -203,7 +245,7 @@ class Crawler(object):
         try:
             self.page_lang = langdetect(text)
         except Exception as e:
-            logging.warning("Check_lang ERror", e)
+            logger.warning("Check_lang Error", e)
             return True
         if self.lang is not False:
             return bool(self.lang == self.page_lang)
@@ -234,7 +276,6 @@ class Crawler(object):
             return bs(html, "lxml").head.title.text
             
     def extract_keywords(self, meta):
-        print meta["keywords"]
         return meta["keywords"]
         
     def extract_meta(self,html):
@@ -260,15 +301,17 @@ class Crawler(object):
     
     def store_file(self, url_id, data, fmt="txt"):
         if fmt is None:
-            fname = url_id.replace(".", "_")+"_VERSION_"+self.date.strftime("%d_%m_%Y_%H_%M")
+            fname = url_id.replace(".", "_")+"_VERSION_"+self.date.strftime("%d_%m_%Y")
         else:    
-            fname = url_id.replace(".", "_")+"_VERSION_"+self.date.strftime("%d_%m_%Y_%H_%M")+"."+fmt
+            fname = url_id.replace(".", "_")+"_VERSION_"+self.date.strftime("%d_%m_%Y")+"."+fmt
+        
         fname = os.path.join(self.directory, fname)
         with open(fname, "w") as f:
             data = (data).encode("utf-8")
             f.write(data)
         return fname
-    
+    def show(self, article):
+        return {"$set":{k: v for k, v in article.items() if k not in ["date", "url", "outlinks"]}}
     def extract(self, response, depth=0, filters=True):
         article = {}
         html = response.text
@@ -288,11 +331,10 @@ class Crawler(object):
             article["title"] = self.extract_title(html)
             article["meta"] = self.extract_meta(html)
             article["keywords"] = self.extract_keywords(article["meta"])
-            print article["keywords"]
             if filters:
                 if self.check_lang(article_txt):
                     if self.check_query(article_txt):
-                        article["html_file"] = self.store_file(article["url_id"]+"_HTML", html, fmt="html")
+                        article["html_file"] = self.store_file(article["url_id"], html, fmt="html")
                         article["txt_file"] = self.store_file(article["url_id"], article_txt, fmt="txt")
                         outlinks = self.extract_outlinks(html, url, depth)
                         article["citeds_url"] = [n["url"] for n in outlinks]
@@ -303,7 +345,7 @@ class Crawler(object):
                         
                     else:
                         if self.check_query(article["title"]):                            
-                            article["html_file"] = self.store_file(article["url_id"], html)
+                            article["html_file"] = self.store_file(article["url_id"], html, fmt="html")
                             article["txt_file"] = self.store_file(article["url_id"], article_txt, fmt="txt")
                             outlinks = self.extract_outlinks(html, url, depth)
                             article["cited_urls"] = [n["url"] for n in outlinks]
@@ -320,7 +362,7 @@ class Crawler(object):
                             return article
                 else:
                     if self.check_lang(article["title"]):                        
-                        article["html_file"] = self.store_file(article["url_id"], html)
+                        article["html_file"] = self.store_file(article["url_id"], html, fmt="html")
                         article["txt_file"] = self.store_file(article["url_id"], article_txt, fmt="txt")
                         outlinks = self.extract_outlinks(html, url, depth)
                         article["cited_urls"] = [n["url"] for n in outlinks]
@@ -336,7 +378,7 @@ class Crawler(object):
                         return article
             else:
                 self.check_lang(article_txt)
-                article["html_file"] = self.store_file(article["url_id"], html)
+                article["html_file"] = self.store_file(article["url_id"], html, fmt="html")
                 article["txt_file"] = self.store_file(article["url_id"], article_txt, fmt="txt")
                 outlinks = self.extract_outlinks(html, url, depth)
                 article["cited_urls"] = [n["url"] for n in outlinks]
@@ -367,10 +409,11 @@ class Crawler(object):
                             self.db.data.insert_one(article)
                             
                             try:
-                                ex = self.db.seeds.find_one({"url":article["url"]})
-                                self.db.seeds.update({"_id":ex["_id"]}, {"$set":article})
+                                ex = [n["_id"] for n in self.db.seeds.find({"url":article["url"]},{"_id":1})]
+                                
+                                self.db.seeds.find_one_and_update({"url":article["url"]}, self.show(article))
                             except Exception as e:
-                                print e
+                                pass
                                 
                                 #self.db.seeds.update(article)
                             for n in outlinks:
@@ -383,46 +426,55 @@ class Crawler(object):
                                     try:
                                         self.db.queue.insert_one(n)
                                     except pymongo.errors.DuplicateKeyError:
-                                        print "Already in queue"
+                                        #print "Already in queue"
+                                        pass
                             return True
                             
                         except pymongo.errors.DuplicateKeyError:
-                            print "Article is already in DB outlinks not put in Queue"
-                            self.db.seeds.update({"url":article["url"]}, {"$set":article})
+                            #~ print "Article is already in DB outlinks not put in Queue"
+                            try:
+                                self.db.seeds.find_one_and_update({"url":article["url"]}, self.show(article))
+                            except Exception as e:
+                                pass
                             return True
                             #~ self.db.data.update({"url":article_url}, {"$set":json.dumps(article)})
                         
                         
                     else:
-                        self.db.seeds.update({"url":article["url"]}, {"$set":article})
+                        try:
+                            self.db.seeds.find_one_and_update({"url":article["url"]}, self.show(article))
+                        except Exception as e:
+                            pass
                         return False
                 else:
                     status_code = 406
                     msg = "Format de la page non supporté: %s" %response.headers['content-type']
-                    self.db.seeds.update({"url":response.url}, {"$set":{"status": False, "status_code": status_code, "msg": msg}})
+                    self.db.seeds.find_one_and_update({"url":response.url}, {"$set":{"status": False, "status_code": status_code, "msg": msg}})
                     return False
             else:
                 status_code = response.status_code
                 msg = "Page indisponible"
-                self.db.seeds.update({"url":response.url}, {"$set":{"status": False, "status_code": status_code, "msg": msg}})
+                self.db.seeds.find_one_and_update({"url":response.url}, {"$set":{"status": False, "status_code": status_code, "msg": msg}})
                 return False
                 
         
         for x in self.db.seeds.find({},{"url":1, "depth":1, "_id":0,"status":1}):
             url = Url(x["url"])
+            #headers = {"User-agent": "Mozilla/5.0","Connection": "close"}
             future = session.get(url.url)
             depth = 0
             try:
                 future.add_done_callback(get_req)
                 
             except Exception as e:
-                logging.critical(e)
+                logger.critical(e)
         
         
         return bool(self.db.queue.count() > 0)
     
     def crawl(self):
         '''main crawl'''
+        self.load_filters()
         def get_page(future):
             response = future.result()
             if response.status_code not in range(400,520):
@@ -478,18 +530,19 @@ class Crawler(object):
                 self.db.queue.delete_many({"url":response.url})
                 return False
                 
-        if self.status is True:
-            URLS = [n for n in self.db.queue.find()]
-        else:
+        if self.status is False:
+            #means nothing in queue
             #~ self.add_seeds()
             #~ self.get_seeds()
             #reload
-            return False
+            pass
         #~ else:
-        session = FuturesSession()
+        session = FuturesSession(executor=ProcessPoolExecutor(max_workers=5))
+        
+        print "Waiting url", self.db.queue.count()
         while self.db.queue.count() > 0:
-            print self.db.queue.count()
-            for x in self.db.queue.find():
+            
+            for x in self.db.queue.find().sort('depth', pymongo.DESCENDING):
                 url = Url(x["url"])
                 
                 depth = x['depth']
@@ -499,24 +552,24 @@ class Crawler(object):
                         #results = self.db.queue.drop({"depth":{"$gt":self.depth})
                         pass
                     else:
+                        #headers = {"User-agent": "Mozilla/5.0","Connection": "close"}
                         future = session.get(url.url)
                         try:
                             future.add_done_callback(get_page)
                         except Exception as e:
-                            print logging.critical(e)
+                            print logger.critical(e)
                             
-                            
-                        
                 if self.db.queue.count() == 0:
                     break
                 if self.depth is not False:
                     results = self.db.queue.delete_many({"depth":{"$gt":self.depth}})
                     if results.deleted_count > 0:
                         break
-                print "Url in queue": self.db.queue.count()
-                print "Step",depth+1, self.db.queue.count({"depth":depth+1})
+            print "Url in queue", self.db.queue.count()
+                
+                
             
 if __name__=="__main__":
     
     c = Crawler()
-    c.crawl()
+    c.start()
