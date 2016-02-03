@@ -1,8 +1,0 @@
-{
-    "default": {
-        "host":"localhost",
-        "directory":"crawl_results",
-        "db_name":"tasks",
-        "user": "4barbes@gmail.com"
-    }
-}

@@ -1,5 +1,11 @@
-#usr/bin python2.7
+__script__ = "crawtext"
+__name__ = "crawtext"
+__version__ = "6.0.0"
+__username__= "c24b"
+__email__= "4barbes@gmail.com"
+__author__= "Constance de Quatrebarbes"
 
-from crawtext import Crawtext
-from .report import Stats
+import os, sys
+package = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+sys.path.append(package)
 

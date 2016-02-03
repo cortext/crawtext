@@ -2,7 +2,7 @@ import lxml
 from lxml import etree
 from lxml.html.clean import autolink_html
 from lxml.html.clean import Cleaner
-from readability.readability import Document
+from readability import Document
 from bs4 import BeautifulSoup as bs
 from bs4 import Comment
 import logging
@@ -29,11 +29,18 @@ def lxml_extractor(html, url):
     cleaner.kill_tags = NEGATIVE_K 
     cleaner.allow_tag = POSITIVE_K
     cleaner.safe_attrs_only = True
-    html = lxml.html.fromstring(html)
-    tree = cleaner.clean_html(html)
-    #tree.make_links_absolute(url)
-    doc = lxml.html.tostring(tree)
-    doc = soup_extractor(doc, url)
+    #~ oc = document_fromstring(html, parser=parser, base_url=base_url, **kw)
+  #~ File "/usr/local/lib/python2.7/dist-packages/lxml/html/__init__.py", line 752, in document_fromstring
+    #~ value = etree.fromstring(html, parser, **kw)
+    try:
+        html = lxml.html.fromstring(html, base_url="url")
+    
+        tree = cleaner.clean_html(html)
+        #tree.make_links_absolute(url)
+        doc = lxml.html.tostring(tree)
+        doc = soup_extractor(doc, url)
+    except ValueError:
+        doc = soup_extractor(html, url)
     
     #~ (title, doc, article, text) = read_extractor(html, url)
     #~ print title
@@ -42,6 +49,7 @@ def lxml_extractor(html, url):
     return doc
     
 def read_extractor(html, url):
+    from readability import Document
     '''readability extractor'''
     try:
         clean_doc = Document(html,url = url, positive_keywords=",".join(POSITIVE_K) , negative_keywords=",".join(NEGATIVE_K))

@@ -8,12 +8,7 @@ import re
 from datetime import datetime
 from copy import copy
 import os, sys
-
-
     
-    
-    
-
 class Database(object):
     '''Database creation'''
     def __init__(self, database_name, local=False, debug=False):

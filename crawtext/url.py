@@ -174,7 +174,7 @@ class Url(object):
             return bool(self.url == self.source_url)
             
     def export(self):
-        return json.dumps(self.__dict__)
+        return self.__dict__
     def check(self):
         check_f = [n for n in dir(Url) if n.startswith("is_wrong")]
         check_m = [getattr(self, f) for f in check_f]

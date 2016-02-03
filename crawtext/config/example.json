@@ -1,17 +1,17 @@
 {
-    "name": "demo3",
+    "name": "mottanai",
     "filters": {
         "depth":{ 
             "active": true,
             "depth": 2
             },
         "lang":{
-            "active": false,
+            "active": true,
             "lang": "en"
             },
         "query":{
-            "active": false,
-            "query": "(digital humanities AND machine learning)"
+            "active": true,
+            "query": "mottanai"
             }
     },
     "scheduler": {
@@ -20,7 +20,7 @@
     },
     "seeds": {
         "url":{
-            "active": true,
+            "active": false,
             "url": "http://www.lefigaro.fr"
             },
         "file":{
@@ -28,9 +28,9 @@
             "file": "./config/sources.txt"
             },
         "search": {
-            "active": false,
+            "active": true,
             "key": "J8zQNrEwAJ2u3VcMykpouyPf4nvA6Wre1019v/dIT0o",
-            "nb": 100
+            "nb": 50
             }
         }
 }

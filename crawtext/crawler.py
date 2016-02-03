@@ -17,6 +17,7 @@ from config import Project
 from concurrent.futures import ProcessPoolExecutor
 import requests
 from requests_futures.sessions import FuturesSession
+requests.packages.urllib3.disable_warnings()
 from extractor import *
 from parser import *
 from url import Url, get_outlinks
@@ -196,8 +197,8 @@ class Crawler(object):
                     '$skip' : i,
                     '$top': 50,
                     'Query' : '\'%s\'' %params["query"],
-                    },auth=(params["key"], params["key"])
-                    )
+                    },auth=(params["key"], params["key"]),
+                    verify=False)
             #~ s = requests.Session('https://api.datamarket.azure.com/Bing/Search/v1/Web')
             #~ future = requests.get(
                         #~ 'https://api.datamarket.azure.com/Bing/Search/v1/Web',
@@ -461,7 +462,7 @@ class Crawler(object):
         for x in self.db.seeds.find({},{"url":1, "depth":1, "_id":0,"status":1}):
             url = Url(x["url"])
             #headers = {"User-agent": "Mozilla/5.0","Connection": "close"}
-            future = session.get(url.url)
+            future = session.get(url.url, verify=False)
             depth = 0
             try:
                 future.add_done_callback(get_req)
@@ -553,11 +554,12 @@ class Crawler(object):
                         pass
                     else:
                         #headers = {"User-agent": "Mozilla/5.0","Connection": "close"}
-                        future = session.get(url.url)
+                        future = session.get(url.url, verify=False)
                         try:
                             future.add_done_callback(get_page)
                         except Exception as e:
-                            print logger.critical(e)
+                            #print logger.critical(e)
+                            pass
                             
                 if self.db.queue.count() == 0:
                     break
@@ -566,9 +568,10 @@ class Crawler(object):
                     if results.deleted_count > 0:
                         break
             print "Url in queue", self.db.queue.count()
-                
-                
-            
+        self.status = True
+        #self.COLL.find_and_update({"name": self.NAME, "user":
+        sys.exit()
+        
 if __name__=="__main__":
     
     c = Crawler()

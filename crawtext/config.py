@@ -1,6 +1,6 @@
 #usr/bin python env
 # coding: utf-8
-import os, sys
+import os, sys, shutil
 import simplejson as json
 import yaml
 import crypt
@@ -58,20 +58,28 @@ class Config(object):
         self.create_db()
         self.create_env()
         return self
+        
     def get_user(self):
-        self.USER, password = self.settings["user"].values()
-        self.PASSWORD = crypt.crypt(password, "22")
+        try:
+            self.USER, password = self.settings["user"].values()
+            self.PASSWORD = crypt.crypt(password, "22")
+        except:
+            self.USER = self.settings["user"]
+            self.PASSWORD = None
         return self.USER
         
     def create_db(self):
-        db = dict(self.settings["db"].items())
-        col_name= db["collection"]
-        self.DB = {}
-        self.DB["uri"] = '%sdb://%s,%s:%s'%(db["provider"], db["host"], db["host"], db["port"])
-        self.DB["client"] =  MongoClient(self.DB["uri"])
-        self.DB["db_name"] = self.DB["client"][str(db["db_name"])]
-        self.DB["collection"] = self.DB["db_name"][col_name]
-        return self.DB
+        try:
+            db = dict(self.settings["db"].items())            
+            col_name= db["collection"]
+            self.DB = {}
+            self.DB["uri"] = '%sdb://%s,%s:%s'%(db["provider"], db["host"], db["host"], db["port"])
+            self.DB["client"] =  MongoClient(self.DB["uri"])
+            self.DB["db_name"] = self.DB["client"][str(db["db_name"])]
+            self.DB["collection"] = self.DB["db_name"][col_name]
+            return self.DB
+        except:
+            return
     
     def create_env(self):
         #Buy default ENV is a directory composed by username
@@ -85,7 +93,8 @@ class Config(object):
         
     def delete_env(self):
         import shutil
-        
+        if os.path.exists(self.USER):
+            shutil.rmtree(self.USER)
         if os.path.exists(self.DIR):
             shutil.rmtree(self.DIR)
             #logger.debug("Directory %s: %s sucessfully deleted"    %(self.name,directory))
@@ -100,11 +109,11 @@ class Config(object):
     def drop_config(self):
         self.delete_env()
         self.delete_db()
+        print "removing config"
     
     def get_projects(self):
-        for n in self.COLL.find():
-            print n
-        return
+        return [n for n in self.DB["collection"].find()]
+            
 
 class Project(object):
     def __init__(self, project_f = "./config/example.json", cfg = "./config/settings.json"):
@@ -112,8 +121,7 @@ class Project(object):
         self.params =  load_settings(project_f)
         self.NAME = self.params["name"] 
         self.PROJECT = self.get()
-        self.create()
-        
+        self.status = self.create()
         self.CONFIG = self.get_config()
         
     def get(self):
@@ -143,7 +151,8 @@ class Project(object):
     def create(self):
         if self.exists():
             return self.update_project()
-        return self.create_project()
+        else:
+            return self.create_project()
         
     def exists(self):
         self.PROJECT = self.COLL.find_one({"name": self.NAME, "user": self.USER})
@@ -170,6 +179,7 @@ class Project(object):
         if self.check_config():
             self.params["reload"] = True
             self.params["status"] = True
+            self.params["historu"] = ["created"]
             self.project_id = self.COLL.insert_one(self.params)
             
             if self.exists():
@@ -196,7 +206,7 @@ class Project(object):
             self.COLL.update({"_id": self.PROJECT["_id"]}, {'$set':{"scheduler": self.params["scheduler"]}})
             self.PROJECT["scheduler"] = self.params["scheduler"]
             self.COLL.update({"_id": self.PROJECT["_id"]}, {'$push':{"date": self.UPDATED_DATE}})
-            self.COLL.update({"_id": self.PROJECT["_id"]}, {'$push':{"history": "update sccheduler"}})
+            self.COLL.update({"_id": self.PROJECT["_id"]}, {'$push':{"history": "update"}})
             self.COLL.update({"_id": self.PROJECT["_id"]}, {'$set':{"reload": True}})
         reload_seeds = False
         histories = []
@@ -324,13 +334,29 @@ class Project(object):
     def has_changed(self, params):
         return any([n[0]!=n[1] for n in zip(params[0].values(),params[1].values())])
     
+    def drop(self):
         
+        project_db = self.DB[self.NAME]
+        self.DB.drop_database(self.NAME)
+        self.PROJECT["directory"]
+        
+        self.COLL.remove({"name": self.NAME, "user": self.USER})
+        if os.path.exists(self.PROJECT["directory"]):
+            shutil.rmtree(self.PROJECT["directory"])
+        if os.path.exists(self.USER):
+            shutil.rmtree(self.USER)
+        print "Everything has been deleted"
+            
     def delete_project(self):
+        ''' deleting project'''
         if self.exists():
             self.COLL.remove({"name":self.NAME, "user":self.USER})
+            print self.delete_project.__doc__
             return True
         else:
             return False
 
-if __name__=="__main__":
-    pass
+#~ if __name__=="__main__":
+    #~ p = Project()
+    #~ p.drop()
+    #~ pass

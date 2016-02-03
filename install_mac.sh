@@ -22,14 +22,14 @@ brew install mongodb
 mkdir -p /data/db
 echo "**********************"
 "Creating a virtual env"
-virtualenv -p /usr/bin/python2.7 crawtext
+virtualenv -p /usr/bin/python2.7 crawtext_env
 source crawtext/bin/activate
 #pip install -r requirements.txt
 echo "Installing python dependencies"
 #~ git clone https://github.com/cortext/crawtext crawtext
 #git checkout dev
 cd install/
-sudo pip install -r ./requirements.pip
+sudo pip install -r requirements.pip
 cd ../
 echo "**********************"
 echo "Install of crawtext is completed! Have fun!"
