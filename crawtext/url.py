@@ -7,6 +7,7 @@ import json
 import tldextract
 from extractor import bs
 import logging
+import packages
 logging.basicConfig()
 logging.getLogger("tldextract").setLevel(logging.CRITICAL)
 ACCEPTED_PROTOCOL = ['http', 'https']
@@ -45,8 +46,9 @@ BAD_QUERY = ["mailto", "share"]
 from adblockparser import AdblockRules
 import os
 
-PKG_DIR = os.path.realpath('packages')
-#PKG_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'packages')
+#PKG_DIR = os.path.join(os.cwd, os.path.realpath('packages'))
+
+
 class Filter(object):
     '''Filter url with adblockparser'''
     def __init__(self, filename):
@@ -65,6 +67,7 @@ class Filter(object):
     def match(self, url, options=None):
         return self.adblock.should_block(url)
     
+PKG_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'packages')
 url_filter = Filter(os.path.join(PKG_DIR, "complete-list.txt"))
 
 class Url(object):    
