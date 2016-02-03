@@ -2,7 +2,7 @@ import lxml
 from lxml import etree
 from lxml.html.clean import autolink_html
 from lxml.html.clean import Cleaner
-from readability import Document
+from readability.readability import Document
 from bs4 import BeautifulSoup as bs
 from bs4 import Comment
 import logging
