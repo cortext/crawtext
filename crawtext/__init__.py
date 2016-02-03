@@ -9,3 +9,4 @@ import os, sys
 package = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 sys.path.append(package)
 
+print __file__

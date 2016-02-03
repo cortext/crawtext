@@ -16,3 +16,4 @@ simplejson==3.8.1
 six==1.10.0
 tldextract==1.7.4
 wsgiref==0.1.2
+readability_lxml

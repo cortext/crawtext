@@ -307,10 +307,11 @@ class Crawler(object):
             fname = url_id.replace(".", "_")+"_VERSION_"+self.date.strftime("%d_%m_%Y")+"."+fmt
         
         fname = os.path.join(self.directory, fname)
-        with open(fname, "w") as f:
-            data = (data).encode("utf-8")
-            f.write(data)
-        return fname
+        try:
+            with open(fname, "w") as f:
+                data = (data).encode("utf-8")
+                f.write(data)
+            return self
     def show(self, article):
         return {"$set":{k: v for k, v in article.items() if k not in ["date", "url", "outlinks"]}}
     def extract(self, response, depth=0, filters=True):
