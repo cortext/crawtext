@@ -25,40 +25,40 @@ Crawtext is a written Python2.7 and use MongoDb3.2
 
 3 steps :
 
-1. Install Mongo 3.2
+* Install Mongo 3.2
 
-* On Linux Debian:
-```
-sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv EA312927
-echo "deb http://repo.mongodb.org/apt/debian wheezy/mongodb-org/3.2 main" | sudo tee /etc/apt/sources.list.d/mongodb-org-3.2.list
-sudo apt-get update
-sudo apt-get install -y mongodb-org=3.2.0 mongodb-org-server=3.2.0 mongodb-org-shell=3.2.0 mongodb-org-mongos=3.2.0 mongodb-org-tools=3.2.0
-sudo mkdir -p /data/db
-```
+    * On Linux Debian:
+    ```
+    sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv EA312927
+    echo "deb http://repo.mongodb.org/apt/debian wheezy/mongodb-org/3.2 main" | sudo tee /etc/apt/sources.list.d/mongodb-org-3.2.list
+    sudo apt-get update
+    sudo apt-get install -y mongodb-org=3.2.0 mongodb-org-server=3.2.0 mongodb-org-shell=3.2.0 mongodb-org-mongos=3.2.0 mongodb-org-tools=3.2.0
+    sudo mkdir -p /data/db
+    ```
 
-* On Mac OSX:
-```
-brew update
-brew install mongodb3.2.0
-sudo mkdir -p /data/db
-```
+    * On Mac OSX:
+    ```
+    brew update
+    brew install mongodb3.2.0
+    sudo mkdir -p /data/db
+    ```
 
-* On Windows:
-Determine your Windows Version
-And download Mongo from source
-[https://docs.mongodb.org/manual/tutorial/install-mongodb-on-windows/]
+    * On Windows:
+    Determine your Windows Version
+    And download Mongo from source
+    [https://docs.mongodb.org/manual/tutorial/install-mongodb-on-windows/]
 
 
-2. Clone this repository
+    * Clone this repository
+    ```
+    git clone https://github.com/cortext/crawtext.git
+    cd crawtext
+
+    ```
+
+* Install python packages in a virtualenv
 ```
-git clone https://github.com/cortext/crawtext.git
-cd crawtext
-
-```
-
-4. Install python packages in a virtualenv
-```
-$ user@computer:~/crawtext/ virtualenv -p /usr/bin/python2.7 venvcrawtext_box
+$ user@computer:~/crawtext/ virtualenv -p /usr/bin/python2.7 crawtext_box
 $user@computer: ~/crawtext/ source crawtext_box/bin/activate
 $user@computer: ~/crawtext/ pip install -r requirements.pip
 
@@ -66,10 +66,11 @@ $user@computer: ~/crawtext/ pip install -r requirements.pip
 
 ### Configuration
 
-
+Configuration of settings throught json file into config/settings.json
+Configuration of a project throught json file into config/example.json
 
 
 ### Activating scheduler
 
-
+Not Implemented Yet
 
