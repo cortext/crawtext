@@ -12,7 +12,7 @@ __author_username__= "c24b"
 __author_email__= "4barbes@gmail.com"
 __author__= "Constance de Quatrebarbes"
 
-from config import Project
+from project import Project
 #import concurrent.futures
 from concurrent.futures import ProcessPoolExecutor
 import requests
@@ -307,13 +307,15 @@ class Crawler(object):
             fname = url_id.replace(".", "_")+"_VERSION_"+self.date.strftime("%d_%m_%Y")+"."+fmt
         
         fname = os.path.join(self.directory, fname)
-        try:
-            with open(fname, "w") as f:
-                data = (data).encode("utf-8")
-                f.write(data)
-            return self
+        
+        with open(fname, "w") as f:
+            data = (data).encode("utf-8")
+            f.write(data)
+        return self
+                
     def show(self, article):
         return {"$set":{k: v for k, v in article.items() if k not in ["date", "url", "outlinks"]}}
+        
     def extract(self, response, depth=0, filters=True):
         article = {}
         html = response.text
