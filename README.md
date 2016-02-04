@@ -26,6 +26,7 @@ Crawtext is a written Python2.7 and use MongoDb3.2
 3 steps :
 
 1. Install Mongo 3.2
+
 * On Linux Debian:
 ```
 sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv EA312927
