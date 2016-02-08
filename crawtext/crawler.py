@@ -1,10 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-"""Usage: crawtext.py [(config|run <task-db>)] ...
-
-Options:
-    run     run the scheduled crawtext project
-    config  create a new crawtext project based on the config.json file
+"""
+CRAWLER
 """
 __script__ = "crawtext"
 __version__ = "6.0.0"

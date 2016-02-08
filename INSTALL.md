@@ -1,24 +1,33 @@
-# INSTALLATION 
-## Download and install MongoDB 
+## INSTALLATION 
+
+Three main steps for this installation:
+- install DB Backend
+- install lxml package
+- create a virtual env and dowload addiionnal python packages
+
+### Download and install MongoDB 
     
-    * On LINUX (Debian based distribution)
-    Packages are compatibles for Debian 7 Wheezy and Ubuntu
+    * On LINUX (Debian based distribution):
+    Packages are compatibles with:
+        * Debian 7 Wheezy (and older)
+        * Ubuntu 12.04 LTS and 14.04 LTS (and older)
     ``` 
     sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv EA312927
     echo "deb http://repo.mongodb.org/apt/debian wheezy/mongodb-org/3.2 main" | sudo tee /etc/apt/sources.list.d/mongodb-org-3.2.list
     sudo apt-get update
     sudo apt-get install -y mongodb-org=3.2.1 mongodb-org-server=3.2.1 mongodb-org-shell=3.2.1 mongodb-org-mongos=3.2.1 mongodb-org-tools=3.2.1
     ``` 
-    * On MAC OS/X 
-    (version Lion and newer)
+    * On MAC OS/X: 
+    (from LionX to newest)
     ``` 
     brew update
     brew install mongodb --with-openssl
     ```
-    * On Windows
-        refer to [official MongoDB installation procedure| https://docs.mongodb.org/manual/tutorial/install-mongodb-on-windows/]
+    * On Windows:
+        refer to [official MongoDB installation procedure] [https://docs.mongodb.org/manual/tutorial/install-mongodb-on-windows/]
 
-## Check if mongodb is working
+Now check if mongodb is working in commandline
+
 ```
 $ mongo
 MongoDB shell version: 3.2.0
@@ -27,7 +36,8 @@ connecting to: test
 ```
 Type Ctrl+C to quit
     
-## Activate a virtualenv
+    
+### Activate a virtualenv
 Verify you have virtualenv installed
 ```
 $ virtualenv --version
