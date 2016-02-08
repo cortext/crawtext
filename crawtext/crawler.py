@@ -60,6 +60,7 @@ class Crawler(object):
         #~ self.get_seeds
         if self.PROJECT["reload"]:
             self.add_seeds()
+            
         if self.status:
             self.add_seeds()
             
@@ -68,8 +69,6 @@ class Crawler(object):
             
         if self.db.queue.count() > 0:
             self.get_seeds()
-        
-        
         self.crawl()
         #queue = {e.submit(self.get_seeds())}
     def exists(self):
@@ -104,6 +103,22 @@ class Crawler(object):
             else:
                 setattr(self, k, False)
         return self
+    
+    #~ def insert_seeds(self):
+        #~ if self.db.seeds.count() > 0:
+            #~ for n in self.db.seeds.find():
+                #~ try: 
+                    #~ print n["url"], n["status"]
+                    #~ try:
+                        #~ self.db.logs.insert(n)
+                    #~ except pymongo.errors.DuplicateKeyError:
+                        #~ pass
+                #~ except KeyError, AttributeError:
+                    #~ print n
+                    #~ try:
+                        #~ self.db.data.insert(n)
+                    #~ except pymongo.errors.DuplicateKeyError:
+                        #~ pass
         
     def add_seeds(self):
         print "addings seeds"
@@ -111,7 +126,7 @@ class Crawler(object):
         filters = {k: self.PROJECT["seeds"][k]["active"] for k in self.PROJECT["seeds"].keys()}
         seeds_options = [k for k,v in filters.items() if v is True]
         for n in seeds_options:
-            print "from", n
+            #print "from", n
             if n == "search":
                 params = self.PROJECT["seeds"][n]
                 params["query"] = self.PROJECT["filters"]["query"]["query"]
@@ -122,6 +137,7 @@ class Crawler(object):
                     self.add_file(params[n])
                 elif n == "url":
                     self.add_url(params[n])
+        
         return 
         
     def add_file(self, filename):
@@ -311,7 +327,7 @@ class Crawler(object):
         with open(fname, "w") as f:
             data = (data).encode("utf-8")
             f.write(data)
-        return self
+        return str(fname)
                 
     def show(self, article):
         return {"$set":{k: v for k, v in article.items() if k not in ["date", "url", "outlinks"]}}
@@ -409,9 +425,10 @@ class Crawler(object):
                         del article["outlinks"]
                         
                         try:
-                            #~ print article
-                            self.db.data.insert_one(article)
                             
+                            self.db.data.insert(article)
+                            
+                                
                             try:
                                 ex = [n["_id"] for n in self.db.seeds.find({"url":article["url"]},{"_id":1})]
                                 
@@ -436,12 +453,13 @@ class Crawler(object):
                             
                         except pymongo.errors.DuplicateKeyError:
                             #~ print "Article is already in DB outlinks not put in Queue"
-                            try:
-                                self.db.seeds.find_one_and_update({"url":article["url"]}, self.show(article))
-                            except Exception as e:
-                                pass
-                            return True
-                            #~ self.db.data.update({"url":article_url}, {"$set":json.dumps(article)})
+                            #~ try:
+                                #~ self.db.seeds.find_one_and_update({"url":article["url"]}, self.show(article))
+                            #~ except Exception as e:
+                                #~ print e, article
+                                #~ pass
+                            #~ return True
+                            pass
                         
                         
                     else:
@@ -454,11 +472,19 @@ class Crawler(object):
                     status_code = 406
                     msg = "Format de la page non supporté: %s" %response.headers['content-type']
                     self.db.seeds.find_one_and_update({"url":response.url}, {"$set":{"status": False, "status_code": status_code, "msg": msg}})
+                    try:
+                        self.db.logs.insert({"$set":{"url":response.url, "status": False, "status_code": status_code, "msg": msg}})
+                    except pymongo.errors.DuplicateKeyError:
+                        pass
                     return False
             else:
                 status_code = response.status_code
                 msg = "Page indisponible"
                 self.db.seeds.find_one_and_update({"url":response.url}, {"$set":{"status": False, "status_code": status_code, "msg": msg}})
+                try:
+                    self.db.logs.insert({"$set":{"url":response.url, "status": False, "status_code": status_code, "msg": msg}})
+                except pymongo.errors.DuplicateKeyError:
+                    pass
                 return False
                 
         
@@ -534,13 +560,18 @@ class Crawler(object):
                 self.db.queue.delete_many({"url":response.url})
                 return False
                 
-        if self.status is False:
-            #means nothing in queue
+        #~ if self.db.queue.count() == 0:
+            #~ if self.db
+            #~ #means nothing in queue
             #~ self.add_seeds()
             #~ self.get_seeds()
-            #reload
-            pass
+            #~ #reload
+        #~ elif self.db.history[-1] == "created":
+            #~ self.add_seeds()
+            #~ self.get_seeds()
         #~ else:
+            #~ pass
+        
         session = FuturesSession(executor=ProcessPoolExecutor(max_workers=5))
         
         print "Waiting url", self.db.queue.count()
@@ -548,7 +579,6 @@ class Crawler(object):
             
             for x in self.db.queue.find().sort('depth', pymongo.DESCENDING):
                 url = Url(x["url"])
-                
                 depth = x['depth']
                 if self.depth is not False:
                     if depth >= self.depth:
@@ -570,10 +600,10 @@ class Crawler(object):
                     results = self.db.queue.delete_many({"depth":{"$gt":self.depth}})
                     if results.deleted_count > 0:
                         break
-            print "Url in queue", self.db.queue.count()
+            logging.info("Url in queue", self.db.queue.count())
         self.status = True
-        #self.COLL.find_and_update({"name": self.NAME, "user":
-        sys.exit()
+        self.COLL.find_and_update({"name": self.NAME, "user":self.USER}, {"$set":{"status":True}, "$push":{"history": "crawled"}})
+        return sys.exit()
         
 if __name__=="__main__":
     
