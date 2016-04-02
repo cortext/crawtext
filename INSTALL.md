@@ -55,7 +55,7 @@ $ virtualenv cortext-box
 $ cd cortext-box
 $ source bin/activate
 ```
-## Install LXML
+### Install LXML
 
 lxml distribution for python requires a few aditionnal packages
 * On Debian
@@ -76,17 +76,13 @@ Select the source file that corresponds to you architecture (32 or 64 bits)
 open an run it
 [lxml ditributions | http://www.lfd.uci.edu/~gohlke/pythonlibs/#lxml]
 
-# Clone the repository
+### Clone the repository
 ```
 $ git clone https://github.com/cortext/crawtext
-```
 
-# Enter into crawtext directory
-
-``` 
 $ cd crawtext
 ``` 
-# Install additionnal packages
+### Install additionnal packages
 
 ``` 
 $ pip install -r requirements.pip
