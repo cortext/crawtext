@@ -41,13 +41,14 @@ Le fichier disponible [ici](./config/settings.json) se présente sous cette form
 ```
 Il suffit d'en modifier les valeurs et Crawtext met à jour la configuration et le paramêtrage à chaque lancement d'un crawl.
 Il est recommandé pour les débutants de ne changer que le **username**
+
 Voir le [fichier de configuration](./config/settings.json)
 
 ## Paramétrage d'un projet
 
 La création ou mise à jour d'un projet se fait via un fichier au format json de parametrages du projet
 Un example de parametrage est donné dans ```config/example.json```
-définir son projet. Pour activer désactiver des filtres il suffit de mettre la valeur à vrai ou faux
+définir son projet. Pour activer désactiver des filtres il suffit de mettre la valeur à vrai ou faux en modifiant le fichier par [ici]()
 
 ```
 {
