@@ -4,6 +4,6 @@
 * [Installation](installation.md)
 * [Configuration](configuration.md)
 * [Tutorial](tutorial.md)
-* API Reference
+* [API Reference](api_reference.md)
 * [Developper Guide](developper_guide.md)
 
