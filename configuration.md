@@ -48,7 +48,7 @@ Voir le [fichier de configuration](./config/settings.json)
 
 La création ou mise à jour d'un projet se fait via un fichier au format json de parametrages du projet
 Un example de parametrage est donné dans ```config/example.json```
-définir son projet. Pour activer désactiver des filtres il suffit de mettre la valeur à vrai ou faux en modifiant le fichier par [ici]()
+Il suffit de modifier les valeurs, et de choisir un nom pour définir son projet. Pour activer désactiver des filtres il suffit de mettre la valeur à vrai ou faux en modifiant le fichier par [ici](/config/example.json)
 
 ```
 {
