@@ -6,7 +6,7 @@ Pour cela  nous allons créer le projet loitravail
 en modifiant le fichier d'example
 
 Nous allons définir une requete
-Loi AND (travail OR "El Khomri")
+'Loi AND (travail OR "El Khomri")'
 
 2. 1. Créer son projet
     ### Ouvrons le fichier example.json
