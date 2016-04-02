@@ -5,5 +5,5 @@
 * Configuration
 * Tutorial
 * API Reference
-* Developper Guide
+* [Developper Guide](developper_guide.md)
 
