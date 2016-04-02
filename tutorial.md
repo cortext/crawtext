@@ -55,43 +55,48 @@ nous allons modifier la partie seeds
             "nb": 50
             }
         }```
-
-Le fichier final appelé loitravail.json prend donc cette forme:
+Le crawl sera répété toutes les semaines (exprimées en jour)
+"scheduler": {
+        "active": true,
+        "days": 7
+    },
+    
+Le fichier final appelé loi_travail.json prend donc cette forme:
 
 ```
 {
-    "name": "COP21",
+    "name": "loi_travail",
     "filters": {
         "depth":{ 
             "active": true,
-            "depth": 5
+            "depth": 3
             },
         "lang":{
             "active": true,
-            "lang": "en"
+            "lang": "fr"
             },
         "query":{
             "active": true,
-            "query": "(COP 21) OR (COP21)"
+            "query": "Loi AND (travail OR el khomri)"
             }
     },
     "scheduler": {
         "active": true,
-        "days": 7
+        "days": 30
     },
     "seeds": {
         "url":{
             "active": false,
-            "url": "http://www.lefigaro.fr"
+            "url": ""
             },
         "file":{
             "active": false,
-            "file": "./config/sources.txt"
+            "file": ""
             },
         "search": {
             "active": true,
-            "key": "J8zQNrEwAJ2u3VcMykpouyPf4nvA6Wre1019v/dIT0o",
-            "nb": 100
+            "key": "MyApiSECRETKeydIT0o",
+            "nb": 50
             }
         }
 }
