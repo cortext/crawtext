@@ -24,20 +24,22 @@ exprimée à travers une expression de recherche
 
 Le crawl nécessite un point de départ pour démarrer son parcours appelés ```seeds```
 Plusieurs méthodes sont proposées qui peuvent être mixés en ajoutant:
-    - une url simple
-    - un fichier contenant une url par ligne
-    - une clé d'API au moteur de recherche **BING**: 
-        on peut l'obtenir en s'inscrivant [ici](https://datamarket.azure.com/dataset/5BA839F1-12CE-4CCE-BF57-A49D98D29A44)
-        une expression de recherche est alors indispensable au fonctionnement du crawl
+* une url simple
+* un fichier contenant une url par ligne
+* une clé d'API au moteur de recherche **BING**: 
+
+on peut l'obtenir en s'inscrivant [ici](https://datamarket.azure.com/dataset/5BA839F1-12CE-4CCE-BF57-A49D98D29A44)
+
+une expression de recherche est alors indispensable au fonctionnement du crawl
         
 Plusieurs filtres additionnels sont proposés:
 
-    - un filtre de langue: le crawler selectionnera uniquement les textes qui correspondent à la langue selectionnée
-        Ce filtre suit la norme [ISO 639-1](https://fr.wikipedia.org/wiki/Liste_des_codes_ISO_639-1)
-    - un filtre de profondeur de crawl: le crawler arretera la recherche quand le nombre d'étape sera atteint.
-        Ce filtre permet de réduire les temps de traitement souvent très long.
-    - un filtre de requête: le crawler selectionnera uniquement les textes qui correspondent à cette expression de recherche.
-        Ce filtre est indispensable dans le cas d'un crawl autour d'un sujet ou d'une thématique
+* un filtre de langue: le crawler selectionnera uniquement les textes qui correspondent à la langue selectionnée
+    Ce filtre suit la norme [ISO 639-1](https://fr.wikipedia.org/wiki/Liste_des_codes_ISO_639-1)
+* un filtre de profondeur de crawl: le crawler arretera la recherche quand le nombre d'étape sera atteint.
+    Ce filtre permet de réduire les temps de traitement souvent très long.
+* un filtre de requête: le crawler selectionnera uniquement les textes qui correspondent à cette expression de recherche.
+    Ce filtre est indispensable dans le cas d'un crawl autour d'un sujet ou d'une thématique
         
 
 ## Installation
