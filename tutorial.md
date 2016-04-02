@@ -6,10 +6,11 @@ Pour cela  nous allons créer le projet loi_travail
   ```name: "loi_travail"```
 Pour un crawl ciblé autour d'une thématique nous avons besoin
 d'une expression de recherche
-  * nous allons définir une requete qui filtre les résultats
+  * nous allons modifier dans la fichier la requtete
   ```query: "Loi AND (travail OR El Khomri)"'```
-  
-
+Au vu du bruit médiatique autour de ce sujet nous allons limiter
+la  profondeur du crawl à 3 soit le résultats des recherches + 2 niveaux
+ ```depth: "Loi AND (travail OR El Khomri)"'```
 Ajouter une clé d'API pour activer la recherche en ligne
 
 
