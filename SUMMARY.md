@@ -5,4 +5,5 @@
 * Configuration
 * Tutorial
 * API Reference
+* Developper Guide
 
