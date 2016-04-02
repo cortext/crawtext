@@ -2,5 +2,5 @@
 
 * Introduction
 * [Installation](installation.md)
-* Configuration
+* [Configuration](configuration.md)
 
