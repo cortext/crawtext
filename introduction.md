@@ -69,6 +69,7 @@ le crawler selectionnera uniquement les textes qui correspondent à cette expres
     
       Ce filtre est indispensable dans le cas d'un crawl autour 
       d'un sujet ou d'une thématique
+      
 
 Pour plus d'information sur les filtres: voir [Configuration](config.md)
 
