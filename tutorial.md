@@ -3,11 +3,11 @@
 Ici nous allons créer un crawl ciblé autour 
 des prises de paroles en ligne sur la loi travail
 Pour cela  nous allons créer le projet loitravail
-en modifiant le fichier d'exemple dans name nous allons donc mettre 
-LoiTravail
-Dans query
-Nous allons définir une requete
-"Loi AND (travail OR El Khomri)"
+Pour un crawl ciblé autour d'une thématique nous avons besoin
+d'une expression de recherche
+  * nous allons définir une requete qui filtre les résultats
+  ```'Loi AND (travail OR El Khomri")'```
+
 Ajouter une clé d'API pour activer la recherche en ligne
 
 
