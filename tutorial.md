@@ -33,11 +33,31 @@ Le contenu qui nous intéresse est en français et on désire filtrer
          },     
 ```
 
-Le point de 
-Ajouter une clé d'API pour activer la recherche en ligne
+Le crawl doit partir d'une recherche initiale sur BING
+nous allons modifier la partie seeds
+* ajouter la clé d'API pour activer la recherche en ligne
+* mettre le nombre de résultats que nous voulons récupérer (50)
+* et désactiver les autres options en mettat à false
 
+```
+"seeds": {
+        "url":{
+            "active": false,
+            "url": ""
+            },
+        "file":{
+            "active": false,
+            "file": ""
+            },
+        "search": {
+            "active": true,
+            "key": "J8zre1019v/dIT0oXXXXXXXXX",
+            "nb": 50
+            }
+        }```
 
-    
+Le fichier final appelé loitravail.json prend donc cette forme:
+
 ```
 {
     "name": "COP21",
@@ -77,6 +97,6 @@ Ajouter une clé d'API pour activer la recherche en ligne
 }
 
 ```
-3. 2. Lancer crawtext
+2. Lancer crawtext
 3. Analyser les résultats
 
