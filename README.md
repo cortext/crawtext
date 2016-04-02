@@ -126,7 +126,7 @@ $ source bin/activate
 Maintenant que nous sommes dans le virtualenv
 lxml distribution for python requière quelques packets additionnel
 
-    * On Debian
+* On Debian
 ```
 sudo apt-get install libxml2-dev libxslt-dev python-dev
 ```
