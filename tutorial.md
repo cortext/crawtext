@@ -6,22 +6,34 @@ Pour cela  nous allons créer le projet loi_travail
   ```name: "loi_travail"```
 Pour un crawl ciblé autour d'une thématique nous avons besoin
 d'une expression de recherche
-  * nous allons modifier dans la fichier la requête
+
+
+Nous allons modifier dans la fichier la "query":
   ```
   "query":{
-  #le filtre est bien activé
+  
             "active": true, 
             "query": "loi AND (Travail OR El K?omri)" 
             }
   ```
 Au vu du bruit médiatique autour de ce sujet nous allons limiter
 la  profondeur du crawl à 3 soit le résultats des recherches + 2 niveaux
+pour ne pas surcharger le crawler
  ```
  depth:{
          "active": true, 
          "depth":3
          },     
 ```
+Le contenu qui nous intéresse est en français et on désire filtrer
+ ```
+ "lang":{
+         "active": true, 
+         "lang":"fr",
+         },     
+```
+
+Le point de 
 Ajouter une clé d'API pour activer la recherche en ligne
 
 
