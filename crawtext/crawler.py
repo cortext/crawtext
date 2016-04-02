@@ -22,7 +22,6 @@ import pymongo
 from pymongo import MongoClient
 from pymongo import DeleteOne, InsertOne
 import os, sys, bson
-#from pymongo import bson
 from logger import logger
 
 
@@ -32,26 +31,33 @@ from logger import logger
 
 
 class Crawler(object):
-    def __init__(self):
-        print "xxxxxxxxxxxxxxxxxxxxxx"
-        p = Project()
-        self.PROJECT = p.get()
+    def __init__(self, project=None, env= None):
+        logging.info("xxxxxxxxxxxxxxxxxxxxxx")
+        #Project config
+        if env is None and project is None:
+            p = Project()
+        elif env is not None and project is not None:
+            p = Project(project_f = project, cfg = env)
+        elif project is not None:
+            p = Project(project_f = project)
+        else:
+            p = Project(cfg = env)
         
-        #print self.PROJECT
-        DB = p.get_config()["db"]
+        self.PROJECT = p.get()
         
         self.name = self.PROJECT["name"]
         print self.name
         self.directory = self.PROJECT["directory"]
-        print self.PROJECT["history"]
+        #print self.PROJECT["history"]
         self.status = self.PROJECT["status"]
         self.date = self.PROJECT["date"][-1]
         #Global config
+        DB = p.get_config()["db"]
         self.setup(DB)
         self.load_filters()
+    #~ def export(self):
+        #~ e = Export()
         
-        
-    
     def start(self):
         #debug
         #~ self.get_seeds
@@ -75,7 +81,7 @@ class Crawler(object):
         self.DB = {}
         self.DB["uri"] = '%sdb://%s,%s:%s'%(config["provider"], config["host"], config["host"], config["port"])
         self.DB["client"] =  MongoClient(self.DB["uri"])
-        
+        self.COLL = self.DB["client"][config["collection"]]
         self.db = self.DB["client"][self.name]
         if not self.exists():
             del self.PROJECT["_id"]
@@ -86,6 +92,7 @@ class Crawler(object):
         #~ self.seeds = self.db["seeds"]
         #~ self.data = self.db["data"]
         #~ self.queue = self.db["queue"]
+        
         return self
         
     def load_filters(self):
@@ -479,7 +486,7 @@ class Crawler(object):
                 msg = "Page indisponible"
                 self.db.seeds.find_one_and_update({"url":response.url}, {"$set":{"status": False, "status_code": status_code, "msg": msg}})
                 try:
-                    self.db.logs.insert({"$set":{"url":response.url, "status": False, "status_code": status_code, "msg": msg}})
+                    self.db.logs.insert({"url":response.url, "status": False, "status_code": status_code, "msg": msg})
                 except pymongo.errors.DuplicateKeyError:
                     pass
                 return False
@@ -600,9 +607,6 @@ class Crawler(object):
             logging.info("Url in queue", self.db.queue.count())
         self.status = True
         self.COLL.find_and_update({"name": self.NAME, "user":self.USER}, {"$set":{"status":True}, "$push":{"history": "crawled"}})
-        return sys.exit()
-        
-if __name__=="__main__":
+        return self.status
+
     
-    c = Crawler()
-    c.start()

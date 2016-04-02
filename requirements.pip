@@ -1,5 +1,3 @@
-PyYAML==3.11
-Whoosh==2.7.0
 adblockparser==0.4
 argparse==1.2.1
 beautifulsoup4==4.4.1
@@ -7,7 +5,6 @@ futures==3.0.4
 langdetect==1.0.5
 lxml==3.5.0
 pyOpenSSL==0.15.1
-pyaml==15.8.2
 pymongo==3.2.1
 readability==0.2
 requests==2.9.1
@@ -17,3 +14,4 @@ six==1.10.0
 tldextract==1.7.4
 wsgiref==0.1.2
 readability_lxml
+Whoosh==2.7.0

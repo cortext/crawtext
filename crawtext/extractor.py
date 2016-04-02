@@ -49,7 +49,6 @@ def lxml_extractor(html, url):
     return doc
     
 def read_extractor(html, url):
-    from readability import Document
     '''readability extractor'''
     try:
         clean_doc = Document(html,url = url, positive_keywords=",".join(POSITIVE_K) , negative_keywords=",".join(NEGATIVE_K))

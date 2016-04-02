@@ -1,9 +1,9 @@
 {
-    "name": "mottanai",
+    "name": "COP21",
     "filters": {
         "depth":{ 
             "active": true,
-            "depth": 2
+            "depth": 5
             },
         "lang":{
             "active": true,
@@ -11,7 +11,7 @@
             },
         "query":{
             "active": true,
-            "query": "mottanai"
+            "query": "(COP 21) OR (COP21)"
             }
     },
     "scheduler": {
@@ -30,7 +30,7 @@
         "search": {
             "active": true,
             "key": "J8zQNrEwAJ2u3VcMykpouyPf4nvA6Wre1019v/dIT0o",
-            "nb": 50
+            "nb": 100
             }
         }
 }
