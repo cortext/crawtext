@@ -1,9 +1,9 @@
 # Configuration
 
-# Configuration
 Crawtext se configure à deux niveaux:
 * Environnement
 * Projet
+
 ## Environnement par défaut
 
 Crawtext propose un fichier de configuration par défaut: ```config/settings.json```
