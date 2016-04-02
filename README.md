@@ -46,7 +46,7 @@ Plusieurs filtres additionnels sont proposés:
 4 étapes d'installation:
 - installation de la base de données en Backend : 
 
-MongoDB [cf. mes reflexions](##Choix d'implémentation et retour sur expérience)
+MongoDB [cf. mes reflexions](##Choix_d'implémentation_et_retour_sur_expérience)
 
 - installation du parser lxml:
 
