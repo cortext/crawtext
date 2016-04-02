@@ -2,4 +2,5 @@
 
 * Introduction
 * [Installation](installation.md)
+* Configuration
 
