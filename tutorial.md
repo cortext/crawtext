@@ -2,11 +2,13 @@
 ## Crawl ciblé
 Ici nous allons créer un crawl ciblé autour 
 des prises de paroles en ligne sur la loi travail
-Pour cela  nous allons créer le projet loitravail
+Pour cela  nous allons créer le projet loi_travail
+  ```name: "loi_travail"```
 Pour un crawl ciblé autour d'une thématique nous avons besoin
 d'une expression de recherche
   * nous allons définir une requete qui filtre les résultats
-  ```'Loi AND (travail OR El Khomri")'```
+  ```query: "Loi AND (travail OR El Khomri)"'```
+  
 
 Ajouter une clé d'API pour activer la recherche en ligne
 
